@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
@@ -56,7 +57,7 @@ func main() {
 	CheckError(err, true)
 
 	// sample arg -> "{\"dockerImageTag\":\"abc-bcd\",\"dockerRegistryURL\":\"686244538589.dkr.ecr.us-east-2.amazonaws.com\",\"dockerFileLocation\":\"./notifier-test/Dockerfile\",\"dockerRepository\":\"notifier-test\",\"awsRegion\":\"us-east-2\",\"ciCacheLocation\":\"s3://ci-caching/\",\"ciCacheFileName\":\"cache.tar.gz\",\"ciProjectDetails\":[{\"gitRepository\":\"https://gitlab.com/devtron/notifier.git\",\"checkoutPath\":\"./notifier-test\",\"commitHash\":\"a6b809c4be87c217feba4af15cf5ebc3cafe21e0\",\"branch\":\"master\",\"gitOptions\":{\"userName\":\"Suraj24\",\"password\":\"Devtron@1234\",\"sshKey\":\"\",\"accessToken\":\"\",\"authMode\":\"\"}},{\"gitRepository\":\"https://gitlab.com/devtron/orchestrator.git\",\"checkoutPath\":\"./orchestrator-test\",\"branch\":\"ci_with_argo\",\"gitOptions\":{\"userName\":\"Suraj24\",\"password\":\"Devtron@1234\",\"sshKey\":\"\",\"accessToken\":\"\",\"authMode\":\"\"}}]}"
-	args :=  os.Args[1]
+	args := "{\"dockerImageTag\":\"abc-bcd\",\"dockerRegistryURL\":\"686244538589.dkr.ecr.us-east-2.amazonaws.com\",\"dockerFileLocation\":\"./notifier-test/Dockerfile\",\"dockerRepository\":\"notifier-test\",\"awsRegion\":\"us-east-2\",\"ciCacheLocation\":\"s3://ci-caching/\",\"ciCacheFileName\":\"cache.tar.gz\",\"ciProjectDetails\":[{\"gitRepository\":\"https://gitlab.com/devtron/notifier.git\",\"checkoutPath\":\"./notifier-test\",\"commitHash\":\"a6b809c4be87c217feba4af15cf5ebc3cafe21e0\",\"branch\":\"master\",\"gitOptions\":{\"userName\":\"Suraj24\",\"password\":\"Devtron@1234\",\"sshKey\":\"\",\"accessToken\":\"\",\"authMode\":\"\"}},{\"gitRepository\":\"https://gitlab.com/devtron/orchestrator.git\",\"checkoutPath\":\"./orchestrator-test\",\"branch\":\"ci_with_argo\",\"gitOptions\":{\"userName\":\"Suraj24\",\"password\":\"Devtron@1234\",\"sshKey\":\"\",\"accessToken\":\"\",\"authMode\":\"\"}}]}" //os.Args[1]
 	ciRequest := &CiRequest{}
 	err = json.Unmarshal([]byte(args), ciRequest)
 	CheckError(err, true)
@@ -96,7 +97,7 @@ func syncCache(ciRequest *CiRequest) {
 
 	//aws s3 cp cache.tar.gz s3://ci-caching/
 	log.Println("------> pushing new cache")
-	cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, ciRequest.CiCacheLocation + ciRequest.CiCacheFileName)
+	cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, ciRequest.CiCacheLocation+ciRequest.CiCacheFileName)
 	runCommand(cachePush, true)
 }
 
@@ -147,29 +148,41 @@ func getCache(ciRequest *CiRequest) {
 func cloneAndCheckout(ciRequest *CiRequest) {
 	for _, prj := range ciRequest.CiProjectDetails {
 		// git clone
+		log.Println("------> git cloning " + prj.GitRepository)
 		if _, err := os.Stat(prj.CheckoutPath); os.IsNotExist(err) {
 			os.Mkdir(prj.CheckoutPath, os.ModeDir)
 		}
-		r, err := git.PlainClone(prj.CheckoutPath, false, &git.CloneOptions{
-			Auth: &http.BasicAuth{
-				Username: prj.GitOptions.UserName,
-				Password: prj.GitOptions.Password,
-			},
-			URL:      prj.GitRepository,
-			Progress: os.Stdout,
-		})
+
+		var r *git.Repository
+		var err error
+		if prj.Branch == "" || prj.Branch == "master" {
+			log.Println("------> " + prj.GitRepository + " cloning master")
+			r, err = git.PlainClone(prj.CheckoutPath, false, &git.CloneOptions{
+				Auth: &http.BasicAuth{
+					Username: prj.GitOptions.UserName,
+					Password: prj.GitOptions.Password,
+				},
+				URL:      prj.GitRepository,
+				Progress: os.Stdout,
+			})
+		} else {
+			log.Println("------> " + prj.GitRepository + " checking branch " + prj.Branch)
+			r, err = git.PlainClone(prj.CheckoutPath, false, &git.CloneOptions{
+				Auth: &http.BasicAuth{
+					Username: prj.GitOptions.UserName,
+					Password: prj.GitOptions.Password,
+				},
+				URL:      prj.GitRepository,
+				Progress: os.Stdout,
+				ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", prj.Branch)),
+				SingleBranch:  true,
+			})
+		}
 		w, err := r.Worktree()
 		CheckError(err, false)
 
-		// git checkout
-		if prj.Branch != "" {
-			err = w.Checkout(&git.CheckoutOptions{
-				Branch: plumbing.NewBranchReferenceName(prj.Branch),
-			})
-			CheckError(err, false)
-		}
-
 		if prj.CommitHash != "" {
+			log.Println("------> " + prj.GitRepository + " git checking out " + prj.CommitHash)
 			CheckoutHash(w, prj.CommitHash)
 		}
 	}
@@ -226,10 +239,6 @@ func runCommand(cmd *exec.Cmd, fatal bool) error {
 }
 
 func CheckoutHash(workTree *git.Worktree, hash string) {
-	if hash == "" {
-		log.Println("no commit hash")
-		return
-	}
 	log.Println("checking out hash ", hash)
 	err := workTree.Checkout(&git.CheckoutOptions{
 		Hash: plumbing.NewHash(hash),
