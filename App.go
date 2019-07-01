@@ -68,19 +68,19 @@ func main() {
 	// build
 	dest, err := BuildArtifact(ciRequest)
 	if err != nil {
-		return
+		os.Exit(1)
 	}
 
 	// push to dest
 	err = PushArtifact(ciRequest, dest)
 	if err != nil {
-		return
+		os.Exit(1)
 	}
 
 	// sync cache
 	err = SyncCache(ciRequest)
 	if err != nil {
-		return
+		os.Exit(1)
 	}
 
 	// debug mode
