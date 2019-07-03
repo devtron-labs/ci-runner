@@ -13,11 +13,14 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 	for _, prj := range ciRequest.CiProjectDetails {
 		// git clone
 		log.Println("------> git cloning " + prj.GitRepository)
-		if _, err := os.Stat(prj.CheckoutPath); os.IsNotExist(err) {
-			mErr := os.Mkdir(prj.CheckoutPath, os.ModeDir)
-			if mErr != nil {
-				log.Println(err)
-				os.Exit(2)
+
+		if prj.CheckoutPath != "./" {
+			if _, err := os.Stat(prj.CheckoutPath); os.IsNotExist(err) {
+				mErr := os.Mkdir(prj.CheckoutPath, os.ModeDir)
+				if mErr != nil {
+					log.Println(err)
+					os.Exit(2)
+				}
 			}
 		}
 
