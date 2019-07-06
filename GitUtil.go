@@ -16,11 +16,7 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 
 		if prj.CheckoutPath != "./" {
 			if _, err := os.Stat(prj.CheckoutPath); os.IsNotExist(err) {
-				mErr := os.Mkdir(prj.CheckoutPath, os.ModeDir)
-				if mErr != nil {
-					log.Println(err)
-					os.Exit(2)
-				}
+				_ = os.Mkdir(prj.CheckoutPath, os.ModeDir)
 			}
 		}
 

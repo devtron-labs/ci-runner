@@ -8,13 +8,22 @@ import (
 func GetCache(ciRequest *CiRequest) {
 	ciCacheLocation := ciRequest.CiCacheLocation + ciRequest.CiCacheFileName
 	cmd := exec.Command("aws", "s3", "cp", ciCacheLocation, ".")
-	err := RunCommand(cmd)
+	log.Println("Downloading pipeline cache")
+	err := cmd.Run()
+	if err != nil {
+		log.Println("Could not get cache", err)
+	} else {
+		log.Println("Downloaded cache")
+	}
 
 	// Extract cache
 	if err == nil {
 		extractCmd := exec.Command("tar", "-xvf", ciRequest.CiCacheFileName)
 		extractCmd.Dir = "/"
-		extractCmd.Run()
+		err = extractCmd.Run()
+		if err != nil {
+			log.Println("Could not extract cache blob", err)
+		}
 	}
 }
 
@@ -31,5 +40,11 @@ func SyncCache(ciRequest *CiRequest) error {
 	//aws s3 cp cache.tar.gz s3://ci-caching/
 	log.Println("------> pushing new cache")
 	cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, ciRequest.CiCacheLocation+ciRequest.CiCacheFileName)
-	return RunCommand(cachePush)
+	err := cachePush.Run()
+	if err != nil {
+		log.Println("Could not push new cache", err)
+	} else {
+		log.Println("Pushed cache")
+	}
+	return err
 }
