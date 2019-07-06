@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -59,12 +60,17 @@ func main() {
 	}
 
 	// Get ci cache
+	log.Println("cf: start")
 	GetCache(ciRequest)
+	log.Println("cf: done")
 
 	// git handling
+	log.Println("gf: start")
 	CloneAndCheckout(ciRequest)
+	log.Println("gf: done")
 
 	// Start docker daemon
+	log.Println("db: start")
 	StartDockerDaemon()
 
 	// build
@@ -72,18 +78,23 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
+	log.Println("db: done")
 
 	// push to dest
+	log.Println("dp: start")
 	err = PushArtifact(ciRequest, dest)
 	if err != nil {
 		os.Exit(1)
 	}
+	log.Println("dp: done")
 
 	// sync cache
+	log.Println("cs: start")
 	err = SyncCache(ciRequest)
 	if err != nil {
 		os.Exit(1)
 	}
+	log.Println("cs: done")
 
 	// debug mode
 	//exec.Command("tail", "-f", "/dev/null").Run()
