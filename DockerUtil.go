@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"io"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -42,14 +45,14 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	return dest, nil
 }
 
-func PushArtifact(ciRequest *CiRequest, dest string) error {
+func PushArtifact(ciRequest *CiRequest, dest string) (string, error) {
 	awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
 	log.Println("------> " + awsLogin)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", awsLogin)
 	err := RunCommand(awsLoginCmd)
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", err
 	}
 
 	dockerPush := "docker push " + dest
@@ -58,9 +61,37 @@ func PushArtifact(ciRequest *CiRequest, dest string) error {
 	err = RunCommand(dockerPushCMD)
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", err
 	}
-	return nil
+	dockerPull := "docker pull " + dest
+	dockerPullCmd := exec.Command("/bin/sh", "-c", dockerPull)
+	digest, err := runGetDockerImageDigest(dockerPullCmd)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	log.Println("Digest -----> ", digest)
+	return digest, nil
+}
+
+func runGetDockerImageDigest(cmd *exec.Cmd) (string, error) {
+	var stdBuffer bytes.Buffer
+	mw := io.MultiWriter(os.Stdout, &stdBuffer)
+	cmd.Stdout = mw
+	cmd.Stderr = mw
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+	output := stdBuffer.String()
+	outArr := strings.Split(output, "\n")
+	var digest string
+	for _, s := range outArr {
+		if strings.HasPrefix(s, "Digest: ") {
+			digest = s[strings.Index(s, "sha256:"):]
+		}
+
+	}
+	return digest, nil
 }
 
 func waitForDockerDaemon(retryCount int) {
@@ -82,4 +113,3 @@ func dockerdUpCheck() error {
 	err := RunCommand(dockerCheckCmd)
 	return err
 }
-
