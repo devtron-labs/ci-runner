@@ -8,6 +8,7 @@ import (
 	"github.com/nats-io/stan.go"
 	"log"
 	"os"
+	"time"
 )
 
 type CiRequest struct {
@@ -34,10 +35,14 @@ type CiCompleteEvent struct {
 
 type CiProjectDetails struct {
 	GitRepository string     `json:"gitRepository"`
+	MaterialName  string     `json:"materialName"`
 	CheckoutPath  string     `json:"checkoutPath"`
 	CommitHash    string     `json:"commitHash"`
-	GitOptions    GitOptions `json:"gitOptions"`
+	CommitTime    time.Time  `json:"commitHash"`
 	Branch        string     `json:"branch"`
+	Type          string     `json:"branch"`
+	Message       string     `json:"message"`
+	GitOptions    GitOptions `json:"gitOptions"`
 }
 
 type GitOptions struct {
