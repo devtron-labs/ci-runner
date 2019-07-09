@@ -9,7 +9,6 @@ import (
 )
 
 func DeleteFile(path string) error {
-	// delete file
 	var err = os.Remove(path)
 	if err != nil {
 		return err
