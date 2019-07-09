@@ -20,6 +20,7 @@ type CiRequest struct {
 	CiCacheLocation    string             `json:"ciCacheLocation"`
 	CiCacheFileName    string             `json:"ciCacheFileName"`
 	PipelineId         int                `json:"pipelineId"`
+	PipelineName       string             `json:"pipelineName"`
 }
 
 type CiCompleteEvent struct {
@@ -28,6 +29,7 @@ type CiCompleteEvent struct {
 	Digest           string             `json:"digest"`
 	PipelineId       int                `json:"pipelineId"`
 	DataSource       string             `json:"dataSource"`
+	PipelineName     string             `json:"pipelineName"`
 }
 
 type CiProjectDetails struct {
@@ -142,6 +144,7 @@ func SendEvents(ciRequest *CiRequest, digest string, image string) error {
 		DockerImage:      image,
 		Digest:           digest,
 		PipelineId:       ciRequest.PipelineId,
+		PipelineName:     ciRequest.PipelineName,
 		DataSource:       "CI-RUNNER",
 	}
 	err = SendCiCompleteEvent(client, event)
