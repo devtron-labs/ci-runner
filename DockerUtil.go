@@ -33,7 +33,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	}
 
 	ciRequest.DockerRegistryURL = strings.TrimPrefix(ciRequest.DockerRegistryURL, "https://")
-	dest := ciRequest.DockerRegistryURL + "/" + ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
+	dest := ciRequest.DockerRegistryURL + "/" + ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag + "-" + ciRequest.PipelineName
 	dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
 	log.Println("------> " + dockerTag)
 	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
