@@ -38,9 +38,9 @@ type CiProjectDetails struct {
 	MaterialName  string     `json:"materialName"`
 	CheckoutPath  string     `json:"checkoutPath"`
 	CommitHash    string     `json:"commitHash"`
-	CommitTime    time.Time  `json:"commitHash"`
+	CommitTime    time.Time  `json:"commitTime"`
 	Branch        string     `json:"branch"`
-	Type          string     `json:"branch"`
+	Type          string     `json:"type"`
 	Message       string     `json:"message"`
 	GitOptions    GitOptions `json:"gitOptions"`
 }
