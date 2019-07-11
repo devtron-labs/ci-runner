@@ -30,6 +30,6 @@ RUN pip install awscli
 RUN apk --purge -v del py-pip
 RUN rm /var/cache/apk/*
 COPY --from=build-env /go/bin/cirunner .
-CMD ["./cirunner"]
+ENTRYPOINT ["./cirunner"]
 
 
