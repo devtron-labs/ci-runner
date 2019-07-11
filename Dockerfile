@@ -5,9 +5,12 @@ RUN echo $GOPATH
 
 RUN apk add --no-cache git gcc musl-dev
 RUN apk add --update make
-RUN mkdir /cirunner
-WORKDIR /cirunner
+
+WORKDIR /go/src/devtron.ai/cirunner
+ADD . /go/src/devtron.ai/cirunner/
 COPY . .
+RUN pwd
+RUN echo $GOPATH
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o /go/bin/cirunner
 
