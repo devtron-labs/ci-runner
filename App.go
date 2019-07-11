@@ -224,8 +224,18 @@ func StopDocker() error {
 	proc, err := os.FindProcess(pid)
 	if err != nil {
 		log.Println(err)
+		return err
 	}
 	// Kill the process
 	err = proc.Signal(syscall.SIGTERM)
-	return err
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	log.Println("-----> checking docker status")
+	err = DockerdUpCheck()
+	if err != nil {
+		log.Println("-----> docker down")
+	}
+	return nil
 }

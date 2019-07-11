@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"os/exec"
 )
 
@@ -43,8 +44,16 @@ func SyncCache(ciRequest *CiRequest) error {
 	err := cachePush.Run()
 	if err != nil {
 		log.Println("Could not push new cache", err)
+		return err
 	} else {
 		log.Println("Pushed cache")
+	}
+
+	err = os.RemoveAll("/var/lib/docker/")
+	if err == nil {
+		log.Println("removed /var/lib/docker")
+	} else {
+		log.Println("err", err)
 	}
 	return err
 }

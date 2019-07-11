@@ -95,19 +95,19 @@ func runGetDockerImageDigest(cmd *exec.Cmd) (string, error) {
 }
 
 func waitForDockerDaemon(retryCount int) {
-	err := dockerdUpCheck()
+	err := DockerdUpCheck()
 	retry := 0
 	for err != nil {
 		if retry == retryCount {
 			break
 		}
 		time.Sleep(1 * time.Second)
-		err = dockerdUpCheck()
+		err = DockerdUpCheck()
 		retry++
 	}
 }
 
-func dockerdUpCheck() error {
+func DockerdUpCheck() error {
 	dockerCheck := "docker ps"
 	dockerCheckCmd := exec.Command("/bin/sh", "-c", dockerCheck)
 	err := RunCommand(dockerCheckCmd)
