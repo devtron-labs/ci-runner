@@ -233,9 +233,6 @@ func StopDocker() error {
 		return err
 	}
 	log.Println("-----> checking docker status")
-	err = DockerdUpCheck()
-	if err != nil {
-		log.Println("-----> docker down")
-	}
+	DockerdUpCheck()
 	return nil
 }
