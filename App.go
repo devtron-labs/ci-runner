@@ -97,7 +97,10 @@ func main() {
 
 	// Get ci cache
 	log.Println("cf:start")
-	GetCache(ciRequest)
+	err = GetCache(ciRequest)
+	if err != nil {
+		os.Exit(1)
+	}
 	log.Println("cf:done")
 
 	// git handling

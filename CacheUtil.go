@@ -6,7 +6,7 @@ import (
 	"os/exec"
 )
 
-func GetCache(ciRequest *CiRequest) {
+func GetCache(ciRequest *CiRequest) error {
 	ciCacheLocation := ciRequest.CiCacheLocation + ciRequest.CiCacheFileName
 	cmd := exec.Command("aws", "s3", "cp", ciCacheLocation, ".")
 	log.Println("Downloading pipeline cache")
@@ -24,8 +24,11 @@ func GetCache(ciRequest *CiRequest) {
 		err = extractCmd.Run()
 		if err != nil {
 			log.Println("Could not extract cache blob", err)
+			log.Fatal(err)
+			return err
 		}
 	}
+	return nil
 }
 
 
