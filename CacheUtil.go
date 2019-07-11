@@ -49,7 +49,7 @@ func SyncCache(ciRequest *CiRequest) error {
 		log.Println("Pushed cache")
 	}
 
-	err = os.RemoveAll("/var/lib/docker/")
+	err = os.RemoveAll("/var/lib/docker/*")
 	if err == nil {
 		log.Println("removed /var/lib/docker")
 	} else {
