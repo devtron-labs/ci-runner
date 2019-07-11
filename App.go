@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	_ "github.com/aws/aws-sdk-go/aws"
 )
 
 type CiRequest struct {

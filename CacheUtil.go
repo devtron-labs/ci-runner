@@ -4,6 +4,10 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"io"
 	"log"
 	"os"
@@ -11,7 +15,39 @@ import (
 )
 
 func GetCache(ciRequest *CiRequest) error {
-	ciCacheLocation := ciRequest.CiCacheLocation + ciRequest.CiCacheFileName
+	//ciCacheLocation := ciRequest.CiCacheLocation + ciRequest.CiCacheFileName
+
+	sess := session.Must(session.NewSession(&aws.Config{
+		Region: aws.String(ciRequest.AwsRegion),
+	}))
+
+	file, err := os.Create("/"+ciRequest.CiCacheFileName)
+
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	defer file.Close()
+
+	downloader := s3manager.NewDownloader(sess)
+
+	numBytes, err := downloader.Download(file,
+		&s3.GetObjectInput{
+			Bucket: aws.String(ciRequest.CiCacheLocation),
+			Key:    aws.String(ciRequest.CiCacheFileName),
+		})
+	if err != nil {
+		log.Println("couldn't download cache file")
+		return nil
+	}
+	fmt.Println("Downloaded", file.Name(), numBytes, "bytes")
+
+
+	/*po, err := svc.PutObjectWithContext(context.Background(), &s3.PutObjectInput{
+		Bucket: aws.String(ciRequest.CiCacheLocation),
+		Key:    aws.String(ciRequest.CiCacheFileName),
+		Body:   os.Stdin,
+	})
 
 	cmd := exec.Command("aws", "s3", "cp", ciCacheLocation, ".")
 	log.Println("Downloading pipeline cache")
@@ -20,7 +56,7 @@ func GetCache(ciRequest *CiRequest) error {
 		log.Println("Could not get cache", err)
 	} else {
 		log.Println("Downloaded cache")
-	}
+	}*/
 
 	// Extract cache
 	/*if err == nil {
@@ -64,9 +100,6 @@ func GetCache(ciRequest *CiRequest) error {
 	}
 	return nil
 }
-
-
-
 
 func SyncCache(ciRequest *CiRequest) error {
 	DeleteFile(ciRequest.CiCacheFileName)
