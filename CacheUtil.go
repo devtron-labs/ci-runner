@@ -11,7 +11,8 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
 func GetCache(ciRequest *CiRequest) error {
@@ -20,9 +21,7 @@ func GetCache(ciRequest *CiRequest) error {
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(ciRequest.AwsRegion),
 	}))
-
-	file, err := os.Create("/"+ciRequest.CiCacheFileName)
-
+	file, err := os.Create("/" + ciRequest.CiCacheFileName)
 	if err != nil {
 		log.Fatal(err)
 		return err
@@ -41,7 +40,6 @@ func GetCache(ciRequest *CiRequest) error {
 		return nil
 	}
 	fmt.Println("Downloaded", file.Name(), numBytes, "bytes")
-
 
 	/*po, err := svc.PutObjectWithContext(context.Background(), &s3.PutObjectInput{
 		Bucket: aws.String(ciRequest.CiCacheLocation),
@@ -70,14 +68,14 @@ func GetCache(ciRequest *CiRequest) error {
 		}
 	}*/
 
-	f, err := os.Open(ciRequest.CiCacheFileName)
+	/*f, err := os.Open(ciRequest.CiCacheFileName)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	defer f.Close()
+	defer f.Close()*/
 
-	gzf, err := gzip.NewReader(f)
+	gzf, err := gzip.NewReader(file)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -106,26 +104,101 @@ func SyncCache(ciRequest *CiRequest) error {
 
 	// Generate new cache
 	log.Println("------> generating new cache")
-	tarCmd := exec.Command("tar", "-cf", ciRequest.CiCacheFileName, "/var/lib/docker")
-	tarCmd.Dir = "/"
-	tarCmd.Run()
-
+	CreateTar(ciRequest.CiCacheFileName, "/var/lib/docker")
 	//aws s3 cp cache.tar.gz s3://ci-caching/
-	log.Println("------> pushing new cache")
-	cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, ciRequest.CiCacheLocation+ciRequest.CiCacheFileName)
-	err := cachePush.Run()
+
+	f, err := os.Open(ciRequest.CiCacheFileName)
 	if err != nil {
-		log.Println("Could not push new cache", err)
+		log.Fatal(err)
+	}
+	fi, _:=f.Stat()
+	fmt.Printf("file size %s",fi)
+	log.Println("------> pushing new cache")
+	sess := session.Must(session.NewSession(&aws.Config{
+		Region: aws.String(ciRequest.AwsRegion),
+	}))
+
+	uploader := s3manager.NewUploader(sess)
+
+	_, err = uploader.Upload(&s3manager.UploadInput{
+		Bucket: aws.String(ciRequest.CiCacheLocation),
+		Key:    aws.String(ciRequest.CiCacheFileName),
+		Body:   f,
+	})
+	if err != nil {
+		// Print the error and exit.
+		log.Println("file upload fail")
 		return err
 	} else {
-		log.Println("Pushed cache")
+
+		fmt.Printf("Successfully uploaded %q to %q\n", ciRequest.CiCacheLocation, ciRequest.CiCacheFileName,)
+
 	}
 
-	err = os.RemoveAll("/var/lib/docker/*")
+	/*err = os.RemoveAll("/var/lib/docker/*")
 	if err == nil {
 		log.Println("removed /var/lib/docker")
 	} else {
 		log.Println("err", err)
-	}
+	}*/
 	return err
+}
+
+func CreateTar(destinationfile, sourcedir string)  {
+
+	dir, err := os.Open(sourcedir)
+
+	checkerror(err)
+
+	fmt.Println(dir.Name())
+	defer dir.Close()
+
+	files, err := dir.Readdir(0) // grab the files list
+
+	checkerror(err)
+
+	tarfile, err := os.Create(destinationfile)
+	defer  tarfile.Close()
+	checkerror(err)
+
+	var fileWriter io.WriteCloser = tarfile
+
+	if strings.HasSuffix(destinationfile, ".gz") {
+		fileWriter = gzip.NewWriter(tarfile) // add a gzip filter
+		defer fileWriter.Close()             // if user add .gz in the destination filename
+	}
+
+	tarfileWriter := tar.NewWriter(fileWriter)
+	defer tarfileWriter.Close()
+
+	for _, fileInfo := range files {
+
+		if fileInfo.IsDir() {
+			continue
+		}
+
+		// see https://www.socketloop.com/tutorials/go-file-path-independent-of-operating-system
+
+		file, err := os.Open(dir.Name() + string(filepath.Separator) + fileInfo.Name())
+
+		checkerror(err)
+
+		defer file.Close()
+
+		// prepare the tar header
+
+		header := new(tar.Header)
+		header.Name = file.Name()
+		header.Size = fileInfo.Size()
+		header.Mode = int64(fileInfo.Mode())
+		header.ModTime = fileInfo.ModTime()
+
+		err = tarfileWriter.WriteHeader(header)
+
+		checkerror(err)
+
+		_, err = io.Copy(tarfileWriter, file)
+
+		checkerror(err)
+	}
 }
