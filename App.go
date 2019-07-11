@@ -6,8 +6,11 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
+	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
+	"syscall"
 	"time"
 )
 
@@ -79,6 +82,7 @@ func main() {
 	err := os.Chdir("/")
 	if err != nil {
 		os.Exit(1)
+
 	}
 
 	// sample arg -> "{\"dockerImageTag\":\"abc-bcd\",\"dockerRegistryURL\":\"686244538589.dkr.ecr.us-east-2.amazonaws.com\",\"dockerFileLocation\":\"./notifier-test/Dockerfile\",\"dockerRepository\":\"notifier-test\",\"awsRegion\":\"us-east-2\",\"ciCacheLocation\":\"s3://ci-caching/\",\"ciCacheFileName\":\"cache.tar.gz\",\"ciProjectDetails\":[{\"gitRepository\":\"https://gitlab.com/devtron/notifier.git\",\"checkoutPath\":\"./notifier-test\",\"commitHash\":\"a6b809c4be87c217feba4af15cf5ebc3cafe21e0\",\"branch\":\"master\",\"gitOptions\":{\"userName\":\"Suraj24\",\"password\":\"Devtron@1234\",\"sshKey\":\"\",\"accessToken\":\"\",\"authMode\":\"\"}},{\"gitRepository\":\"https://gitlab.com/devtron/orchestrator.git\",\"checkoutPath\":\"./orchestrator-test\",\"branch\":\"ci_with_argo\",\"gitOptions\":{\"userName\":\"Suraj24\",\"password\":\"Devtron@1234\",\"sshKey\":\"\",\"accessToken\":\"\",\"authMode\":\"\"}}]}"
@@ -125,6 +129,12 @@ func main() {
 		os.Exit(1)
 	}
 	log.Println("ns:done")
+
+	err = StopDocker()
+	if err != nil {
+		log.Println("err", err)
+		os.Exit(1)
+	}
 
 	// sync cache
 	log.Println("cs:start")
@@ -185,11 +195,32 @@ func SendCiCompleteEvent(client *PubSubClient, event CiCompleteEvent) error {
 		return err
 	}
 	var reqBody = []byte(jsonBody)
-	log.Println("ci complete evt -----> ", reqBody)
+	log.Println("ci complete evt -----> ", string(reqBody))
 	err = client.Conn.Publish(CI_COMPLETE_TOPIC, reqBody) // does not return until an ack has been received from NATS Streaming
 	if err != nil {
 		log.Println("publish err", "err", err)
 		return err
 	}
 	return nil
+}
+
+func StopDocker() error {
+	file:="/var/run/docker.pid"
+	content, err := ioutil.ReadFile(file)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+
+	pid, err := strconv.Atoi(string(content))
+	if err!=nil{
+		return err
+	}
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		log.Println(err)
+	}
+	// Kill the process
+	err = proc.Signal(syscall.SIGTERM)
+	return err
 }
