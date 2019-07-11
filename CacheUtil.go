@@ -1,6 +1,10 @@
 package main
 
 import (
+	"archive/tar"
+	"compress/gzip"
+	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -8,6 +12,7 @@ import (
 
 func GetCache(ciRequest *CiRequest) error {
 	ciCacheLocation := ciRequest.CiCacheLocation + ciRequest.CiCacheFileName
+
 	cmd := exec.Command("aws", "s3", "cp", ciCacheLocation, ".")
 	log.Println("Downloading pipeline cache")
 	err := cmd.Run()
@@ -18,7 +23,7 @@ func GetCache(ciRequest *CiRequest) error {
 	}
 
 	// Extract cache
-	if err == nil {
+	/*if err == nil {
 		extractCmd := exec.Command("tar", "-xvf", ciRequest.CiCacheFileName)
 		extractCmd.Dir = "/"
 		err = extractCmd.Run()
@@ -27,9 +32,40 @@ func GetCache(ciRequest *CiRequest) error {
 			log.Fatal(err)
 			return err
 		}
+	}*/
+
+	f, err := os.Open(ciRequest.CiCacheFileName)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer f.Close()
+
+	gzf, err := gzip.NewReader(f)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	tr := tar.NewReader(gzf)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break // End of archive
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Contents of %s:\n", hdr.Name)
+		if _, err := io.Copy(os.Stdout, tr); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println()
 	}
 	return nil
 }
+
+
 
 
 func SyncCache(ciRequest *CiRequest) error {
