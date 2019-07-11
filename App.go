@@ -8,6 +8,7 @@ import (
 	"github.com/nats-io/stan.go"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
 	"strconv"
 	"syscall"
@@ -175,12 +176,16 @@ func NewPubSubClient() (*PubSubClient, error) {
 	nc, err := nats.Connect(cfg.NatsServerHost)
 	if err != nil {
 		log.Println("err", err)
-		return &PubSubClient{}, err
+		os.Exit(1)
 	}
-	sc, err := stan.Connect(cfg.ClusterId, cfg.ClientId, stan.NatsConn(nc))
+	s := rand.NewSource(time.Now().UnixNano())
+	uuid := rand.New(s)
+	uniqueClienId := "ci-runner-" + strconv.Itoa(uuid.Int())
+
+	sc, err := stan.Connect(cfg.ClusterId, uniqueClienId, stan.NatsConn(nc))
 	if err != nil {
 		log.Println("err", err)
-		return &PubSubClient{}, err
+		os.Exit(1)
 	}
 	natsClient := &PubSubClient{
 		Conn: sc,
@@ -205,7 +210,7 @@ func SendCiCompleteEvent(client *PubSubClient, event CiCompleteEvent) error {
 }
 
 func StopDocker() error {
-	file:="/var/run/docker.pid"
+	file := "/var/run/docker.pid"
 	content, err := ioutil.ReadFile(file)
 	if err != nil {
 		log.Fatal(err)
@@ -213,7 +218,7 @@ func StopDocker() error {
 	}
 
 	pid, err := strconv.Atoi(string(content))
-	if err!=nil{
+	if err != nil {
 		return err
 	}
 	proc, err := os.FindProcess(pid)
