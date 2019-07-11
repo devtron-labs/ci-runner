@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"bufio"
 	"compress/gzip"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
@@ -104,15 +105,24 @@ func SyncCache(ciRequest *CiRequest) error {
 
 	// Generate new cache
 	log.Println("------> generating new cache")
-	CreateTar(ciRequest.CiCacheFileName, "/var/lib/docker")
+	f1, err := os.Create(ciRequest.CiCacheFileName)
+
+	w := bufio.NewWriter(f1)
+
+	err = Tarf("/var/lib/docker", w)
+	if err != nil {
+		log.Println("err", err)
+		return err
+	}
+	//CreateTar(ciRequest.CiCacheFileName, "/var/lib/docker")
 	//aws s3 cp cache.tar.gz s3://ci-caching/
 
 	f, err := os.Open(ciRequest.CiCacheFileName)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fi, _:=f.Stat()
-	fmt.Printf("file size %s",fi)
+	fi, _ := f.Stat()
+	fmt.Printf("file size %s", fi)
 	log.Println("------> pushing new cache")
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(ciRequest.AwsRegion),
@@ -131,7 +141,7 @@ func SyncCache(ciRequest *CiRequest) error {
 		return err
 	} else {
 
-		fmt.Printf("Successfully uploaded %q to %q\n", ciRequest.CiCacheLocation, ciRequest.CiCacheFileName,)
+		fmt.Printf("Successfully uploaded %q to %q\n", ciRequest.CiCacheLocation, ciRequest.CiCacheFileName, )
 
 	}
 
@@ -144,7 +154,68 @@ func SyncCache(ciRequest *CiRequest) error {
 	return err
 }
 
-func CreateTar(destinationfile, sourcedir string)  {
+func Tarf(src string, writers ...io.Writer) error {
+
+	// ensure the src actually exists before trying to tar it
+	if _, err := os.Stat(src); err != nil {
+		return fmt.Errorf("Unable to tar files - %v", err.Error())
+	}
+
+	mw := io.MultiWriter(writers...)
+
+	gzw := gzip.NewWriter(mw)
+	defer gzw.Close()
+
+	tw := tar.NewWriter(gzw)
+	defer tw.Close()
+
+	// walk path
+	return filepath.Walk(src, func(file string, fi os.FileInfo, err error) error {
+
+		// return on any error
+		if err != nil {
+			return err
+		}
+
+		// create a new dir/file header
+		header, err := tar.FileInfoHeader(fi, fi.Name())
+		if err != nil {
+			return err
+		}
+
+		// update the name to correctly reflect the desired destination when untaring
+		header.Name = strings.TrimPrefix(strings.Replace(file, src, "", -1), string(filepath.Separator))
+
+		// write the header
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+
+		// return on non-regular files (thanks to [kumo](https://medium.com/@komuw/just-like-you-did-fbdd7df829d3) for this suggested update)
+		if !fi.Mode().IsRegular() {
+			return nil
+		}
+
+		// open files for taring
+		f, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+
+		// copy file data into tar writer
+		if _, err := io.Copy(tw, f); err != nil {
+			return err
+		}
+
+		// manually close here after each file operation; defering would cause each file close
+		// to wait until all operations have completed.
+		f.Close()
+
+		return nil
+	})
+}
+
+func CreateTar(destinationfile, sourcedir string) {
 
 	dir, err := os.Open(sourcedir)
 
@@ -158,7 +229,7 @@ func CreateTar(destinationfile, sourcedir string)  {
 	checkerror(err)
 
 	tarfile, err := os.Create(destinationfile)
-	defer  tarfile.Close()
+	defer tarfile.Close()
 	checkerror(err)
 
 	var fileWriter io.WriteCloser = tarfile
@@ -170,9 +241,10 @@ func CreateTar(destinationfile, sourcedir string)  {
 
 	tarfileWriter := tar.NewWriter(fileWriter)
 	defer tarfileWriter.Close()
-
+	fmt.Println("build tar")
 	for _, fileInfo := range files {
 
+		fmt.Println(fileInfo.Name())
 		if fileInfo.IsDir() {
 			continue
 		}

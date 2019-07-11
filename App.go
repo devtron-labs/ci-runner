@@ -1,12 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
 	_ "github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/caarlos0/env"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
@@ -93,13 +91,24 @@ func checkerror(err error) {
 }
 
 func main1() {
-	CreateTar("/tmp/abc.tar", "/Users/nishant/go/src/devtron.ai/cirunner")
+
+	f, err := os.Create("/tmp/1.tar")
+
+	w := bufio.NewWriter(f)
+	err=Tarf("/Users/nishant/go/src/devtron.ai/cirunner", w)
+
+	if err!=nil{
+		fmt.Println(err)
+	}else {
+		fmt.Println("done")
+	}
+	/*CreateTar("/tmp/abc.tar", "/var/lib/docker/")
 
 	f, err := os.Open("/tmp/abc.tar")
 	if err != nil {
 		log.Fatal(err)
-	}
-	sess := session.Must(session.NewSession(&aws.Config{
+	}*/
+	/*sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String("us-east-2"),
 	}))
 
@@ -116,7 +125,7 @@ func main1() {
 		fmt.Println(err)
 	} else {
 		fmt.Printf("Successfully uploaded %q to %q\n")
-	}
+	}*/
 }
 func main() {
 	err := os.Chdir("/")
