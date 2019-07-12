@@ -86,7 +86,7 @@ func SyncCache(ciRequest *CiRequest) error {
 	DeleteFile(ciRequest.CiCacheFileName)
 	// Generate new cache
 	log.Println("------> generating new cache")
-	tarCmd := exec.Command("tar", "-cfz", ciRequest.CiCacheFileName, "/var/lib/docker")
+	tarCmd := exec.Command("tar", "-cf", ciRequest.CiCacheFileName, "/var/lib/docker")
 	tarCmd.Dir = "/"
 	err := RunCommand(tarCmd)
 	if err != nil {
