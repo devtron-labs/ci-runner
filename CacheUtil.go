@@ -86,7 +86,7 @@ func SyncCache(ciRequest *CiRequest) error {
 	DeleteFile(ciRequest.CiCacheFileName)
 	// Generate new cache
 	log.Println("------> generating new cache")
-	tarCmd := exec.Command("tar", "-cf", ciRequest.CiCacheFileName, "/var/lib/docker")
+	tarCmd := exec.Command("tar", "-cfz", ciRequest.CiCacheFileName, "/var/lib/docker")
 	tarCmd.Dir = "/"
 	err := RunCommand(tarCmd)
 	if err != nil {
@@ -96,6 +96,6 @@ func SyncCache(ciRequest *CiRequest) error {
 
 	//aws s3 cp cache.tar.gz s3://ci-caching/
 	log.Println("------> pushing new cache")
-	cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, "s3://ci-caching/suraj-23-ci-suraj-test-pipeline.tar.gz")
+	cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, "s3://" + ciRequest.CiCacheLocation + "/" + ciRequest.CiCacheFileName)
 	return RunCommand(cachePush)
 }

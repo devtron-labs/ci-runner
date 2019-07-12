@@ -11,7 +11,6 @@ import (
 	"log"
 	"math/rand"
 	"os"
-	"os/exec"
 	"strconv"
 	"syscall"
 	"time"
@@ -81,70 +80,13 @@ type PubSubConfig struct {
 
 const retryCount = 10
 
-
-/*func main1() {
-
-	ciRequest := CiRequest{
-		AwsRegion: "us-east-2",
-		CiCacheFileName: "flow.pem",
-		CiCacheLocation: "ci-caching",
-	}
-
-	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(ciRequest.AwsRegion),
-	}))
-	file, err := os.Create("/Users/surajgupta/go_workspace/src/devtron.ai/ci-runner/" + ciRequest.CiCacheFileName)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	svc := s3.New(sess)
-	input := &s3.ListObjectVersionsInput{
-		Bucket: aws.String(ciRequest.CiCacheLocation),
-		Prefix: aws.String(ciRequest.CiCacheFileName),
-	}
-	result, err := svc.ListObjectVersions(input)
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			default:
-				fmt.Println(aerr.Error())
-			}
-		} else {
-			fmt.Println(err.Error())
-		}
-		return
-	}
-
-	var version *string
-	for _, v := range result.Versions {
-		if *v.IsLatest && *v.Key == ciRequest.CiCacheFileName {
-			version = v.VersionId
-			break
-		}
-	}
-
-	downloader := s3manager.NewDownloader(sess)
-	numBytes, err := downloader.Download(file,
-		&s3.GetObjectInput{
-			Bucket:    aws.String(ciRequest.CiCacheLocation),
-			Key:       aws.String(ciRequest.CiCacheFileName),
-			VersionId: version,
-		})
-	if err != nil {
-		log.Println("couldn't download cache file")
-		return
-	}
-	fmt.Println("Downloaded", file.Name(), numBytes, "bytes")
-}*/
-
 func main() {
 	err := os.Chdir("/")
 	if err != nil {
 		os.Exit(1)
 	}
-	//args := `{"workflowNamePrefix":"55-suraj-23-ci-suraj-test-pipeline-8","pipelineName":"suraj-23-ci-suraj-test-pipeline","pipelineId":8,"dockerImageTag":"a6b809c4be87c217feba4af15cf5ebc3cafe21e0","dockerRegistryURL":"686244538589.dkr.ecr.us-east-2.amazonaws.com","dockerRepository":"test/suraj-23","dockerfileLocation":"./notifier/Dockerfile","awsRegion":"us-east-2","ciCacheLocation":"ci-caching","ciCacheFileName":"suraj-23-ci-suraj-test-pipeline.tar.gz","ciProjectDetails":[{"gitRepository":"https://gitlab.com/devtron/notifier.git","materialName":"1-notifier","checkoutPath":"./notifier","commitHash":"a6b809c4be87c217feba4af15cf5ebc3cafe21e0","commitTime":"0001-01-01T00:00:00Z","branch":"master","type":"SOURCE_TYPE_BRANCH_FIXED","message":"test-commit","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":"USERNAME_PASSWORD"}},{"gitRepository":"https://gitlab.com/devtron/orchestrator.git","materialName":"2-orchestrator","checkoutPath":"./orch","commitHash":"","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":""}}],"ciImage":"686244538589.dkr.ecr.us-east-2.amazonaws.com/cirunner:latest","namespace":"default"}`
+
+	// '{"workflowNamePrefix":"55-suraj-23-ci-suraj-test-pipeline-8","pipelineName":"suraj-23-ci-suraj-test-pipeline","pipelineId":8,"dockerImageTag":"a6b809c4be87c217feba4af15cf5ebc3cafe21e0","dockerRegistryURL":"686244538589.dkr.ecr.us-east-2.amazonaws.com","dockerRepository":"test/suraj-23","dockerfileLocation":"./notifier/Dockerfile","awsRegion":"us-east-2","ciCacheLocation":"ci-caching","ciCacheFileName":"suraj-23-ci-suraj-test-pipeline.tar.gz","ciProjectDetails":[{"gitRepository":"https://gitlab.com/devtron/notifier.git","materialName":"1-notifier","checkoutPath":"./notifier","commitHash":"d4df38bcd065004014d255c2203d592a91585955","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"test-commit","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":"USERNAME_PASSWORD"}},{"gitRepository":"https://gitlab.com/devtron/orchestrator.git","materialName":"2-orchestrator","checkoutPath":"./orch","commitHash":"","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":""}}],"ciImage":"686244538589.dkr.ecr.us-east-2.amazonaws.com/cirunner:latest","namespace":"default"}'
 	args := os.Args[1]
 	fmt.Println("ci request -----> " + args)
 	ciRequest := &CiRequest{}
@@ -205,9 +147,6 @@ func main() {
 		os.Exit(1)
 	}
 	log.Println("cs:done")
-
-	// debug mode
-	exec.Command("tail", "-f", "/dev/null").Run()
 }
 
 func SendEvents(ciRequest *CiRequest, digest string, image string) error {
@@ -297,24 +236,3 @@ func StopDocker() error {
 	DockerdUpCheck()
 	return nil
 }
-
-
-/*func main1() {
-	f, err := os.Create("/tmp/1.tar")
-	w := bufio.NewWriter(f)
-	err=Tarf("/Users/nishant/go/src/devtron.ai/cirunner", w)
-
-	if err!=nil{
-		fmt.Println(err)
-	}else {
-		fmt.Println("done")
-	}
-}*/
-
-/*func checkerror(err error) {
-
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-}*/
