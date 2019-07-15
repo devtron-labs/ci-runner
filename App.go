@@ -73,7 +73,7 @@ type PubSubClient struct {
 }
 
 type PubSubConfig struct {
-	NatsServerHost string `env:"NATS_SERVER_HOST" envDefault:"nats://example-nats.default:4222"`
+	NatsServerHost string `env:"NATS_SERVER_HOST" envDefault:"nats://devtron-nats.devtroncd:4222"`
 	ClusterId      string `env:"CLUSTER_ID" envDefault:"example-stan"`
 	ClientId       string `env:"CLIENT_ID" envDefault:"ci-runner"`
 }
