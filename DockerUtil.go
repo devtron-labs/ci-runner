@@ -23,8 +23,17 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	}
 	// Docker build, tag image and push
 	dockerFileLocationDir := ciRequest.DockerFileLocation[:strings.LastIndex(ciRequest.DockerFileLocation, "/")+1]
-	dockerBuild := "docker build -f " + ciRequest.DockerFileLocation + " -t " + ciRequest.DockerRepository + " " + dockerFileLocationDir
+	log.Println("docker file location: ", dockerFileLocationDir)
+
+	if len(ciRequest.CiProjectDetails) == 1 {
+		if dockerFileLocationDir == "" || dockerFileLocationDir == "./" {
+			dockerFileLocationDir = "/" + ciRequest.CiProjectDetails[0].MaterialName[strings.Index(ciRequest.CiProjectDetails[0].MaterialName, "-")+1:] + "/"
+		}
+	}
+
+	dockerBuild := "docker build -t " + ciRequest.DockerRepository + " " + dockerFileLocationDir
 	log.Println("------> " + dockerBuild)
+
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
 	err := RunCommand(dockerBuildCMD)
 	if err != nil {
