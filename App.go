@@ -164,16 +164,18 @@ func SendEvents(ciRequest *CiRequest, digest string, image string) error {
 		DataSource:       "CI-RUNNER",
 	}
 	err = SendCiCompleteEvent(client, event)
+	nc := client.Conn.NatsConn()
 
 	err = client.Conn.Close()
 	if err != nil {
 		log.Println("error in closing stan", "err", err)
 	}
-	err = client.Conn.NatsConn().Drain()
+
+	err = nc.Drain()
 	if err != nil {
 		log.Println("error in draining nats", "err", err)
 	}
-	client.Conn.NatsConn().Close()
+	nc.Close()
 	log.Println("housekeeping done. exiting now")
 	return err
 }
