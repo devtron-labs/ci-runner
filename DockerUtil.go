@@ -25,14 +25,8 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	dockerFileLocationDir := ciRequest.DockerFileLocation[:strings.LastIndex(ciRequest.DockerFileLocation, "/")+1]
 	log.Println("docker file location: ", dockerFileLocationDir)
 
-	if len(ciRequest.CiProjectDetails) == 1 {
-		if dockerFileLocationDir == "" || dockerFileLocationDir == "./" {
-			dockerFileLocationDir = "/" + ciRequest.CiProjectDetails[0].MaterialName[strings.Index(ciRequest.CiProjectDetails[0].MaterialName, "-")+1:] + "/"
-		}
-	}
-
-	dockerBuild := "docker build -t " + ciRequest.DockerRepository + " " + dockerFileLocationDir
-	log.Println("------> " + dockerBuild)
+	dockerBuild := "docker build -f " + ciRequest.DockerFileLocation + " -t " + ciRequest.DockerRepository + " ."
+	log.Println(" ------> " + dockerBuild)
 
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
 	err := RunCommand(dockerBuildCMD)
@@ -44,7 +38,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	ciRequest.DockerRegistryURL = strings.TrimPrefix(ciRequest.DockerRegistryURL, "https://")
 	dest := ciRequest.DockerRegistryURL + "/" + ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag + "-" + ciRequest.PipelineName
 	dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
-	log.Println("------> " + dockerTag)
+	log.Println(" ------> " + dockerTag)
 	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
 	err = RunCommand(dockerTagCMD)
 	if err != nil {
