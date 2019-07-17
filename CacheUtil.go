@@ -90,12 +90,13 @@ func SyncCache(ciRequest *CiRequest) error {
 	tarCmd.Dir = "/"
 	err := RunCommand(tarCmd)
 	if err != nil {
+		fmt.Println("error while creating tar")
 		fmt.Println(err)
 		return err
 	}
 
 	//aws s3 cp cache.tar.gz s3://ci-caching/
 	log.Println("------> pushing new cache")
-	cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, "s3://" + ciRequest.CiCacheLocation + "/" + ciRequest.CiCacheFileName)
+	cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, "s3://"+ciRequest.CiCacheLocation+"/"+ciRequest.CiCacheFileName)
 	return RunCommand(cachePush)
 }
