@@ -79,9 +79,14 @@ type PubSubConfig struct {
 }
 
 const retryCount = 10
+const workingDir = "./devtroncd"
 
 func main() {
-	err := os.Chdir("/")
+	if _, err := os.Stat(workingDir); os.IsNotExist(err) {
+		_ = os.Mkdir(workingDir, os.ModeDir)
+	}
+
+	err := os.Chdir("./")
 	if err != nil {
 		os.Exit(1)
 	}
@@ -103,6 +108,11 @@ func main() {
 	}
 	log.Println("cf:done")
 
+
+	err = os.Chdir(workingDir)
+	if err != nil {
+		os.Exit(1)
+	}
 	// git handling
 	log.Println("gf:start")
 	CloneAndCheckout(ciRequest)
@@ -137,6 +147,11 @@ func main() {
 	err = StopDocker()
 	if err != nil {
 		log.Println("err", err)
+		os.Exit(1)
+	}
+
+	err = os.Chdir("./")
+	if err != nil {
 		os.Exit(1)
 	}
 
