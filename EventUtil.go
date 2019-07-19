@@ -1,0 +1,88 @@
+package main
+
+import (
+	"encoding/json"
+	"github.com/caarlos0/env"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/stan.go"
+	"log"
+	"math/rand"
+	"os"
+	"strconv"
+	"time"
+)
+
+func SendEvents(ciRequest *CiRequest, digest string, image string) error {
+	client, err := NewPubSubClient()
+	if err != nil {
+		log.Println("err", err)
+		os.Exit(1)
+	}
+	event := CiCompleteEvent{
+		CiProjectDetails: ciRequest.CiProjectDetails,
+		DockerImage:      image,
+		Digest:           digest,
+		PipelineId:       ciRequest.PipelineId,
+		PipelineName:     ciRequest.PipelineName,
+		DataSource:       "CI-RUNNER",
+		WorkflowId:       ciRequest.WorkflowId,
+		TriggeredBy:      ciRequest.TriggeredBy,
+	}
+	err = SendCiCompleteEvent(client, event)
+	nc := client.Conn.NatsConn()
+
+	err = client.Conn.Close()
+	if err != nil {
+		log.Println("error in closing stan", "err", err)
+	}
+
+	err = nc.Drain()
+	if err != nil {
+		log.Println("error in draining nats", "err", err)
+	}
+	nc.Close()
+	log.Println("housekeeping done. exiting now")
+	return err
+}
+
+func NewPubSubClient() (*PubSubClient, error) {
+	cfg := &PubSubConfig{}
+	err := env.Parse(cfg)
+	if err != nil {
+		return &PubSubClient{}, err
+	}
+	nc, err := nats.Connect(cfg.NatsServerHost)
+	if err != nil {
+		log.Println("err", err)
+		os.Exit(1)
+	}
+	s := rand.NewSource(time.Now().UnixNano())
+	uuid := rand.New(s)
+	uniqueClienId := "CI-RUNNER-" + strconv.Itoa(uuid.Int())
+
+	sc, err := stan.Connect(cfg.ClusterId, uniqueClienId, stan.NatsConn(nc))
+	if err != nil {
+		log.Println("err", err)
+		os.Exit(1)
+	}
+	natsClient := &PubSubClient{
+		Conn: sc,
+	}
+	return natsClient, nil
+}
+
+func SendCiCompleteEvent(client *PubSubClient, event CiCompleteEvent) error {
+	jsonBody, err := json.Marshal(event)
+	if err != nil {
+		log.Println("err", err)
+		return err
+	}
+	var reqBody = []byte(jsonBody)
+	log.Println("ci complete evt -----> ", string(reqBody))
+	err = client.Conn.Publish(CI_COMPLETE_TOPIC, reqBody) // does not return until an ack has been received from NATS Streaming
+	if err != nil {
+		log.Println("publish err", "err", err)
+		return err
+	}
+	return nil
+}

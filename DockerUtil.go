@@ -3,10 +3,13 @@ package main
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -95,6 +98,34 @@ func runGetDockerImageDigest(cmd *exec.Cmd) (string, error) {
 
 	}
 	return digest, nil
+}
+
+func StopDocker() error {
+	file := "/var/run/docker.pid"
+	content, err := ioutil.ReadFile(file)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+
+	pid, err := strconv.Atoi(string(content))
+	if err != nil {
+		return err
+	}
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	// Kill the process
+	err = proc.Signal(syscall.SIGTERM)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	log.Println("-----> checking docker status")
+	DockerdUpCheck()
+	return nil
 }
 
 func waitForDockerDaemon(retryCount int) {

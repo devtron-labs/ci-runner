@@ -32,6 +32,10 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 				URL:      prj.GitRepository,
 				Progress: os.Stdout,
 			})
+			if cErr != nil {
+				log.Println("could not clone ", " err ", cErr)
+				log.Fatal(cErr)
+			}
 		} else {
 			log.Println("------> " + prj.GitRepository + " checking branch " + prj.Branch)
 			r, cErr = git.PlainClone(prj.CheckoutPath, false, &git.CloneOptions{
@@ -44,10 +48,10 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 				ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", prj.Branch)),
 				SingleBranch:  true,
 			})
-		}
-		if cErr != nil {
-			log.Println(cErr)
-			return cErr
+			if cErr != nil {
+				log.Println("could not clone branch ", " err ", cErr)
+				log.Fatal(cErr)
+			}
 		}
 
 		w, wErr := r.Worktree()

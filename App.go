@@ -4,15 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	_ "github.com/aws/aws-sdk-go/aws"
-	"github.com/caarlos0/env"
-	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
-	"io/ioutil"
 	"log"
-	"math/rand"
 	"os"
-	"strconv"
-	"syscall"
 	"time"
 )
 
@@ -27,6 +21,8 @@ type CiRequest struct {
 	CiCacheFileName    string             `json:"ciCacheFileName"`
 	PipelineId         int                `json:"pipelineId"`
 	PipelineName       string             `json:"pipelineName"`
+	WorkflowId         int                `json:"workflowId"`
+	TriggeredBy        int                `json:"triggeredBy"`
 }
 
 type CiCompleteEvent struct {
@@ -36,6 +32,8 @@ type CiCompleteEvent struct {
 	PipelineId       int                `json:"pipelineId"`
 	DataSource       string             `json:"dataSource"`
 	PipelineName     string             `json:"pipelineName"`
+	WorkflowId       int                `json:"workflowId"`
+	TriggeredBy      int                `json:"triggeredBy"`
 }
 
 type CiProjectDetails struct {
@@ -75,7 +73,7 @@ type PubSubClient struct {
 type PubSubConfig struct {
 	NatsServerHost string `env:"NATS_SERVER_HOST" envDefault:"nats://devtron-nats.devtroncd:4222"`
 	ClusterId      string `env:"CLUSTER_ID" envDefault:"devtron-stan"`
-	ClientId       string `env:"CLIENT_ID" envDefault:"ci-runner"`
+	ClientId       string `env:"CLIENT_ID" envDefault:"CI-RUNNER"`
 }
 
 const retryCount = 10
@@ -107,7 +105,6 @@ func main() {
 		os.Exit(1)
 	}
 	log.Println("cf:done")
-
 
 	err = os.Chdir(workingDir)
 	if err != nil {
@@ -162,105 +159,4 @@ func main() {
 		os.Exit(1)
 	}
 	log.Println("cs:done")
-}
-
-func SendEvents(ciRequest *CiRequest, digest string, image string) error {
-	client, err := NewPubSubClient()
-	if err != nil {
-		log.Println("err", err)
-		os.Exit(1)
-	}
-	event := CiCompleteEvent{
-		CiProjectDetails: ciRequest.CiProjectDetails,
-		DockerImage:      image,
-		Digest:           digest,
-		PipelineId:       ciRequest.PipelineId,
-		PipelineName:     ciRequest.PipelineName,
-		DataSource:       "CI-RUNNER",
-	}
-	err = SendCiCompleteEvent(client, event)
-	nc := client.Conn.NatsConn()
-
-	err = client.Conn.Close()
-	if err != nil {
-		log.Println("error in closing stan", "err", err)
-	}
-
-	err = nc.Drain()
-	if err != nil {
-		log.Println("error in draining nats", "err", err)
-	}
-	nc.Close()
-	log.Println("housekeeping done. exiting now")
-	return err
-}
-
-func NewPubSubClient() (*PubSubClient, error) {
-	cfg := &PubSubConfig{}
-	err := env.Parse(cfg)
-	if err != nil {
-		return &PubSubClient{}, err
-	}
-	nc, err := nats.Connect(cfg.NatsServerHost)
-	if err != nil {
-		log.Println("err", err)
-		os.Exit(1)
-	}
-	s := rand.NewSource(time.Now().UnixNano())
-	uuid := rand.New(s)
-	uniqueClienId := "ci-runner-" + strconv.Itoa(uuid.Int())
-
-	sc, err := stan.Connect(cfg.ClusterId, uniqueClienId, stan.NatsConn(nc))
-	if err != nil {
-		log.Println("err", err)
-		os.Exit(1)
-	}
-	natsClient := &PubSubClient{
-		Conn: sc,
-	}
-	return natsClient, nil
-}
-
-func SendCiCompleteEvent(client *PubSubClient, event CiCompleteEvent) error {
-	jsonBody, err := json.Marshal(event)
-	if err != nil {
-		log.Println("err", err)
-		return err
-	}
-	var reqBody = []byte(jsonBody)
-	log.Println("ci complete evt -----> ", string(reqBody))
-	err = client.Conn.Publish(CI_COMPLETE_TOPIC, reqBody) // does not return until an ack has been received from NATS Streaming
-	if err != nil {
-		log.Println("publish err", "err", err)
-		return err
-	}
-	return nil
-}
-
-func StopDocker() error {
-	file := "/var/run/docker.pid"
-	content, err := ioutil.ReadFile(file)
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-
-	pid, err := strconv.Atoi(string(content))
-	if err != nil {
-		return err
-	}
-	proc, err := os.FindProcess(pid)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	// Kill the process
-	err = proc.Signal(syscall.SIGTERM)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	log.Println("-----> checking docker status")
-	DockerdUpCheck()
-	return nil
 }
