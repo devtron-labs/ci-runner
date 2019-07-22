@@ -34,6 +34,7 @@ type CiCompleteEvent struct {
 	PipelineName     string             `json:"pipelineName"`
 	WorkflowId       int                `json:"workflowId"`
 	TriggeredBy      int                `json:"triggeredBy"`
+	MaterialType     string             `json:"materialType"`
 }
 
 type CiProjectDetails struct {
@@ -78,7 +79,6 @@ type PubSubConfig struct {
 
 const retryCount = 10
 const workingDir = "./devtroncd"
-
 
 func main() {
 	err := os.Chdir("/")

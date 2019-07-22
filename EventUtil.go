@@ -27,6 +27,7 @@ func SendEvents(ciRequest *CiRequest, digest string, image string) error {
 		DataSource:       "CI-RUNNER",
 		WorkflowId:       ciRequest.WorkflowId,
 		TriggeredBy:      ciRequest.TriggeredBy,
+		MaterialType:     "git",
 	}
 	err = SendCiCompleteEvent(client, event)
 	nc := client.Conn.NatsConn()
