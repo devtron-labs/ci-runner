@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	_ "github.com/aws/aws-sdk-go/aws"
 	"github.com/nats-io/stan.go"
 	"log"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -79,6 +79,7 @@ type PubSubConfig struct {
 const retryCount = 10
 const workingDir = "./devtroncd"
 
+
 func main() {
 	err := os.Chdir("/")
 	if err != nil {
@@ -91,12 +92,13 @@ func main() {
 
 	// ' {"workflowNamePrefix":"55-suraj-23-ci-suraj-test-pipeline-8","pipelineName":"suraj-23-ci-suraj-test-pipeline","pipelineId":8,"dockerImageTag":"a6b809c4be87c217feba4af15cf5ebc3cafe21e0","dockerRegistryURL":"686244538589.dkr.ecr.us-east-2.amazonaws.com","dockerRepository":"test/suraj-23","dockerfileLocation":"./notifier/Dockerfile","awsRegion":"us-east-2","ciCacheLocation":"ci-caching","ciCacheFileName":"suraj-23-ci-suraj-test-pipeline.tar.gz","ciProjectDetails":[{"gitRepository":"https://gitlab.com/devtron/notifier.git","materialName":"1-notifier","checkoutPath":"./notifier","commitHash":"d4df38bcd065004014d255c2203d592a91585955","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"test-commit","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":"USERNAME_PASSWORD"}},{"gitRepository":"https://gitlab.com/devtron/orchestrator.git","materialName":"2-orchestrator","checkoutPath":"./orch","commitHash":"","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":""}}],"ciImage":"686244538589.dkr.ecr.us-east-2.amazonaws.com/cirunner:latest","namespace":"default"}'
 	args := os.Args[1]
-	fmt.Println("ci request -----> " + args)
 	ciRequest := &CiRequest{}
 	err = json.Unmarshal([]byte(args), ciRequest)
 	if err != nil {
+		log.Println(err)
 		os.Exit(1)
 	}
+	log.Println("ci request details -----> ", " trigger time: ", time.Now(), " pipelineId: ", strconv.Itoa(ciRequest.PipelineId), " projects: ", strconv.Itoa(len(ciRequest.CiProjectDetails)))
 
 	// Get ci cache
 	log.Println("cf:start")
@@ -137,6 +139,7 @@ func main() {
 	log.Println("ns:start")
 	err = SendEvents(ciRequest, digest, dest)
 	if err != nil {
+		log.Println(err)
 		os.Exit(1)
 	}
 	log.Println("ns:done")
@@ -149,6 +152,7 @@ func main() {
 
 	err = os.Chdir("/")
 	if err != nil {
+		log.Println(err)
 		os.Exit(1)
 	}
 
@@ -156,6 +160,7 @@ func main() {
 	log.Println("cs:start")
 	err = SyncCache(ciRequest)
 	if err != nil {
+		log.Println(err)
 		os.Exit(1)
 	}
 	log.Println("cs:done")
