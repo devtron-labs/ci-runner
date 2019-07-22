@@ -69,6 +69,11 @@ func GetCache(ciRequest *CiRequest) error {
 		return nil
 	}
 
+	if numBytes >= ciRequest.CacheLimit {
+		fmt.Println("cache upper limit exceeded, ignoring old cache")
+		return nil
+	}
+
 	// Extract cache
 	if err == nil {
 		extractCmd := exec.Command("tar", "-xvzf", ciRequest.CiCacheFileName)

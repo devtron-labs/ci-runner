@@ -23,6 +23,7 @@ type CiRequest struct {
 	PipelineName       string             `json:"pipelineName"`
 	WorkflowId         int                `json:"workflowId"`
 	TriggeredBy        int                `json:"triggeredBy"`
+	CacheLimit         int64              `json:"cacheLimit"`
 }
 
 type CiCompleteEvent struct {
@@ -165,3 +166,5 @@ func main() {
 	}
 	log.Println("cs:done")
 }
+
+
