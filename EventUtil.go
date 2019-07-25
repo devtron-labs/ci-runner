@@ -79,11 +79,11 @@ func SendCiCompleteEvent(client *PubSubClient, event CiCompleteEvent) error {
 		return err
 	}
 	var reqBody = []byte(jsonBody)
-	log.Println("ci complete evt -----> ", string(reqBody))
 	err = client.Conn.Publish(CI_COMPLETE_TOPIC, reqBody) // does not return until an ack has been received from NATS Streaming
 	if err != nil {
 		log.Println("publish err", "err", err)
 		return err
 	}
+	log.Println("ci complete event notification done")
 	return nil
 }
