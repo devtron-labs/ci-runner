@@ -16,7 +16,7 @@ import (
 func StartDockerDaemon() {
 	dockerdStart := "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
 	out, _ := exec.Command("/bin/sh", "-c", dockerdStart).Output()
-	log.Println(devtron, string(out))
+	log.Println(string(out))
 	waitForDockerDaemon(retryCount)
 }
 
