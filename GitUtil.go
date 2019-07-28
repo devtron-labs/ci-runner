@@ -12,7 +12,7 @@ import (
 func CloneAndCheckout(ciRequest *CiRequest) error {
 	for _, prj := range ciRequest.CiProjectDetails {
 		// git clone
-		log.Println("------> git cloning " + prj.GitRepository)
+		log.Println("-----> git cloning " + prj.GitRepository)
 
 		if prj.CheckoutPath != "./" {
 			if _, err := os.Stat(prj.CheckoutPath); os.IsNotExist(err) {
@@ -23,7 +23,7 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 		var r *git.Repository
 		var cErr error
 		if prj.Branch == "" || prj.Branch == "master" {
-			log.Println("------> " + prj.GitRepository + " cloning master")
+			log.Println("-----> " + prj.GitRepository + " cloning master")
 			r, cErr = git.PlainClone(prj.CheckoutPath, false, &git.CloneOptions{
 				Auth: &http.BasicAuth{
 					Username: prj.GitOptions.UserName,
@@ -33,11 +33,10 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 				Progress: os.Stdout,
 			})
 			if cErr != nil {
-				log.Println("could not clone ", " err ", cErr)
-				log.Fatal(cErr)
+				log.Fatal("could not clone ", " err ", cErr)
 			}
 		} else {
-			log.Println("------> " + prj.GitRepository + " checking branch " + prj.Branch)
+			log.Println("-----> " + prj.GitRepository + " checking out branch " + prj.Branch)
 			r, cErr = git.PlainClone(prj.CheckoutPath, false, &git.CloneOptions{
 				Auth: &http.BasicAuth{
 					Username: prj.GitOptions.UserName,
@@ -49,19 +48,17 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 				SingleBranch:  true,
 			})
 			if cErr != nil {
-				log.Println("could not clone branch ", " err ", cErr)
-				log.Fatal(cErr)
+				log.Fatal("could not clone branch ", " err ", cErr)
 			}
 		}
 
 		w, wErr := r.Worktree()
 		if wErr != nil {
-			log.Println(wErr)
-			return wErr
+			log.Fatal(wErr)
 		}
 
 		if prj.CommitHash != "" {
-			log.Println("------> " + prj.GitRepository + " git checking out " + prj.CommitHash)
+			log.Println("-----> " + prj.GitRepository + " git checking out commit " + prj.CommitHash)
 			cErr := checkoutHash(w, prj.CommitHash)
 			if cErr != nil {
 				log.Println(cErr)
@@ -73,7 +70,6 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 }
 
 func checkoutHash(workTree *git.Worktree, hash string) error {
-	log.Println("checking out hash ", hash)
 	err := workTree.Checkout(&git.CheckoutOptions{
 		Hash: plumbing.NewHash(hash),
 	})

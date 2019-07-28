@@ -34,15 +34,15 @@ func SendEvents(ciRequest *CiRequest, digest string, image string) error {
 
 	err = client.Conn.Close()
 	if err != nil {
-		log.Println("error in closing stan", "err", err)
+		log.Println(devtron, " error in closing stan", "err", err)
 	}
 
 	err = nc.Drain()
 	if err != nil {
-		log.Println("error in draining nats", "err", err)
+		log.Println(devtron," error in draining nats", "err", err)
 	}
 	nc.Close()
-	log.Println("housekeeping done. exiting now")
+	log.Println(devtron," housekeeping done. exiting now")
 	return err
 }
 
@@ -63,8 +63,7 @@ func NewPubSubClient() (*PubSubClient, error) {
 
 	sc, err := stan.Connect(cfg.ClusterId, uniqueClienId, stan.NatsConn(nc))
 	if err != nil {
-		log.Println("err", err)
-		os.Exit(1)
+		log.Fatal(devtron, "err", err)
 	}
 	natsClient := &PubSubClient{
 		Conn: sc,
@@ -75,15 +74,15 @@ func NewPubSubClient() (*PubSubClient, error) {
 func SendCiCompleteEvent(client *PubSubClient, event CiCompleteEvent) error {
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
-		log.Println("err", err)
+		log.Println(devtron, "err", err)
 		return err
 	}
 	var reqBody = []byte(jsonBody)
 	err = client.Conn.Publish(CI_COMPLETE_TOPIC, reqBody) // does not return until an ack has been received from NATS Streaming
 	if err != nil {
-		log.Println("publish err", "err", err)
+		log.Println(devtron, "publish err", "err", err)
 		return err
 	}
-	log.Println("ci complete event notification done")
+	log.Println(devtron, "ci complete event notification done")
 	return nil
 }

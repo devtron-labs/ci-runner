@@ -16,7 +16,7 @@ import (
 func StartDockerDaemon() {
 	dockerdStart := "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
 	out, _ := exec.Command("/bin/sh", "-c", dockerdStart).Output()
-	log.Println(string(out))
+	log.Println(devtron, string(out))
 	waitForDockerDaemon(retryCount)
 }
 
@@ -26,10 +26,10 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	}
 	// Docker build, tag image and push
 	dockerFileLocationDir := ciRequest.DockerFileLocation[:strings.LastIndex(ciRequest.DockerFileLocation, "/")+1]
-	log.Println("docker file location: ", dockerFileLocationDir)
+	log.Println(devtron, " docker file location: ", dockerFileLocationDir)
 
 	dockerBuild := "docker build -f " + ciRequest.DockerFileLocation + " --network host -t " + ciRequest.DockerRepository + " ."
-	log.Println(" ------> " + dockerBuild)
+	log.Println(" -----> " + dockerBuild)
 
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
 	err := RunCommand(dockerBuildCMD)
@@ -41,7 +41,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	ciRequest.DockerRegistryURL = strings.TrimPrefix(ciRequest.DockerRegistryURL, "https://")
 	dest := ciRequest.DockerRegistryURL + "/" + ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
 	dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
-	log.Println(" ------> " + dockerTag)
+	log.Println(" -----> " + dockerTag)
 	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
 	err = RunCommand(dockerTagCMD)
 	if err != nil {
@@ -53,7 +53,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 
 func PushArtifact(ciRequest *CiRequest, dest string) (string, error) {
 	awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
-	log.Println("------> " + awsLogin)
+	log.Println(devtron, " -----> " + awsLogin)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", awsLogin)
 	err := RunCommand(awsLoginCmd)
 	if err != nil {
@@ -62,7 +62,7 @@ func PushArtifact(ciRequest *CiRequest, dest string) (string, error) {
 	}
 
 	dockerPush := "docker push " + dest
-	log.Println("------> " + dockerPush)
+	log.Println("-----> " + dockerPush)
 	dockerPushCMD := exec.Command("/bin/sh", "-c", dockerPush)
 	err = RunCommand(dockerPushCMD)
 	if err != nil {
@@ -123,7 +123,7 @@ func StopDocker() error {
 		log.Println(err)
 		return err
 	}
-	log.Println("-----> checking docker status")
+	log.Println(devtron, " -----> checking docker status")
 	DockerdUpCheck()
 	return nil
 }
@@ -144,6 +144,6 @@ func waitForDockerDaemon(retryCount int) {
 func DockerdUpCheck() error {
 	dockerCheck := "docker ps"
 	dockerCheckCmd := exec.Command("/bin/sh", "-c", dockerCheck)
-	err := RunCommand(dockerCheckCmd)
+	err := dockerCheckCmd.Run()
 	return err
 }

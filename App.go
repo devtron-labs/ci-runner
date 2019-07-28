@@ -6,7 +6,6 @@ import (
 	"github.com/nats-io/stan.go"
 	"log"
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -80,6 +79,7 @@ type PubSubConfig struct {
 
 const retryCount = 10
 const workingDir = "./devtroncd"
+const devtron = "DEVTRON"
 
 func main() {
 	err := os.Chdir("/")
@@ -99,27 +99,27 @@ func main() {
 		log.Println(err)
 		os.Exit(1)
 	}
-	log.Println("ci request details -----> ", " trigger time: ", time.Now(), " pipelineId: ", strconv.Itoa(ciRequest.PipelineId), " projects: ", strconv.Itoa(len(ciRequest.CiProjectDetails)))
+	log.Println(devtron, " ci request details -----> ", args)
 
 	// Get ci cache
-	log.Println("cf:start")
+	log.Println(devtron, " cache-pull")
 	err = GetCache(ciRequest)
 	if err != nil {
 		os.Exit(1)
 	}
-	log.Println("cf:done")
+	log.Println(devtron, " /cache-pull")
 
 	err = os.Chdir(workingDir)
 	if err != nil {
 		os.Exit(1)
 	}
 	// git handling
-	log.Println("gf:start")
+	log.Println(devtron, " git")
 	CloneAndCheckout(ciRequest)
-	log.Println("gf:done")
+	log.Println(devtron, " /git")
 
 	// Start docker daemon
-	log.Println("db:start")
+	log.Println(devtron, " docker-build")
 	StartDockerDaemon()
 
 	// build
@@ -127,23 +127,23 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
-	log.Println("db:done")
+	log.Println(devtron, " /docker-build")
 
 	// push to dest
-	log.Println("dp:start")
+	log.Println(devtron, " docker-push")
 	digest, err := PushArtifact(ciRequest, dest)
 	if err != nil {
 		os.Exit(1)
 	}
-	log.Println("dp:done")
+	log.Println(devtron, " /docker-push")
 
-	log.Println("ns:start")
+	log.Println(devtron, " event")
 	err = SendEvents(ciRequest, digest, dest)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
-	log.Println("ns:done")
+	log.Println(devtron, " /event")
 
 	err = StopDocker()
 	if err != nil {
@@ -158,13 +158,11 @@ func main() {
 	}
 
 	// sync cache
-	log.Println("cs:start")
+	log.Println(devtron, " cache-push")
 	err = SyncCache(ciRequest)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
-	log.Println("cs:done")
+	log.Println(devtron, " /cache-push")
 }
-
-

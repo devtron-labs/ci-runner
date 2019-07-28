@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -19,7 +18,6 @@ func GetCache(ciRequest *CiRequest) error {
 	file, err := os.Create("/" + ciRequest.CiCacheFileName)
 	if err != nil {
 		log.Fatal(err)
-		return err
 	}
 
 	svc := s3.New(sess)
@@ -32,10 +30,10 @@ func GetCache(ciRequest *CiRequest) error {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				fmt.Println(aerr.Error())
+				log.Println(aerr.Error())
 			}
 		} else {
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		return err
 	}
@@ -45,7 +43,7 @@ func GetCache(ciRequest *CiRequest) error {
 	for _, v := range result.Versions {
 		if *v.IsLatest && *v.Key == ciRequest.CiCacheFileName {
 			version = v.VersionId
-			fmt.Println("selected version", v.VersionId, "last modified", v.LastModified)
+			log.Println(devtron, " selected version ", v.VersionId, " last modified ", v.LastModified)
 			size = *v.Size
 			break
 		}
@@ -59,18 +57,18 @@ func GetCache(ciRequest *CiRequest) error {
 			VersionId: version,
 		})
 	if err != nil {
-		log.Println("couldn't download cache file")
+		log.Println("Couldn't download cache file")
 		return nil
 	}
-	fmt.Println("Downloaded", file.Name(), numBytes, "bytes")
+	log.Println(devtron, " downloaded ", file.Name(), numBytes, " bytes ")
 
 	if numBytes != size {
-		fmt.Println("cache sizes don't match. Skipping step", "version cache size", size, "downloaded size", numBytes)
+		log.Println(devtron, " cache sizes don't match, skipping step ", " version cache size ", size, " downloaded size ", numBytes)
 		return nil
 	}
 
 	if numBytes >= ciRequest.CacheLimit {
-		fmt.Println("cache upper limit exceeded, ignoring old cache")
+		log.Println(devtron, " cache upper limit exceeded, ignoring old cache")
 		return nil
 	}
 
@@ -80,8 +78,7 @@ func GetCache(ciRequest *CiRequest) error {
 		extractCmd.Dir = "/"
 		err = extractCmd.Run()
 		if err != nil {
-			log.Fatal("Could not extract cache blob", err)
-			return err
+			log.Fatal(" Could not extract cache blob ", err)
 		}
 	}
 	return nil
@@ -90,17 +87,16 @@ func GetCache(ciRequest *CiRequest) error {
 func SyncCache(ciRequest *CiRequest) error {
 	DeleteFile(ciRequest.CiCacheFileName)
 	// Generate new cache
-	log.Println("------> generating new cache")
+	log.Println("Generating new cache")
 	tarCmd := exec.Command("tar", "-cvzf", ciRequest.CiCacheFileName, "/var/lib/docker")
 	tarCmd.Dir = "/"
 	err := tarCmd.Run()
 	if err != nil {
 		log.Fatal("Could not compress cache", err)
-		return err
 	}
 
 	//aws s3 cp cache.tar.gz s3://ci-caching/
-	log.Println("------> pushing new cache")
+	log.Println(devtron, " -----> pushing new cache")
 	cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, "s3://"+ciRequest.CiCacheLocation+"/"+ciRequest.CiCacheFileName)
 	return RunCommand(cachePush)
 }
