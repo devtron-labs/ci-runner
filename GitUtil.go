@@ -9,6 +9,7 @@ import (
 	"os"
 )
 
+
 func CloneAndCheckout(ciRequest *CiRequest) error {
 	for _, prj := range ciRequest.CiProjectDetails {
 		// git clone
@@ -22,13 +23,18 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 
 		var r *git.Repository
 		var cErr error
+		var auth *http.BasicAuth
+		switch prj.GitOptions.AuthMode {
+		case AUTH_MODE_USERNAME_PASSWORD:
+			auth = &http.BasicAuth{Password: prj.GitOptions.Password, Username: prj.GitOptions.UserName}
+		case AUTH_MODE_ACCESS_TOKEN:
+			auth = &http.BasicAuth{Password: prj.GitOptions.AccessToken, Username: prj.GitOptions.UserName}
+		}
+
 		if prj.Branch == "" || prj.Branch == "master" {
 			log.Println("-----> " + prj.GitRepository + " cloning master")
 			r, cErr = git.PlainClone(prj.CheckoutPath, false, &git.CloneOptions{
-				Auth: &http.BasicAuth{
-					Username: prj.GitOptions.UserName,
-					Password: prj.GitOptions.Password,
-				},
+				Auth:     auth,
 				URL:      prj.GitRepository,
 				Progress: os.Stdout,
 			})
@@ -38,10 +44,7 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 		} else {
 			log.Println("-----> " + prj.GitRepository + " checking out branch " + prj.Branch)
 			r, cErr = git.PlainClone(prj.CheckoutPath, false, &git.CloneOptions{
-				Auth: &http.BasicAuth{
-					Username: prj.GitOptions.UserName,
-					Password: prj.GitOptions.Password,
-				},
+				Auth:          auth,
 				URL:           prj.GitRepository,
 				Progress:      os.Stdout,
 				ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", prj.Branch)),
