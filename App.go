@@ -12,10 +12,15 @@ import (
 type CiRequest struct {
 	CiProjectDetails   []CiProjectDetails `json:"ciProjectDetails"`
 	DockerImageTag     string             `json:"dockerImageTag"`
+	DockerRegistryType string             `json:"dockerRegistryType"`
 	DockerRegistryURL  string             `json:"dockerRegistryURL"`
 	DockerRepository   string             `json:"dockerRepository"`
 	DockerFileLocation string             `json:"dockerfileLocation"`
+	DockerUsername     string             `json:"dockerUsername"`
+	DockerPassword     string             `json:"dockerPassword"`
 	AwsRegion          string             `json:"awsRegion"`
+	AccessKey          string             `json:"accessKey"`
+	SecretKey          string             `json:"secretKey"`
 	CiCacheLocation    string             `json:"ciCacheLocation"`
 	CiCacheFileName    string             `json:"ciCacheFileName"`
 	PipelineId         int                `json:"pipelineId"`
