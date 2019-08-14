@@ -13,7 +13,7 @@ import (
 
 func GetCache(ciRequest *CiRequest) error {
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(ciRequest.AwsRegion),
+		Region: aws.String(ciRequest.CiCacheRegion),
 	}))
 	file, err := os.Create("/" + ciRequest.CiCacheFileName)
 	if err != nil {
