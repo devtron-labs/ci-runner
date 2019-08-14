@@ -22,6 +22,7 @@ type CiRequest struct {
 	AccessKey          string             `json:"accessKey"`
 	SecretKey          string             `json:"secretKey"`
 	CiCacheLocation    string             `json:"ciCacheLocation"`
+	CiCacheRegion      string             `json:"ciCacheRegion"`
 	CiCacheFileName    string             `json:"ciCacheFileName"`
 	PipelineId         int                `json:"pipelineId"`
 	PipelineName       string             `json:"pipelineName"`
