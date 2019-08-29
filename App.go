@@ -15,6 +15,7 @@ type CiRequest struct {
 	DockerRegistryType string             `json:"dockerRegistryType"`
 	DockerRegistryURL  string             `json:"dockerRegistryURL"`
 	DockerRepository   string             `json:"dockerRepository"`
+	DockerBuildArgs    string             `json:"dockerBuildArgs"`
 	DockerFileLocation string             `json:"dockerfileLocation"`
 	DockerUsername     string             `json:"dockerUsername"`
 	DockerPassword     string             `json:"dockerPassword"`
