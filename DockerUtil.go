@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -46,7 +47,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
 		}
 	}
-	dockerBuild = dockerBuild + " -f " + ciRequest.DockerFileLocation + " --network host -t " + ciRequest.DockerRepository + " ."
+	dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
 	log.Println(" -----> " + dockerBuild)
 
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
