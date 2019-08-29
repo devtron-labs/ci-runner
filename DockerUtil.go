@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -33,7 +35,19 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	dockerFileLocationDir := ciRequest.DockerFileLocation[:strings.LastIndex(ciRequest.DockerFileLocation, "/")+1]
 	log.Println(devtron, " docker file location: ", dockerFileLocationDir)
 
-	dockerBuild := "docker build -f " + ciRequest.DockerFileLocation + " --network host -t " + ciRequest.DockerRepository + " ."
+	dockerBuild := "docker build "
+	if ciRequest.DockerBuildArgs != "" {
+		dockerBuildArgsMap := make(map[string]string)
+		err := json.Unmarshal([]byte(ciRequest.DockerBuildArgs), &dockerBuildArgsMap)
+		if err != nil {
+			log.Println("err", err)
+			return "", err
+		}
+		for k, v := range dockerBuildArgsMap {
+			dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
+		}
+	}
+	dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
 	log.Println(" -----> " + dockerBuild)
 
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
@@ -69,7 +83,7 @@ func PushArtifact(ciRequest *CiRequest, dest string) (string, error) {
 
 	if ciRequest.DockerRegistryType == "ecr" {
 		svc := ecr.New(session.New(&aws.Config{
-			Region: &ciRequest.AwsRegion,
+			Region:      &ciRequest.AwsRegion,
 			Credentials: credentials.NewStaticCredentials(ciRequest.AccessKey, ciRequest.SecretKey, ""),
 		}))
 
@@ -93,8 +107,8 @@ func PushArtifact(ciRequest *CiRequest, dest string) (string, error) {
 		pwd = credsSlice[1]
 	}
 
-	dockerLogin := "docker login -u " + username + " -p " + pwd + " " +  ciRequest.DockerRegistryURL
-	log.Println(devtron, " -----> " + dockerLogin)
+	dockerLogin := "docker login -u " + username + " -p " + pwd + " " + ciRequest.DockerRegistryURL
+	log.Println(devtron, " -----> "+dockerLogin)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
 	err := RunCommand(awsLoginCmd)
 	if err != nil {
