@@ -53,6 +53,7 @@ type CiProjectDetails struct {
 	Branch        string     `json:"branch"`
 	Type          string     `json:"type"`
 	Message       string     `json:"message"`
+	Author        string     `json:"author"`
 	GitOptions    GitOptions `json:"gitOptions"`
 }
 
