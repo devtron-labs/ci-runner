@@ -86,7 +86,7 @@ type PubSubConfig struct {
 }
 
 const retryCount = 10
-const workingDir = "./devtroncd"
+const workingDir = "/devtroncd"
 const devtron = "DEVTRON"
 
 func main() {
@@ -123,7 +123,11 @@ func main() {
 	}
 	// git handling
 	log.Println(devtron, " git")
-	CloneAndCheckout(ciRequest)
+	err = CloneAndCheckout(ciRequest)
+	if err != nil {
+		log.Println(devtron, "clone err: ", err)
+		os.Exit(1)
+	}
 	log.Println(devtron, " /git")
 
 	// Start docker daemon

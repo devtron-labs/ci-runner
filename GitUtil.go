@@ -7,8 +7,8 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"log"
 	"os"
+	"path/filepath"
 )
-
 
 func CloneAndCheckout(ciRequest *CiRequest) error {
 	for _, prj := range ciRequest.CiProjectDetails {
@@ -30,29 +30,19 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 		case AUTH_MODE_ACCESS_TOKEN:
 			auth = &http.BasicAuth{Password: prj.GitOptions.AccessToken, Username: prj.GitOptions.UserName}
 		}
-
-		if prj.Branch == "" || prj.Branch == "master" {
-			log.Println("-----> " + prj.GitRepository + " cloning master")
-			r, cErr = git.PlainClone(prj.CheckoutPath, false, &git.CloneOptions{
-				Auth:     auth,
-				URL:      prj.GitRepository,
-				Progress: os.Stdout,
-			})
-			if cErr != nil {
-				log.Fatal("could not clone ", " err ", cErr)
-			}
-		} else {
-			log.Println("-----> " + prj.GitRepository + " checking out branch " + prj.Branch)
-			r, cErr = git.PlainClone(prj.CheckoutPath, false, &git.CloneOptions{
-				Auth:          auth,
-				URL:           prj.GitRepository,
-				Progress:      os.Stdout,
-				ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", prj.Branch)),
-				SingleBranch:  true,
-			})
-			if cErr != nil {
-				log.Fatal("could not clone branch ", " err ", cErr)
-			}
+		if len(prj.Branch) == 0 {
+			prj.Branch = "master"
+		}
+		log.Println("-----> " + prj.GitRepository + " checking out branch " + prj.Branch)
+		r, cErr = git.PlainClone(filepath.Join(workingDir, prj.CheckoutPath), false, &git.CloneOptions{
+			Auth:          auth,
+			URL:           prj.GitRepository,
+			Progress:      os.Stdout,
+			ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", prj.Branch)),
+			SingleBranch:  true,
+		})
+		if cErr != nil {
+			log.Fatal("could not clone branch ", " err ", cErr)
 		}
 
 		w, wErr := r.Worktree()
