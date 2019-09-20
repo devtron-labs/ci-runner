@@ -1,7 +1,7 @@
 
 all: build
 
-TAG?=latest
+TAG?=6bd516eacd6ee-10
 FLAGS=
 ENVVAR=
 GOOS?=darwin
@@ -21,14 +21,14 @@ clean:
 run: build
 	./cirunner
 
-#.PHONY: build
-#docker-build-image:  build
-#	 docker build -t orchestrator:$(TAG) .
+.PHONY: build
+docker-build-image:  build
+	 docker build -t testci-runner:$(TAG) .
 
-#.PHONY: build, all, wire, clean, run, set-docker-build-env, docker-build-push, orchestrator,
-#docker-build-push: docker-build-image
-#	docker tag orchestrator:${TAG}  ${REGISTRY}/orchestrator:${TAG}
-#	docker push ${REGISTRY}/orchestrator:${TAG}
+.PHONY: build, all, wire, clean, run, set-docker-build-env, docker-build-push, orchestrator,
+docker-build-push: docker-build-image
+	docker tag testci-runner:${TAG}  ${REGISTRY}/testci-runner:${TAG}
+	docker push ${REGISTRY}/testci-runner:${TAG}
 
 
 
