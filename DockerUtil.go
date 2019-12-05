@@ -89,7 +89,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	log.Println(" -----> " + dockerBuild)
 
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
-	err := RunCommand(dockerBuildCMD)
+	err = RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
 		return "", err
