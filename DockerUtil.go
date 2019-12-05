@@ -28,6 +28,44 @@ func StartDockerDaemon() {
 }
 
 func BuildArtifact(ciRequest *CiRequest) (string, error) {
+	username := ciRequest.DockerUsername
+	pwd := ciRequest.DockerPassword
+
+	if ciRequest.DockerRegistryType == "ecr" {
+		svc := ecr.New(session.New(&aws.Config{
+			Region:      &ciRequest.AwsRegion,
+			Credentials: credentials.NewStaticCredentials(ciRequest.AccessKey, ciRequest.SecretKey, ""),
+		}))
+
+		input := &ecr.GetAuthorizationTokenInput{}
+		authData, err := svc.GetAuthorizationToken(input)
+		if err != nil {
+			log.Println(err)
+			return "", err
+		}
+
+		// decode token
+		token := authData.AuthorizationData[0].AuthorizationToken
+		decodedToken, err := base64.StdEncoding.DecodeString(*token)
+		if err != nil {
+			log.Println(err)
+			return "", err
+		}
+
+		credsSlice := strings.Split(string(decodedToken), ":")
+		username = credsSlice[0]
+		pwd = credsSlice[1]
+	}
+
+	dockerLogin := "docker login -u " + username + " -p " + pwd + " " + ciRequest.DockerRegistryURL
+	log.Println(devtron, " -----> "+dockerLogin)
+	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
+	err := RunCommand(awsLoginCmd)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
 	if ciRequest.DockerImageTag == "" {
 		ciRequest.DockerImageTag = "latest"
 	}
@@ -77,49 +115,11 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 }
 
 func PushArtifact(ciRequest *CiRequest, dest string) (string, error) {
-	//awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
-	username := ciRequest.DockerUsername
-	pwd := ciRequest.DockerPassword
-
-	if ciRequest.DockerRegistryType == "ecr" {
-		svc := ecr.New(session.New(&aws.Config{
-			Region:      &ciRequest.AwsRegion,
-			Credentials: credentials.NewStaticCredentials(ciRequest.AccessKey, ciRequest.SecretKey, ""),
-		}))
-
-		input := &ecr.GetAuthorizationTokenInput{}
-		authData, err := svc.GetAuthorizationToken(input)
-		if err != nil {
-			log.Println(err)
-			return "", err
-		}
-
-		// decode token
-		token := authData.AuthorizationData[0].AuthorizationToken
-		decodedToken, err := base64.StdEncoding.DecodeString(*token)
-		if err != nil {
-			log.Println(err)
-			return "", err
-		}
-
-		credsSlice := strings.Split(string(decodedToken), ":")
-		username = credsSlice[0]
-		pwd = credsSlice[1]
-	}
-
-	dockerLogin := "docker login -u " + username + " -p " + pwd + " " + ciRequest.DockerRegistryURL
-	log.Println(devtron, " -----> "+dockerLogin)
-	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
-	err := RunCommand(awsLoginCmd)
-	if err != nil {
-		log.Println(err)
-		return "", err
-	}
-
+	//awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"ss
 	dockerPush := "docker push " + dest
 	log.Println("-----> " + dockerPush)
 	dockerPushCMD := exec.Command("/bin/sh", "-c", dockerPush)
-	err = RunCommand(dockerPushCMD)
+	err := RunCommand(dockerPushCMD)
 	if err != nil {
 		log.Println(err)
 		return "", err
