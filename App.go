@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	_ "github.com/aws/aws-sdk-go/aws"
 	"github.com/nats-io/stan.go"
 	"log"
@@ -12,38 +13,40 @@ import (
 )
 
 type CiRequest struct {
-	CiProjectDetails            []CiProjectDetails           `json:"ciProjectDetails"`
-	DockerImageTag              string                       `json:"dockerImageTag"`
-	DockerRegistryType          string                       `json:"dockerRegistryType"`
-	DockerRegistryURL           string                       `json:"dockerRegistryURL"`
-	DockerRepository            string                       `json:"dockerRepository"`
-	DockerBuildArgs             string                       `json:"dockerBuildArgs"`
-	DockerFileLocation          string                       `json:"dockerfileLocation"`
-	DockerUsername              string                       `json:"dockerUsername"`
-	DockerPassword              string                       `json:"dockerPassword"`
-	AwsRegion                   string                       `json:"awsRegion"`
-	AccessKey                   string                       `json:"accessKey"`
-	SecretKey                   string                       `json:"secretKey"`
-	CiCacheLocation             string                       `json:"ciCacheLocation"`
-	CiCacheRegion               string                       `json:"ciCacheRegion"`
-	CiCacheFileName             string                       `json:"ciCacheFileName"`
-	PipelineId                  int                          `json:"pipelineId"`
-	PipelineName                string                       `json:"pipelineName"`
-	WorkflowId                  int                          `json:"workflowId"`
-	TriggeredBy                 int                          `json:"triggeredBy"`
-	CacheLimit                  int64                        `json:"cacheLimit"`
-	BeforeDockerBuild           []*Task                      `json:"beforeDockerBuild"`
-	AfterDockerBuild            []*Task                      `json:"afterDockerBuild"`
-	BeforeDockerBuildScript     string                       `json:"beforeDockerBuildScript"`
-	AfterDockerBuildScript      string                       `json:"afterDockerBuildScript"`
+	CiProjectDetails        []CiProjectDetails `json:"ciProjectDetails"`
+	DockerImageTag          string             `json:"dockerImageTag"`
+	DockerRegistryType      string             `json:"dockerRegistryType"`
+	DockerRegistryURL       string             `json:"dockerRegistryURL"`
+	DockerRepository        string             `json:"dockerRepository"`
+	DockerBuildArgs         string             `json:"dockerBuildArgs"`
+	DockerFileLocation      string             `json:"dockerfileLocation"`
+	DockerUsername          string             `json:"dockerUsername"`
+	DockerPassword          string             `json:"dockerPassword"`
+	AwsRegion               string             `json:"awsRegion"`
+	AccessKey               string             `json:"accessKey"`
+	SecretKey               string             `json:"secretKey"`
+	CiCacheLocation         string             `json:"ciCacheLocation"`
+	CiArtifactLocation      string             `json:"ciArtifactLocation"`
+	CiCacheRegion           string             `json:"ciCacheRegion"`
+	CiCacheFileName         string             `json:"ciCacheFileName"`
+	PipelineId              int                `json:"pipelineId"`
+	PipelineName            string             `json:"pipelineName"`
+	WorkflowId              int                `json:"workflowId"`
+	TriggeredBy             int                `json:"triggeredBy"`
+	CacheLimit              int64              `json:"cacheLimit"`
+	BeforeDockerBuild       []*Task            `json:"beforeDockerBuild"`
+	AfterDockerBuild        []*Task            `json:"afterDockerBuild"`
+	BeforeDockerBuildScript string             `json:"beforeDockerBuildScript"`
+	AfterDockerBuildScript  string             `json:"afterDockerBuildScript"`
+
 	TestExecutorImageProperties *TestExecutorImageProperties `json:"testExecutorImageProperties"`
 }
 
 type Task struct {
-	Name string   `json:"name"`
-	Type string   `json:"type"` //for now ignore this input
-	Cmd  string   `json:"cmd"`
-	Args []string `json:"args"`
+	Name              string `json:"name"`
+	Cmd               string `json:"cmd"`
+	ArtifactsLocation string `json:"artifactsLocation"` // file/dir
+	runStatus         bool   `json:"-"`
 }
 
 type TestExecutorImageProperties struct {
@@ -109,48 +112,77 @@ const workingDir = "/devtroncd"
 const devtron = "DEVTRON"
 
 var (
-	output_path = filepath.Join("./post_process")
+	output_path = filepath.Join("./process")
 	bash_script = filepath.Join("_script.sh")
 )
 
+func logStage(name string) {
+	stageTemplate := `------------------------------------------------------------------------------------------------------------\n
+					%s
+					------------------------------------------------------------------------------------------------------------`
+	log.Println(fmt.Sprintf(stageTemplate, name))
+}
+
 func main() {
-	err := os.Chdir("/")
-	if err != nil {
-		os.Exit(1)
-	}
-
-	if _, err := os.Stat(workingDir); os.IsNotExist(err) {
-		_ = os.Mkdir(workingDir, os.ModeDir)
-	}
-
 	// ' {"workflowNamePrefix":"55-suraj-23-ci-suraj-test-pipeline-8","pipelineName":"suraj-23-ci-suraj-test-pipeline","pipelineId":8,"dockerImageTag":"a6b809c4be87c217feba4af15cf5ebc3cafe21e0","dockerRegistryURL":"686244538589.dkr.ecr.us-east-2.amazonaws.com","dockerRepository":"test/suraj-23","dockerfileLocation":"./notifier/Dockerfile","awsRegion":"us-east-2","ciCacheLocation":"ci-caching","ciCacheFileName":"suraj-23-ci-suraj-test-pipeline.tar.gz","ciProjectDetails":[{"gitRepository":"https://gitlab.com/devtron/notifier.git","materialName":"1-notifier","checkoutPath":"./notifier","commitHash":"d4df38bcd065004014d255c2203d592a91585955","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"test-commit","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":"USERNAME_PASSWORD"}},{"gitRepository":"https://gitlab.com/devtron/orchestrator.git","materialName":"2-orchestrator","checkoutPath":"./orch","commitHash":"","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":""}}],"ciImage":"686244538589.dkr.ecr.us-east-2.amazonaws.com/cirunner:latest","namespace":"default"}'
 	args := os.Args[1]
 	ciRequest := &CiRequest{}
-	err = json.Unmarshal([]byte(args), ciRequest)
+	err := json.Unmarshal([]byte(args), ciRequest)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
 	log.Println(devtron, " ci request details -----> ", args)
 
+	err = run(ciRequest)
+	artifactUploadErr := collectAndUploadArtifact(ciRequest)
+	if err != nil || artifactUploadErr != nil {
+		os.Exit(1)
+	}
+}
+
+func collectAndUploadArtifact(ciRequest *CiRequest) error {
+	artifactFiles := make(map[string]string)
+	for _, task := range append(ciRequest.BeforeDockerBuild, ciRequest.AfterDockerBuild...) {
+		if task.runStatus {
+			artifactFiles[task.Name] = task.ArtifactsLocation
+		}
+	}
+	log.Println(devtron, " artifacts", artifactFiles)
+	//"s3://"+ciRequest.CiCacheLocation+"/"+ciRequest.CiCacheFileName
+	//TODO get this from orchestrator
+	s3Location := fmt.Sprintf("s3:://%s/%d/%d", ciRequest.CiArtifactLocation, ciRequest.WorkflowId, ciRequest.WorkflowId)
+	return UploadArtifact(artifactFiles, s3Location)
+}
+
+func run(ciRequest *CiRequest) error {
+	err := os.Chdir("/")
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(workingDir); os.IsNotExist(err) {
+		_ = os.Mkdir(workingDir, os.ModeDir)
+	}
+
 	// Get ci cache
 	log.Println(devtron, " cache-pull")
 	err = GetCache(ciRequest)
 	if err != nil {
-		os.Exit(1)
+		return err
 	}
 	log.Println(devtron, " /cache-pull")
 
 	err = os.Chdir(workingDir)
 	if err != nil {
-		os.Exit(1)
+		return err
 	}
 	// git handling
 	log.Println(devtron, " git")
 	err = CloneAndCheckout(ciRequest)
 	if err != nil {
 		log.Println(devtron, "clone err: ", err)
-		os.Exit(1)
+		return err
 	}
 	log.Println(devtron, " /git")
 
@@ -158,28 +190,51 @@ func main() {
 	log.Println(devtron, " docker-build")
 	StartDockerDaemon()
 
+	//before task
+	for i, task := range ciRequest.BeforeDockerBuild {
+		//log running cmd
+		logStage(task.Name)
+		err = RunPostDockerBuildCmds(output_path, fmt.Sprintf("before-%d", i), task.Cmd)
+		if err != nil {
+			return err
+		}
+		task.runStatus = true
+	}
+	logStage("docker build")
 	// build
 	dest, err := BuildArtifact(ciRequest)
 	if err != nil {
-		os.Exit(1)
+		return err
 	}
 	log.Println(devtron, " /docker-build")
 
 	// run post artifact processing
 	log.Println(devtron, " docker-build-post-processing")
+	//before task
+	for i, task := range ciRequest.AfterDockerBuild {
+		logStage(task.Name)
+		err = RunPostDockerBuildCmds(output_path, fmt.Sprintf("after-%d", i), task.Cmd)
+		if err != nil {
+			return err
+		}
+		task.runStatus = true
+	}
+
 	// TODO: Remove
+
 	ciRequest.AfterDockerBuildScript = "docker run --network=\"host\" -itd testsuraj-1:latest; sleep 10; curl -X GET http://localhost:8080/health;"
 	err = RunPostDockerBuildCmds(output_path, bash_script, ciRequest.AfterDockerBuildScript)
 	if err != nil {
-		os.Exit(1)
+		return err
 	}
 	log.Println(devtron, " /docker-build-post-processing")
 
+	logStage("docker push")
 	// push to dest
 	log.Println(devtron, " docker-push")
 	digest, err := PushArtifact(ciRequest, dest)
 	if err != nil {
-		os.Exit(1)
+		return err
 	}
 	log.Println(devtron, " /docker-push")
 
@@ -187,27 +242,27 @@ func main() {
 	err = SendEvents(ciRequest, digest, dest)
 	if err != nil {
 		log.Println(err)
-		os.Exit(1)
+		return err
 	}
 	log.Println(devtron, " /event")
 
 	err = StopDocker()
 	if err != nil {
 		log.Println("err", err)
-		os.Exit(1)
+		return err
 	}
 
 	err = os.Chdir("/")
 	if err != nil {
 		log.Println(err)
-		os.Exit(1)
+		return err
 	}
 
 	tail := exec.Command("/bin/sh", "-c", "tail -f /dev/null")
 	err = RunCommand(tail)
 	if err != nil {
 		log.Println(err)
-		os.Exit(1)
+		return err
 	}
 
 	// sync cache
@@ -215,7 +270,8 @@ func main() {
 	err = SyncCache(ciRequest)
 	if err != nil {
 		log.Println(err)
-		os.Exit(1)
+		return err
 	}
 	log.Println(devtron, " /cache-push")
+	return nil
 }
