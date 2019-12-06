@@ -6,30 +6,49 @@ import (
 	"github.com/nats-io/stan.go"
 	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"time"
 )
 
 type CiRequest struct {
-	CiProjectDetails   []CiProjectDetails `json:"ciProjectDetails"`
-	DockerImageTag     string             `json:"dockerImageTag"`
-	DockerRegistryType string             `json:"dockerRegistryType"`
-	DockerRegistryURL  string             `json:"dockerRegistryURL"`
-	DockerRepository   string             `json:"dockerRepository"`
-	DockerBuildArgs    string             `json:"dockerBuildArgs"`
-	DockerFileLocation string             `json:"dockerfileLocation"`
-	DockerUsername     string             `json:"dockerUsername"`
-	DockerPassword     string             `json:"dockerPassword"`
-	AwsRegion          string             `json:"awsRegion"`
-	AccessKey          string             `json:"accessKey"`
-	SecretKey          string             `json:"secretKey"`
-	CiCacheLocation    string             `json:"ciCacheLocation"`
-	CiCacheRegion      string             `json:"ciCacheRegion"`
-	CiCacheFileName    string             `json:"ciCacheFileName"`
-	PipelineId         int                `json:"pipelineId"`
-	PipelineName       string             `json:"pipelineName"`
-	WorkflowId         int                `json:"workflowId"`
-	TriggeredBy        int                `json:"triggeredBy"`
-	CacheLimit         int64              `json:"cacheLimit"`
+	CiProjectDetails            []CiProjectDetails           `json:"ciProjectDetails"`
+	DockerImageTag              string                       `json:"dockerImageTag"`
+	DockerRegistryType          string                       `json:"dockerRegistryType"`
+	DockerRegistryURL           string                       `json:"dockerRegistryURL"`
+	DockerRepository            string                       `json:"dockerRepository"`
+	DockerBuildArgs             string                       `json:"dockerBuildArgs"`
+	DockerFileLocation          string                       `json:"dockerfileLocation"`
+	DockerUsername              string                       `json:"dockerUsername"`
+	DockerPassword              string                       `json:"dockerPassword"`
+	AwsRegion                   string                       `json:"awsRegion"`
+	AccessKey                   string                       `json:"accessKey"`
+	SecretKey                   string                       `json:"secretKey"`
+	CiCacheLocation             string                       `json:"ciCacheLocation"`
+	CiCacheRegion               string                       `json:"ciCacheRegion"`
+	CiCacheFileName             string                       `json:"ciCacheFileName"`
+	PipelineId                  int                          `json:"pipelineId"`
+	PipelineName                string                       `json:"pipelineName"`
+	WorkflowId                  int                          `json:"workflowId"`
+	TriggeredBy                 int                          `json:"triggeredBy"`
+	CacheLimit                  int64                        `json:"cacheLimit"`
+	BeforeDockerBuild           []*Task                      `json:"beforeDockerBuild"`
+	AfterDockerBuild            []*Task                      `json:"afterDockerBuild"`
+	BeforeDockerBuildScript     string                       `json:"beforeDockerBuildScript"`
+	AfterDockerBuildScript      string                       `json:"afterDockerBuildScript"`
+	TestExecutorImageProperties *TestExecutorImageProperties `json:"testExecutorImageProperties"`
+}
+
+type Task struct {
+	Name string   `json:"name"`
+	Type string   `json:"type"` //for now ignore this input
+	Cmd  string   `json:"cmd"`
+	Args []string `json:"args"`
+}
+
+type TestExecutorImageProperties struct {
+	ImageName string `json:"imageName,omitempty"`
+	Arg       string `json:"arg,omitempty"`
 }
 
 type CiCompleteEvent struct {
@@ -89,6 +108,11 @@ const retryCount = 10
 const workingDir = "/devtroncd"
 const devtron = "DEVTRON"
 
+var (
+	output_path = filepath.Join("./post_process")
+	bash_script = filepath.Join("_script.sh")
+)
+
 func main() {
 	err := os.Chdir("/")
 	if err != nil {
@@ -141,6 +165,16 @@ func main() {
 	}
 	log.Println(devtron, " /docker-build")
 
+	// run post artifact processing
+	log.Println(devtron, " docker-build-post-processing")
+	// TODO: Remove
+	ciRequest.AfterDockerBuildScript = "docker run --network=\"host\" -itd testsuraj-1:latest; sleep 10; curl -X GET http://localhost:8080/health;"
+	err = RunPostDockerBuildCmds(output_path, bash_script, ciRequest.AfterDockerBuildScript)
+	if err != nil {
+		os.Exit(1)
+	}
+	log.Println(devtron, " /docker-build-post-processing")
+
 	// push to dest
 	log.Println(devtron, " docker-push")
 	digest, err := PushArtifact(ciRequest, dest)
@@ -164,6 +198,13 @@ func main() {
 	}
 
 	err = os.Chdir("/")
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+
+	tail := exec.Command("/bin/sh", "-c", "tail -f /dev/null")
+	err = RunCommand(tail)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)

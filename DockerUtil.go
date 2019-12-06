@@ -14,6 +14,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -114,8 +115,44 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	return dest, nil
 }
 
+
+func RunPostDockerBuildCmds(outputPath string, bashScript string, script string) error {
+	log.Println("running post artifact build commands")
+	os.RemoveAll(outputPath)
+	err := os.MkdirAll( outputPath, os.ModePerm|os.ModeDir )
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	file, err := os.Create(filepath.Join(outputPath, bashScript))
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer file.Close()
+
+	if !strings.Contains(script, "#!/bin/sh") {
+		file.WriteString("#!/bin/sh\n")
+	}
+	file.WriteString(script)
+
+	err = os.Chdir(outputPath)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	runScriptCMD := exec.Command("/bin/sh", bashScript)
+	err = RunCommand(runScriptCMD)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
 func PushArtifact(ciRequest *CiRequest, dest string) (string, error) {
-	//awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"ss
+	//awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
 	dockerPush := "docker push " + dest
 	log.Println("-----> " + dockerPush)
 	dockerPushCMD := exec.Command("/bin/sh", "-c", dockerPush)
