@@ -28,6 +28,7 @@ RUN apk -Uuv add groff less python py-pip
 RUN pip install awscli
 RUN apk --purge -v del py-pip
 RUN rm /var/cache/apk/*
+COPY --from=docker/compose:latest /usr/local/bin/docker-compose /usr/bin/docker-compose
 
 COPY --from=build-env /go/bin/cirunner .
 ENTRYPOINT ["./cirunner"]
