@@ -140,6 +140,15 @@ func main() {
 		log.Println(devtron, err, artifactUploadErr)
 		os.Exit(1)
 	}
+
+	// sync cache
+	log.Println(devtron, " cache-push")
+	err = SyncCache(ciRequest)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+	log.Println(devtron, " /cache-push")
 }
 
 func collectAndUploadArtifact(ciRequest *CiRequest) error {
@@ -272,13 +281,5 @@ func run(ciRequest *CiRequest) error {
 		return err
 	}
 
-	// sync cache
-	log.Println(devtron, " cache-push")
-	err = SyncCache(ciRequest)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	log.Println(devtron, " /cache-push")
 	return nil
 }
