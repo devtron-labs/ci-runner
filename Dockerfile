@@ -23,6 +23,7 @@ RUN apk add --no-cache --virtual .build-deps
 RUN apk add bash
 RUN apk add make && apk add curl && apk add openssh
 RUN apk add git
+RUN apk add zip
 RUN ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
 RUN apk -Uuv add groff less python py-pip
 RUN pip install awscli

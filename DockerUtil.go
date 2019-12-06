@@ -145,12 +145,8 @@ export {{ $key }}={{ $value }} ;
 	}
 	defer file.Close()
 	_, err = file.WriteString(finalScript)
-	if err != nil {
-		log.Println(devtron, err)
-		return err
-	}
-
-	err = os.Chdir(outputPath)
+	log.Println(devtron, "final script ", finalScript)
+	log.Println(devtron, scriptPath)
 	if err != nil {
 		log.Println(devtron, err)
 		return err
