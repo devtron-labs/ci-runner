@@ -34,15 +34,15 @@ type CiRequest struct {
 	WorkflowId         int                `json:"workflowId"`
 	TriggeredBy        int                `json:"triggeredBy"`
 	CacheLimit         int64              `json:"cacheLimit"`
-	BeforeDockerBuild  []*Task            `json:"beforeDockerBuild"`
-	AfterDockerBuild   []*Task            `json:"afterDockerBuild"`
+	BeforeDockerBuild  []*Task            `json:"beforeDockerBuildScripts"`
+	AfterDockerBuild   []*Task            `json:"afterDockerBuildScripts"`
 
 	TestExecutorImageProperties *TestExecutorImageProperties `json:"testExecutorImageProperties"`
 }
 
 type Task struct {
-	Id    int `json:"id"`
-	Index int `json:"index"`
+	Id             int    `json:"id"`
+	Index          int    `json:"index"`
 	Name           string `json:"name"`
 	Script         string `json:"script"`
 	OutputLocation string `json:"outputLocation"` // file/dir
@@ -197,6 +197,7 @@ func run(ciRequest *CiRequest) error {
 	scriptEnvs := getScriptEnvVariables(ciRequest)
 	//before task
 	for i, task := range ciRequest.BeforeDockerBuild {
+		log.Println(devtron, "pre", task)
 		//log running cmd
 		logStage(task.Name)
 		err = RunPostDockerBuildCmds(output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs)
@@ -217,6 +218,7 @@ func run(ciRequest *CiRequest) error {
 	log.Println(devtron, " docker-build-post-processing")
 	//after task
 	for i, task := range ciRequest.AfterDockerBuild {
+		log.Println(devtron, "post", task)
 		logStage(task.Name)
 		err = RunPostDockerBuildCmds(output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs)
 		if err != nil {
