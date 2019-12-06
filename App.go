@@ -213,7 +213,7 @@ func run(ciRequest *CiRequest) error {
 
 	// run post artifact processing
 	log.Println(devtron, " docker-build-post-processing")
-	//before task
+	//after task
 	for i, task := range ciRequest.AfterDockerBuild {
 		logStage(task.Name)
 		err = RunPostDockerBuildCmds(output_path, fmt.Sprintf("after-%d", i), task.Cmd, scriptEnvs)

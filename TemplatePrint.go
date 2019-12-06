@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"text/template"
 )
 
@@ -17,7 +16,7 @@ func Tprintf(tmpl string, data interface{}) (string, error) {
 	return buf.String(), nil
 }
 
-func main() {
+/*func main() {
 	scriptTemplate := `#!/bin/sh
 {{ range $key, $value := .envVr }}
 export {{ $key }}={{ $value }} ;
@@ -33,3 +32,4 @@ export {{ $key }}={{ $value }} ;
 	fmt.Println(t)
 	fmt.Println(err)
 }
+*/
