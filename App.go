@@ -41,10 +41,12 @@ type CiRequest struct {
 }
 
 type Task struct {
-	Name              string `json:"name"`
-	Cmd               string `json:"cmd"`
-	ArtifactsLocation string `json:"artifactsLocation"` // file/dir
-	runStatus         bool   `json:"-"`
+	Id    int `json:"id"`
+	Index int `json:"index"`
+	Name           string `json:"name"`
+	Script         string `json:"script"`
+	OutputLocation string `json:"outputLocation"` // file/dir
+	runStatus      bool   `json:"-"`
 }
 
 type TestExecutorImageProperties struct {
@@ -144,7 +146,7 @@ func collectAndUploadArtifact(ciRequest *CiRequest) error {
 	artifactFiles := make(map[string]string)
 	for _, task := range append(ciRequest.BeforeDockerBuild, ciRequest.AfterDockerBuild...) {
 		if task.runStatus {
-			artifactFiles[task.Name] = task.ArtifactsLocation
+			artifactFiles[task.Name] = task.OutputLocation
 		}
 	}
 	log.Println(devtron, " artifacts", artifactFiles)
@@ -197,7 +199,7 @@ func run(ciRequest *CiRequest) error {
 	for i, task := range ciRequest.BeforeDockerBuild {
 		//log running cmd
 		logStage(task.Name)
-		err = RunPostDockerBuildCmds(output_path, fmt.Sprintf("before-%d", i), task.Cmd, scriptEnvs)
+		err = RunPostDockerBuildCmds(output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return err
 		}
@@ -216,7 +218,7 @@ func run(ciRequest *CiRequest) error {
 	//after task
 	for i, task := range ciRequest.AfterDockerBuild {
 		logStage(task.Name)
-		err = RunPostDockerBuildCmds(output_path, fmt.Sprintf("after-%d", i), task.Cmd, scriptEnvs)
+		err = RunPostDockerBuildCmds(output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return err
 		}
