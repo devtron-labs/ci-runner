@@ -115,34 +115,48 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	return dest, nil
 }
 
-
-func RunPostDockerBuildCmds(outputPath string, bashScript string, script string) error {
+func RunPostDockerBuildCmds(outputPath string, bashScript string, script string, envVars map[string]string) error {
 	log.Println("running post artifact build commands")
-	os.RemoveAll(outputPath)
-	err := os.MkdirAll( outputPath, os.ModePerm|os.ModeDir )
+	scriptTemplate := `#!/bin/sh
+{{ range $key, $value := .envVr }}
+export {{ $key }}={{ $value }} ;
+{{ end }}
+{{.script}};
+`
+
+	templateData := make(map[string]interface{})
+	templateData["envVr"] = envVars
+	templateData["script"] = script
+	finalScript, err := Tprintf(scriptTemplate, templateData)
 	if err != nil {
-		log.Println(err)
+		log.Println(devtron, err)
 		return err
 	}
-	file, err := os.Create(filepath.Join(outputPath, bashScript))
+	err = os.MkdirAll(outputPath, os.ModePerm|os.ModeDir)
+	if err != nil {
+		log.Println(devtron, err)
+		return err
+	}
+	scriptPath := filepath.Join(outputPath, bashScript)
+	file, err := os.Create(scriptPath)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 	defer file.Close()
-
-	if !strings.Contains(script, "#!/bin/sh") {
-		file.WriteString("#!/bin/sh\n")
-	}
-	file.WriteString(script)
-
-	err = os.Chdir(outputPath)
+	_, err = file.WriteString(finalScript)
 	if err != nil {
-		log.Println(err)
+		log.Println(devtron, err)
 		return err
 	}
 
-	runScriptCMD := exec.Command("/bin/sh", bashScript)
+	err = os.Chdir(outputPath)
+	if err != nil {
+		log.Println(devtron, err)
+		return err
+	}
+
+	runScriptCMD := exec.Command("/bin/sh", scriptPath)
 	err = RunCommand(runScriptCMD)
 	if err != nil {
 		log.Println(err)
