@@ -7,7 +7,6 @@ import (
 	"github.com/nats-io/stan.go"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"time"
 )
@@ -210,7 +209,7 @@ func run(ciRequest *CiRequest) error {
 		log.Println(devtron, "pre", task)
 		//log running cmd
 		logStage(task.Name)
-		err = RunPostDockerBuildCmds(output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs)
+		err = RunScripts(output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return err
 		}
@@ -230,7 +229,7 @@ func run(ciRequest *CiRequest) error {
 	for i, task := range ciRequest.AfterDockerBuild {
 		log.Println(devtron, "post", task)
 		logStage(task.Name)
-		err = RunPostDockerBuildCmds(output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs)
+		err = RunScripts(output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return err
 		}
@@ -238,9 +237,8 @@ func run(ciRequest *CiRequest) error {
 	}
 
 	/*	// TODO: Remove
-
 		ciRequest.AfterDockerBuildScript = "docker run --network=\"host\" -itd testsuraj-1:latest; sleep 10; curl -X GET http://localhost:8080/health;"
-		err = RunPostDockerBuildCmds(output_path, bash_script, ciRequest.AfterDockerBuildScript)
+		err = RunScripts(output_path, bash_script, ciRequest.AfterDockerBuildScript)
 		if err != nil {
 			return err
 		}
@@ -275,12 +273,11 @@ func run(ciRequest *CiRequest) error {
 		return err
 	}
 
-	tail := exec.Command("/bin/sh", "-c", "tail -f /dev/null")
+	/*tail := exec.Command("/bin/sh", "-c", "tail -f /dev/null")
 	err = RunCommand(tail)
 	if err != nil {
 		log.Println(err)
 		return err
-	}
-
+	}*/
 	return nil
 }

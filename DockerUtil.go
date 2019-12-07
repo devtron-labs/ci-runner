@@ -115,7 +115,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	return dest, nil
 }
 
-func RunPostDockerBuildCmds(outputPath string, bashScript string, script string, envVars map[string]string) error {
+func RunScripts(outputPath string, bashScript string, script string, envVars map[string]string) error {
 	log.Println("running post artifact build commands")
 	scriptTemplate := `#!/bin/sh
 {{ range $key, $value := .envVr }}
