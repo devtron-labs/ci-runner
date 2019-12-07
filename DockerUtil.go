@@ -116,7 +116,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 }
 
 func RunScripts(outputPath string, bashScript string, script string, envVars map[string]string) error {
-	log.Println("running post artifact build commands")
+	log.Println("running script commands")
 	scriptTemplate := `#!/bin/sh
 {{ range $key, $value := .envVr }}
 export {{ $key }}={{ $value }} ;

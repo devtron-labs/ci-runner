@@ -7,6 +7,7 @@ import (
 	"github.com/nats-io/stan.go"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 )
@@ -155,6 +156,9 @@ func collectAndUploadArtifact(ciRequest *CiRequest) error {
 	artifactFiles := make(map[string]string)
 	for _, task := range append(ciRequest.BeforeDockerBuild, ciRequest.AfterDockerBuild...) {
 		if task.runStatus {
+			if _, err := os.Stat(task.OutputLocation); os.IsNotExist(err) {		// Ignore if no file/folder
+				continue
+			}
 			artifactFiles[task.Name] = task.OutputLocation
 		}
 	}
@@ -273,11 +277,11 @@ func run(ciRequest *CiRequest) error {
 		return err
 	}
 
-	/*tail := exec.Command("/bin/sh", "-c", "tail -f /dev/null")
+	tail := exec.Command("/bin/sh", "-c", "tail -f /dev/null")
 	err = RunCommand(tail)
 	if err != nil {
 		log.Println(err)
 		return err
-	}*/
+	}
 	return nil
 }
