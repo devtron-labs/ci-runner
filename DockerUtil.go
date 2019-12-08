@@ -121,7 +121,7 @@ func RunScripts(outputPath string, bashScript string, script string, envVars map
 {{ range $key, $value := .envVr }}
 export {{ $key }}={{ $value }} ;
 {{ end }}
-{{.script}};
+{{.script}}
 `
 
 	templateData := make(map[string]interface{})

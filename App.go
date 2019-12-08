@@ -156,7 +156,7 @@ func collectAndUploadArtifact(ciRequest *CiRequest) error {
 	artifactFiles := make(map[string]string)
 	for _, task := range append(ciRequest.BeforeDockerBuild, ciRequest.AfterDockerBuild...) {
 		if task.runStatus {
-			if _, err := os.Stat(task.OutputLocation); os.IsNotExist(err) {		// Ignore if no file/folder
+			if _, err := os.Stat(task.OutputLocation); os.IsNotExist(err) { // Ignore if no file/folder
 				continue
 			}
 			artifactFiles[task.Name] = task.OutputLocation
@@ -170,6 +170,7 @@ func getScriptEnvVariables(ciRequest *CiRequest) map[string]string {
 	envs := make(map[string]string)
 	//TODO ADD MORE env variable
 	envs["DOCKER_IMAGE_TAG"] = ciRequest.DockerImageTag
+	envs["DOCKER_REPOSITORY"] = ciRequest.DockerRepository
 	return envs
 }
 
