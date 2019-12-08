@@ -117,9 +117,9 @@ var (
 
 func logStage(name string) {
 	stageTemplate := `
-------------------------------------------------------------------------------------------------------------
-%s
-------------------------------------------------------------------------------------------------------------`
+------------------------------------------------------------------------------------------------------------------------
+STAGE:  %s
+------------------------------------------------------------------------------------------------------------------------`
 	log.Println(fmt.Sprintf(stageTemplate, name))
 }
 
@@ -171,6 +171,7 @@ func getScriptEnvVariables(ciRequest *CiRequest) map[string]string {
 	//TODO ADD MORE env variable
 	envs["DOCKER_IMAGE_TAG"] = ciRequest.DockerImageTag
 	envs["DOCKER_REPOSITORY"] = ciRequest.DockerRepository
+	envs["DOCKER_REGISTRY_URL"] = ciRequest.DockerRegistryURL
 	return envs
 }
 
