@@ -145,7 +145,7 @@ export {{ $key }}={{ $value }} ;
 	}
 	defer file.Close()
 	_, err = file.WriteString(finalScript)
-	log.Println(devtron, "final script ", finalScript)
+	//log.Println(devtron, "final script ", finalScript) removed it shows some part on ui
 	log.Println(devtron, scriptPath)
 	if err != nil {
 		log.Println(devtron, err)
