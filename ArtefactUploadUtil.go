@@ -12,6 +12,7 @@ var tmpArtifactLocation = "./job-artifact"
 
 func UploadArtifact(artifactFiles map[string]string, s3Location string) error {
 	//collect in a dir
+	log.Println(devtron, "artifact upload ", artifactFiles, s3Location)
 	err := os.Mkdir(tmpArtifactLocation, os.ModeDir)
 	if err != nil {
 		return err
