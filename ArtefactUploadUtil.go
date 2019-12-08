@@ -27,7 +27,7 @@ func UploadArtifact(artifactFiles map[string]string, s3Location string) error {
 		if err != nil {
 			return err
 		}
-		err = copy.Copy(val, loc)
+		err = copy.Copy(val, filepath.Join(loc, val))
 		if err != nil {
 			return err
 		}
