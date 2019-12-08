@@ -156,6 +156,7 @@ func collectAndUploadArtifact(ciRequest *CiRequest) error {
 	for _, task := range append(ciRequest.BeforeDockerBuild, ciRequest.AfterDockerBuild...) {
 		if task.runStatus {
 			if _, err := os.Stat(task.OutputLocation); os.IsNotExist(err) { // Ignore if no file/folder
+				log.Println(devtron, "artifact not found ", err)
 				continue
 			}
 			artifactFiles[task.Name] = task.OutputLocation
