@@ -85,12 +85,17 @@ func GetCache(ciRequest *CiRequest) error {
 }
 
 func SyncCache(ciRequest *CiRequest) error {
+	err := os.Chdir("/")
+	if err != nil {
+		log.Println(err)
+		return err
+	}
 	DeleteFile(ciRequest.CiCacheFileName)
 	// Generate new cache
 	log.Println("Generating new cache")
 	tarCmd := exec.Command("tar", "-cvzf", ciRequest.CiCacheFileName, "/var/lib/docker")
 	tarCmd.Dir = "/"
-	err := tarCmd.Run()
+	err = tarCmd.Run()
 	if err != nil {
 		log.Fatal("Could not compress cache", err)
 	}

@@ -246,14 +246,6 @@ func run(ciRequest *CiRequest) error {
 		task.runStatus = true
 	}
 
-	/*	// TODO: Remove
-		ciRequest.AfterDockerBuildScript = "docker run --network=\"host\" -itd testsuraj-1:latest; sleep 10; curl -X GET http://localhost:8080/health;"
-		err = RunScripts(output_path, bash_script, ciRequest.AfterDockerBuildScript)
-		if err != nil {
-			return err
-		}
-		log.Println(devtron, " /docker-build-post-processing")*/
-
 	logStage("docker push")
 	// push to dest
 	log.Println(devtron, " docker-push")
@@ -274,12 +266,6 @@ func run(ciRequest *CiRequest) error {
 	err = StopDocker()
 	if err != nil {
 		log.Println("err", err)
-		return err
-	}
-
-	err = os.Chdir("/")
-	if err != nil {
-		log.Println(err)
 		return err
 	}
 	return nil
