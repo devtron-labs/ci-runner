@@ -203,11 +203,11 @@ func runGetDockerImageDigest(cmd *exec.Cmd) (string, error) {
 }
 
 func StopDocker() error {
-	out, err := exec.Command("docker ps -a -q").Output()
-	if err!=nil{
+	out, err := exec.Command("docker", "ps", "-a", "-q").Output()
+	if err != nil {
 		return err
 	}
-	if len(out)>0{
+	if len(out) > 0 {
 		stopCmdS := "docker stop -t 5 $(docker ps -a -q)"
 		log.Println(devtron, " -----> stopping docker container")
 		stopCmd := exec.Command("/bin/sh", "-c", stopCmdS)
