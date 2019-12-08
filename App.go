@@ -7,6 +7,7 @@ import (
 	"github.com/nats-io/stan.go"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 )
@@ -152,6 +153,10 @@ func main() {
 }
 
 func collectAndUploadArtifact(ciRequest *CiRequest) error {
+	cmd1 := exec.Command("pwd")
+	cmd2 := exec.Command("ls")
+	RunCommand(cmd1)
+	RunCommand(cmd2)
 	artifactFiles := make(map[string]string)
 	for _, task := range append(ciRequest.BeforeDockerBuild, ciRequest.AfterDockerBuild...) {
 		if task.runStatus {
