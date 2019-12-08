@@ -235,8 +235,8 @@ func StopDocker() error {
 		return err
 	}
 	log.Println(devtron, " -----> checking docker status")
-	err = DockerdUpCheck()
-	return err
+	DockerdUpCheck()
+	return nil
 }
 
 func waitForDockerDaemon(retryCount int) {
