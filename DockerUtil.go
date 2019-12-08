@@ -203,6 +203,16 @@ func runGetDockerImageDigest(cmd *exec.Cmd) (string, error) {
 }
 
 func StopDocker() error {
+	stopCmdS := "docker stop -t 5 $(docker ps -a -q)"
+	log.Println(devtron, " -----> stopping docker container")
+
+	stopCmd := exec.Command(stopCmdS)
+	err := RunCommand(stopCmd)
+	log.Println(devtron, " -----> stopped docker container")
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
 	file := "/var/run/docker.pid"
 	content, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -226,8 +236,8 @@ func StopDocker() error {
 		return err
 	}
 	log.Println(devtron, " -----> checking docker status")
-	DockerdUpCheck()
-	return nil
+	err = DockerdUpCheck()
+	return err
 }
 
 func waitForDockerDaemon(retryCount int) {
