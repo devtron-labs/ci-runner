@@ -7,7 +7,6 @@ import (
 	"github.com/nats-io/stan.go"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"time"
 )
@@ -273,13 +272,6 @@ func run(ciRequest *CiRequest) error {
 	}
 
 	err = os.Chdir("/")
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	tail := exec.Command("/bin/sh", "-c", "tail -f /dev/null")
-	err = RunCommand(tail)
 	if err != nil {
 		log.Println(err)
 		return err

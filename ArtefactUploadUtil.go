@@ -35,5 +35,13 @@ func UploadArtifact(artifactFiles map[string]string, s3Location string) error {
 	}
 	log.Println(devtron, " artifact upload to ", zipFile, s3Location)
 	artifactPush := exec.Command("aws", "s3", "cp", zipFile, s3Location)
+
+	tail := exec.Command("/bin/sh", "-c", "tail -f /dev/null")
+	err = RunCommand(tail)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
 	return RunCommand(artifactPush)
 }
