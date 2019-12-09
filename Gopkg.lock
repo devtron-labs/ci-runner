@@ -2,14 +2,6 @@
 
 
 [[projects]]
-  branch = "master"
-  digest = "1:ef09c94a4b7a61b41034d03a885b1c1e87bf544bcd78a8784c3c0b36e8d00e2e"
-  name = "github.com/andybalholm/brotli"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "71eb68cc467c35a70c4b3d0c46b590260fe3f303"
-
-[[projects]]
   digest = "1:5a8983066d5f437b57a5449d9f999556a9fb454e0e1dcafd508d15b7b5ec498b"
   name = "github.com/aws/aws-sdk-go"
   packages = [
@@ -41,11 +33,13 @@
     "private/protocol/eventstream",
     "private/protocol/eventstream/eventstreamapi",
     "private/protocol/json/jsonutil",
+    "private/protocol/jsonrpc",
     "private/protocol/query",
     "private/protocol/query/queryutil",
     "private/protocol/rest",
     "private/protocol/restxml",
     "private/protocol/xml/xmlutil",
+    "service/ecr",
     "service/s3",
     "service/s3/s3iface",
     "service/s3/s3manager",
@@ -62,21 +56,6 @@
   pruneopts = "UT"
   revision = "4bd75bf16b9ef8c1383109b5e4d931bd72c3b6d0"
   version = "v6.0.0"
-
-[[projects]]
-  digest = "1:d052bda13fd17bd8cf52ccae57b0a03ffeea80cffc2cffc62741235fa34f92cf"
-  name = "github.com/dsnet/compress"
-  packages = [
-    ".",
-    "bzip2",
-    "bzip2/internal/sais",
-    "internal",
-    "internal/errors",
-    "internal/prefix",
-  ]
-  pruneopts = "UT"
-  revision = "da652975a8eea9fa0735aba8056747a751db0bd3"
-  version = "v0.0.1"
 
 [[projects]]
   digest = "1:b498b36dbb2b306d1c5205ee5236c9e60352be8f9eea9bf08186723a9f75b4f3"
@@ -107,25 +86,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8f251d09f52a8920bdba202b0c18a24cafb4f70f94b9afd8d02bf7643cfc99a0"
-  name = "github.com/golang/gddo"
-  packages = [
-    "httputil",
-    "httputil/header",
-  ]
-  pruneopts = "UT"
-  revision = "af0f2af80721261f4d211b2c9563f7b46b2aab06"
-
-[[projects]]
-  digest = "1:e4f5819333ac698d294fe04dbf640f84719658d5c7ce195b10060cc37292ce79"
-  name = "github.com/golang/snappy"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "2a8bb927dd31d8daada140a5d09578521ce5c36a"
-  version = "v0.0.1"
-
-[[projects]]
-  branch = "master"
   digest = "1:62fe3a7ea2050ecbd753a71889026f83d73329337ada66325cbafd5dea5f713d"
   name = "github.com/jbenet/go-context"
   packages = ["io"]
@@ -146,48 +106,6 @@
   pruneopts = "UT"
   revision = "81db2a75821ed34e682567d48be488a1c3121088"
   version = "0.5"
-
-[[projects]]
-  digest = "1:feed849b56cbd33aacf00ec49d4680415fa8368bc92bfa7f565a62534e06330d"
-  name = "github.com/klauspost/compress"
-  packages = [
-    "flate",
-    "fse",
-    "huff0",
-    "snappy",
-    "zstd",
-    "zstd/internal/xxhash",
-  ]
-  pruneopts = "UT"
-  revision = "315059c39568ee89ae0c118bc6dc7306041543c3"
-  version = "v1.7.2"
-
-[[projects]]
-  digest = "1:923c4d7194b42e054b2eb8a6c62824ac55e23ececc1c7e48d4da69c971c55954"
-  name = "github.com/klauspost/cpuid"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "05a8198c0f5a27739aec358908d7e12c64ce6eb7"
-  version = "v1.2.1"
-
-[[projects]]
-  digest = "1:ce7769e1e6c4180a163da92df483369d689c8849eacfdd24a3cdcbcdc47b8b95"
-  name = "github.com/klauspost/pgzip"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "083b1c3f84dd6486588802e5ce295de3a7f41a8b"
-  version = "v1.2.1"
-
-[[projects]]
-  digest = "1:cd16ada4f180a675ffb198e39f20ab7123777a3a849db475e762ad94963078cf"
-  name = "github.com/mholt/archiver"
-  packages = [
-    ".",
-    "cmd/arc",
-  ]
-  pruneopts = "UT"
-  revision = "33320f6f730664f9896b05b777e53ae4c917f572"
-  version = "v3.2.0"
 
 [[projects]]
   digest = "1:5d231480e1c64a726869bc4142d270184c419749d34f167646baa21008eb0a79"
@@ -237,12 +155,12 @@
   version = "v0.5.0"
 
 [[projects]]
-  digest = "1:b93a939355dc613ca1c23bf39f6d4c207da431a31dd8af001cc334ad24cab9d3"
-  name = "github.com/nwaples/rardecode"
+  digest = "1:69d7d8f871a15079052dc15c85d4f44915b2bf3fdbd56cf14e424b4326289717"
+  name = "github.com/otiai10/copy"
   packages = ["."]
   pruneopts = "UT"
-  revision = "cc3e4b2381762c56dbcdf9f93be03349a1dc1c14"
-  version = "v1.0.0"
+  revision = "f98458f9df5788f53462a1bf427b728f113ab481"
+  version = "v1.0.2"
 
 [[projects]]
   digest = "1:b2ee62e09bec113cf086d2ce0769efcc7bf79481aba8373fd8f7884e94df3462"
@@ -251,17 +169,6 @@
   pruneopts = "UT"
   revision = "c37440a7cf42ac63b919c752ca73a85067e05992"
   version = "v0.2.0"
-
-[[projects]]
-  digest = "1:f690a0a27cefae695fa9587aa3ed23652e593be1d98b35f8184d10bccec30444"
-  name = "github.com/pierrec/lz4"
-  packages = [
-    ".",
-    "internal/xxh32",
-  ]
-  pruneopts = "UT"
-  revision = "057d66e894a4e55853274a3bbbf7de02ba639e43"
-  version = "v2.2.4"
 
 [[projects]]
   digest = "1:d917313f309bda80d27274d53985bc65651f81a5b66b820749ac7f8ef061fd04"
@@ -285,33 +192,12 @@
   version = "v1.4.0"
 
 [[projects]]
-  digest = "1:2643d81498e38e44bdcf480be199cac55f29e97403b0342d962824bfe9960722"
-  name = "github.com/ulikunitz/xz"
-  packages = [
-    ".",
-    "internal/hash",
-    "internal/xlog",
-    "lzma",
-  ]
-  pruneopts = "UT"
-  revision = "6f934d456d51e742b4eeab20d925a827ef22320a"
-  version = "v0.5.6"
-
-[[projects]]
   digest = "1:172f94a6b3644a8f9e6b5e5b7fc9fe1e42d424f52a0300b2e7ab1e57db73f85d"
   name = "github.com/xanzy/ssh-agent"
   packages = ["."]
   pruneopts = "UT"
   revision = "6a3e2ff9e7c564f36873c2e36413f634534f1c44"
   version = "v0.2.1"
-
-[[projects]]
-  branch = "master"
-  digest = "1:0dfba983988bcd90e6dd30b9bfdb9685ff530dbf61db3706e55372e975b1d8bc"
-  name = "github.com/xi2/xz"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "48954b6210f8d154cb5f8484d3a3e1f83489309e"
 
 [[projects]]
   branch = "master"
@@ -439,13 +325,16 @@
   analyzer-version = 1
   input-imports = [
     "github.com/aws/aws-sdk-go/aws",
+    "github.com/aws/aws-sdk-go/aws/awserr",
+    "github.com/aws/aws-sdk-go/aws/credentials",
     "github.com/aws/aws-sdk-go/aws/session",
+    "github.com/aws/aws-sdk-go/service/ecr",
     "github.com/aws/aws-sdk-go/service/s3",
     "github.com/aws/aws-sdk-go/service/s3/s3manager",
     "github.com/caarlos0/env",
-    "github.com/mholt/archiver/cmd/arc",
     "github.com/nats-io/nats.go",
     "github.com/nats-io/stan.go",
+    "github.com/otiai10/copy",
     "gopkg.in/src-d/go-git.v4",
     "gopkg.in/src-d/go-git.v4/plumbing",
     "gopkg.in/src-d/go-git.v4/plumbing/transport/http",

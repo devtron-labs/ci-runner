@@ -57,3 +57,7 @@
 [[constraint]]
   name = "github.com/mholt/archiver"
   version = "3.2.0"
+
+[[constraint]]
+  name = "github.com/otiai10/copy"
+  version = "1.0.2"

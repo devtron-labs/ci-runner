@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	_ "github.com/aws/aws-sdk-go/aws"
 	"github.com/nats-io/stan.go"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -23,6 +25,7 @@ type CiRequest struct {
 	AccessKey          string             `json:"accessKey"`
 	SecretKey          string             `json:"secretKey"`
 	CiCacheLocation    string             `json:"ciCacheLocation"`
+	CiArtifactLocation string             `json:"ciArtifactLocation"` // s3 bucket+ path
 	CiCacheRegion      string             `json:"ciCacheRegion"`
 	CiCacheFileName    string             `json:"ciCacheFileName"`
 	PipelineId         int                `json:"pipelineId"`
@@ -30,6 +33,24 @@ type CiRequest struct {
 	WorkflowId         int                `json:"workflowId"`
 	TriggeredBy        int                `json:"triggeredBy"`
 	CacheLimit         int64              `json:"cacheLimit"`
+	BeforeDockerBuild  []*Task            `json:"beforeDockerBuildScripts"`
+	AfterDockerBuild   []*Task            `json:"afterDockerBuildScripts"`
+
+	TestExecutorImageProperties *TestExecutorImageProperties `json:"testExecutorImageProperties"`
+}
+
+type Task struct {
+	Id             int    `json:"id"`
+	Index          int    `json:"index"`
+	Name           string `json:"name"`
+	Script         string `json:"script"`
+	OutputLocation string `json:"outputLocation"` // file/dir
+	runStatus      bool   `json:"-"`
+}
+
+type TestExecutorImageProperties struct {
+	ImageName string `json:"imageName,omitempty"`
+	Arg       string `json:"arg,omitempty"`
 }
 
 type CiCompleteEvent struct {
@@ -89,83 +110,34 @@ const retryCount = 10
 const workingDir = "/devtroncd"
 const devtron = "DEVTRON"
 
+var (
+	output_path = filepath.Join("./process")
+	bash_script = filepath.Join("_script.sh")
+)
+
+func logStage(name string) {
+	stageTemplate := `
+------------------------------------------------------------------------------------------------------------------------
+STAGE:  %s
+------------------------------------------------------------------------------------------------------------------------`
+	log.Println(fmt.Sprintf(stageTemplate, name))
+}
+
 func main() {
-	err := os.Chdir("/")
-	if err != nil {
-		os.Exit(1)
-	}
-
-	if _, err := os.Stat(workingDir); os.IsNotExist(err) {
-		_ = os.Mkdir(workingDir, os.ModeDir)
-	}
-
 	// ' {"workflowNamePrefix":"55-suraj-23-ci-suraj-test-pipeline-8","pipelineName":"suraj-23-ci-suraj-test-pipeline","pipelineId":8,"dockerImageTag":"a6b809c4be87c217feba4af15cf5ebc3cafe21e0","dockerRegistryURL":"686244538589.dkr.ecr.us-east-2.amazonaws.com","dockerRepository":"test/suraj-23","dockerfileLocation":"./notifier/Dockerfile","awsRegion":"us-east-2","ciCacheLocation":"ci-caching","ciCacheFileName":"suraj-23-ci-suraj-test-pipeline.tar.gz","ciProjectDetails":[{"gitRepository":"https://gitlab.com/devtron/notifier.git","materialName":"1-notifier","checkoutPath":"./notifier","commitHash":"d4df38bcd065004014d255c2203d592a91585955","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"test-commit","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":"USERNAME_PASSWORD"}},{"gitRepository":"https://gitlab.com/devtron/orchestrator.git","materialName":"2-orchestrator","checkoutPath":"./orch","commitHash":"","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":""}}],"ciImage":"686244538589.dkr.ecr.us-east-2.amazonaws.com/cirunner:latest","namespace":"default"}'
 	args := os.Args[1]
 	ciRequest := &CiRequest{}
-	err = json.Unmarshal([]byte(args), ciRequest)
+	err := json.Unmarshal([]byte(args), ciRequest)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
 	log.Println(devtron, " ci request details -----> ", args)
 
-	// Get ci cache
-	log.Println(devtron, " cache-pull")
-	err = GetCache(ciRequest)
-	if err != nil {
-		os.Exit(1)
-	}
-	log.Println(devtron, " /cache-pull")
-
-	err = os.Chdir(workingDir)
-	if err != nil {
-		os.Exit(1)
-	}
-	// git handling
-	log.Println(devtron, " git")
-	err = CloneAndCheckout(ciRequest)
-	if err != nil {
-		log.Println(devtron, "clone err: ", err)
-		os.Exit(1)
-	}
-	log.Println(devtron, " /git")
-
-	// Start docker daemon
-	log.Println(devtron, " docker-build")
-	StartDockerDaemon()
-
-	// build
-	dest, err := BuildArtifact(ciRequest)
-	if err != nil {
-		os.Exit(1)
-	}
-	log.Println(devtron, " /docker-build")
-
-	// push to dest
-	log.Println(devtron, " docker-push")
-	digest, err := PushArtifact(ciRequest, dest)
-	if err != nil {
-		os.Exit(1)
-	}
-	log.Println(devtron, " /docker-push")
-
-	log.Println(devtron, " event")
-	err = SendEvents(ciRequest, digest, dest)
-	if err != nil {
-		log.Println(err)
-		os.Exit(1)
-	}
-	log.Println(devtron, " /event")
-
-	err = StopDocker()
-	if err != nil {
-		log.Println("err", err)
-		os.Exit(1)
-	}
-
-	err = os.Chdir("/")
-	if err != nil {
-		log.Println(err)
+	err = run(ciRequest)
+	artifactUploadErr := collectAndUploadArtifact(ciRequest)
+	if err != nil || artifactUploadErr != nil {
+		log.Println(devtron, err, artifactUploadErr)
 		os.Exit(1)
 	}
 
@@ -177,4 +149,120 @@ func main() {
 		os.Exit(1)
 	}
 	log.Println(devtron, " /cache-push")
+}
+
+func collectAndUploadArtifact(ciRequest *CiRequest) error {
+	artifactFiles := make(map[string]string)
+	for _, task := range append(ciRequest.BeforeDockerBuild, ciRequest.AfterDockerBuild...) {
+		if task.runStatus {
+			if _, err := os.Stat(task.OutputLocation); os.IsNotExist(err) { // Ignore if no file/folder
+				log.Println(devtron, "artifact not found ", err)
+				continue
+			}
+			artifactFiles[task.Name] = task.OutputLocation
+		}
+	}
+	log.Println(devtron, " artifacts", artifactFiles)
+	return UploadArtifact(artifactFiles, ciRequest.CiArtifactLocation)
+}
+
+func getScriptEnvVariables(ciRequest *CiRequest) map[string]string {
+	envs := make(map[string]string)
+	//TODO ADD MORE env variable
+	envs["DOCKER_IMAGE_TAG"] = ciRequest.DockerImageTag
+	envs["DOCKER_REPOSITORY"] = ciRequest.DockerRepository
+	envs["DOCKER_REGISTRY_URL"] = ciRequest.DockerRegistryURL
+	return envs
+}
+
+func run(ciRequest *CiRequest) error {
+	err := os.Chdir("/")
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(workingDir); os.IsNotExist(err) {
+		_ = os.Mkdir(workingDir, os.ModeDir)
+	}
+
+	// Get ci cache
+	log.Println(devtron, " cache-pull")
+	err = GetCache(ciRequest)
+	if err != nil {
+		return err
+	}
+	log.Println(devtron, " /cache-pull")
+
+	err = os.Chdir(workingDir)
+	if err != nil {
+		return err
+	}
+	// git handling
+	log.Println(devtron, " git")
+	err = CloneAndCheckout(ciRequest)
+	if err != nil {
+		log.Println(devtron, "clone err: ", err)
+		return err
+	}
+	log.Println(devtron, " /git")
+
+	// Start docker daemon
+	log.Println(devtron, " docker-build")
+	StartDockerDaemon()
+	scriptEnvs := getScriptEnvVariables(ciRequest)
+	//before task
+	for i, task := range ciRequest.BeforeDockerBuild {
+		log.Println(devtron, "pre", task)
+		//log running cmd
+		logStage(task.Name)
+		err = RunScripts(output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs)
+		if err != nil {
+			return err
+		}
+		task.runStatus = true
+	}
+	logStage("docker build")
+	// build
+	dest, err := BuildArtifact(ciRequest)
+	if err != nil {
+		return err
+	}
+	log.Println(devtron, " /docker-build")
+
+	// run post artifact processing
+	log.Println(devtron, " docker-build-post-processing")
+	//after task
+	for i, task := range ciRequest.AfterDockerBuild {
+		log.Println(devtron, "post", task)
+		logStage(task.Name)
+		err = RunScripts(output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs)
+		if err != nil {
+			return err
+		}
+		task.runStatus = true
+	}
+
+	logStage("docker push")
+	// push to dest
+	log.Println(devtron, " docker-push")
+	digest, err := PushArtifact(ciRequest, dest)
+	if err != nil {
+		return err
+	}
+	log.Println(devtron, " /docker-push")
+
+	log.Println(devtron, " event")
+	err = SendEvents(ciRequest, digest, dest)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	log.Println(devtron, " /event")
+
+	err = StopDocker()
+	if err != nil {
+		log.Println("err", err)
+		return err
+	}
+	return nil
 }
