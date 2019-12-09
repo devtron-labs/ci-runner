@@ -17,13 +17,13 @@ func UploadArtifact(artifactFiles map[string]string, s3Location string) error {
 	}
 	//collect in a dir
 	log.Println(devtron, "artifact upload ", artifactFiles, s3Location)
-	err := os.Mkdir(tmpArtifactLocation, os.ModeDir)
+	err := os.Mkdir(tmpArtifactLocation, os.ModePerm)
 	if err != nil {
 		return err
 	}
 	for key, val := range artifactFiles {
 		loc := filepath.Join(tmpArtifactLocation, key)
-		err := os.Mkdir(loc, os.ModeDir)
+		err := os.Mkdir(loc, os.ModePerm)
 		if err != nil {
 			return err
 		}
