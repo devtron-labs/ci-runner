@@ -45,7 +45,7 @@ type Task struct {
 	Name           string `json:"name"`
 	Script         string `json:"script"`
 	OutputLocation string `json:"outputLocation"` // file/dir
-	runStatus      bool   `json:"-"`
+	runStatus      bool   `json:"-"`              // task run was attempted or not
 }
 
 type TestExecutorImageProperties struct {
@@ -212,6 +212,7 @@ func run(ciRequest *CiRequest) error {
 	scriptEnvs := getScriptEnvVariables(ciRequest)
 	//before task
 	for i, task := range ciRequest.BeforeDockerBuild {
+		task.runStatus = true
 		log.Println(devtron, "pre", task)
 		//log running cmd
 		logStage(task.Name)
@@ -219,7 +220,6 @@ func run(ciRequest *CiRequest) error {
 		if err != nil {
 			return err
 		}
-		task.runStatus = true
 	}
 	logStage("docker build")
 	// build
@@ -233,13 +233,14 @@ func run(ciRequest *CiRequest) error {
 	log.Println(devtron, " docker-build-post-processing")
 	//after task
 	for i, task := range ciRequest.AfterDockerBuild {
+		task.runStatus = true
 		log.Println(devtron, "post", task)
 		logStage(task.Name)
 		err = RunScripts(output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return err
 		}
-		task.runStatus = true
+
 	}
 
 	logStage("docker push")
