@@ -217,6 +217,15 @@ func StopDocker() error {
 			log.Fatal(err)
 			return err
 		}
+		removeContainerCmds:= "docker rm -v -f $(docker ps -a -q)"
+		log.Println(devtron, " -----> removing docker container")
+		removeContainerCmd := exec.Command("/bin/sh", "-c", removeContainerCmds)
+		err = RunCommand(removeContainerCmd)
+		log.Println(devtron, " -----> removed docker container")
+		if err != nil {
+			log.Fatal(err)
+			return err
+		}
 	}
 	file := "/var/run/docker.pid"
 	content, err := ioutil.ReadFile(file)
