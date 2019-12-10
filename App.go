@@ -45,6 +45,7 @@ type Task struct {
 	Name           string `json:"name"`
 	Script         string `json:"script"`
 	OutputLocation string `json:"outputLocation"` // file/dir
+	Branch         string `json:"branch"`
 	runStatus      bool   `json:"-"`
 }
 
@@ -210,6 +211,16 @@ func run(ciRequest *CiRequest) error {
 	log.Println(devtron, " docker-build")
 	StartDockerDaemon()
 	scriptEnvs := getScriptEnvVariables(ciRequest)
+
+	beforeTaskMap := make(map[string]bool)
+	for _, task := range ciRequest.BeforeDockerBuild {
+		beforeTaskMap[task.Name] = true
+	}
+	afterTaskMap := make(map[string]bool)
+	for _, task := range ciRequest.AfterDockerBuild {
+		afterTaskMap[task.Name] = true
+	}
+
 	//before task
 	for i, task := range ciRequest.BeforeDockerBuild {
 		log.Println(devtron, "pre", task)
