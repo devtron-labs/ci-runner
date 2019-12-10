@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -35,6 +36,7 @@ type CiRequest struct {
 	CacheLimit         int64              `json:"cacheLimit"`
 	BeforeDockerBuild  []*Task            `json:"beforeDockerBuildScripts"`
 	AfterDockerBuild   []*Task            `json:"afterDockerBuildScripts"`
+	CiYamlLocation     string             `json:"CiYamlLocations"`
 
 	TestExecutorImageProperties *TestExecutorImageProperties `json:"testExecutorImageProperties"`
 }
@@ -42,11 +44,10 @@ type CiRequest struct {
 type Task struct {
 	Id             int    `json:"id"`
 	Index          int    `json:"index"`
-	Name           string `json:"name"`
-	Script         string `json:"script"`
-	OutputLocation string `json:"outputLocation"` // file/dir
-	Branch         string `json:"branch"`
-	runStatus      bool   `json:"-"`
+	Name           string `json:"name" yaml:"name"`
+	Script         string `json:"script" yaml:"script"`
+	OutputLocation string `json:"outputLocation" yaml:"outputLocation"` // file/dir
+	runStatus      bool   `json:"-"`                                    // task run was attempted or not
 }
 
 type TestExecutorImageProperties struct {
@@ -212,26 +213,21 @@ func run(ciRequest *CiRequest) error {
 	StartDockerDaemon()
 	scriptEnvs := getScriptEnvVariables(ciRequest)
 
-	beforeTaskMap := make(map[string]bool)
-	for _, task := range ciRequest.BeforeDockerBuild {
-		beforeTaskMap[task.Name] = true
-	}
-	afterTaskMap := make(map[string]bool)
-	for _, task := range ciRequest.AfterDockerBuild {
-		afterTaskMap[task.Name] = true
+	// Get devtron-ci yaml
+	yamlLocation := ciRequest.DockerFileLocation[:strings.LastIndex(ciRequest.DockerFileLocation, "/")+1]
+	log.Println(devtron, "devtron-ci yaml location ", yamlLocation)
+	taskYaml, err := GetTaskYaml(yamlLocation)
+	if err != nil {
+		return err
 	}
 
-	//before task
-	for i, task := range ciRequest.BeforeDockerBuild {
-		log.Println(devtron, "pre", task)
-		//log running cmd
-		logStage(task.Name)
-		err = RunScripts(output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs)
-		if err != nil {
-			return err
-		}
-		task.runStatus = true
+	// run pre artifact processing
+	err = RunPreDockerBuildTasks(ciRequest, scriptEnvs, taskYaml)
+	if err != nil {
+		log.Println(err)
+		return err
 	}
+
 	logStage("docker build")
 	// build
 	dest, err := BuildArtifact(ciRequest)
@@ -241,16 +237,9 @@ func run(ciRequest *CiRequest) error {
 	log.Println(devtron, " /docker-build")
 
 	// run post artifact processing
-	log.Println(devtron, " docker-build-post-processing")
-	//after task
-	for i, task := range ciRequest.AfterDockerBuild {
-		log.Println(devtron, "post", task)
-		logStage(task.Name)
-		err = RunScripts(output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs)
-		if err != nil {
-			return err
-		}
-		task.runStatus = true
+	err = RunPostDockerBuildTasks(ciRequest, scriptEnvs, taskYaml)
+	if err != nil {
+		return err
 	}
 
 	logStage("docker push")
@@ -274,6 +263,81 @@ func run(ciRequest *CiRequest) error {
 	if err != nil {
 		log.Println("err", err)
 		return err
+	}
+	return nil
+}
+
+func RunPreDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, taskYaml *TaskYaml) error {
+	beforeYamlTasks, err := GetBeforeDockerBuildTasks(ciRequest, taskYaml)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	//before task
+	beforeTaskMap := make(map[string]*Task)
+	for i, task := range ciRequest.BeforeDockerBuild {
+		task.runStatus = true
+		beforeTaskMap[task.Name] = task
+		log.Println(devtron, "pre", task)
+		//log running cmd
+		logStage(task.Name)
+		err = RunScripts(output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs)
+		if err != nil {
+			return err
+		}
+	}
+
+	// run before yaml tasks
+	for i, task := range beforeYamlTasks {
+		if _, ok := beforeTaskMap[task.Name]; ok {
+			log.Println("duplicate task found in yaml, ran earlier so ignoring")
+			continue
+		}
+		task.runStatus = true
+		log.Println(devtron, "pre - yaml", task)
+		//log running cmd
+		logStage(task.Name)
+		err = RunScripts(output_path, fmt.Sprintf("before-yaml-%d", i), task.Script, scriptEnvs)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func RunPostDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, taskYaml *TaskYaml) error {
+	afterYamlTasks, err := GetAfterDockerBuildTasks(ciRequest, taskYaml)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	log.Println(devtron, " docker-build-post-processing")
+	afterTaskMap := make(map[string]*Task)
+	for i, task := range ciRequest.AfterDockerBuild {
+		task.runStatus = true
+		afterTaskMap[task.Name] = task
+		log.Println(devtron, "post", task)
+		logStage(task.Name)
+		err = RunScripts(output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs)
+		if err != nil {
+			return err
+		}
+	}
+	for i, task := range afterYamlTasks {
+		if _, ok := afterTaskMap[task.Name]; ok {
+			log.Println("duplicate task found in yaml, already run so ignoring")
+			continue
+		}
+		task.runStatus = true
+		log.Println(devtron, "post - yaml", task)
+		//log running cmd
+		logStage(task.Name)
+		err = RunScripts(output_path, fmt.Sprintf("after-yaml-%d", i), task.Script, scriptEnvs)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
