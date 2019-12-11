@@ -9,6 +9,16 @@ pipelineConf:
         value:
           - "%d.%d.%d-rc"
     beforeDockerBuildStages:
+      - name: "test-1"
+        script: |
+          date > abc.report
+          echo 'hello'
+        outputLocation: "./abc1.report"
+      - name: "test-2"
+        script: |
+          date > abc.report
+        outputLocation: "./abcd2.report"
+    afterDockerBuildStages:
       - name: "test-3"
         script: |
           date > abc.report
