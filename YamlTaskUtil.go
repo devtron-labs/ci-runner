@@ -176,7 +176,7 @@ func isValidTag(ciRequest *CiRequest, a AppliesTo) bool {
 	isValidTag := true
 	for _, prj := range ciRequest.CiProjectDetails {
 		for _, t := range tagsRegex {
-			match, _ := regexp.MatchString(t, prj.SourceValue)
+			match, _ := regexp.MatchString(t, prj.GitTag)
 			if !match {
 				log.Println(devtron, "invalid tag")
 				isValidTag = false
