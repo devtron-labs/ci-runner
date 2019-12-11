@@ -62,6 +62,7 @@ func GetBeforeDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Tas
 				// TODO:
 			}
 		}
+
 	}
 	return tasks, nil
 }

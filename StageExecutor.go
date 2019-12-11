@@ -36,6 +36,7 @@ func RunPreDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, 
 			log.Println("duplicate task found in yaml, ran earlier so ignoring")
 			continue
 		}
+		beforeTaskMap[task.Name] = task
 		task.runStatus = true
 		log.Println(devtron, "pre - yaml", task)
 		//log running cmd
@@ -73,6 +74,7 @@ func RunPostDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string,
 			log.Println("duplicate task found in yaml, already run so ignoring")
 			continue
 		}
+		afterTaskMap[task.Name] = task
 		task.runStatus = true
 		log.Println(devtron, "post - yaml", task)
 		//log running cmd
