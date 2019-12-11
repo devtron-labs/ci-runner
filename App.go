@@ -156,11 +156,14 @@ func main() {
 func collectAndUploadArtifact(ciRequest *CiRequest) error {
 	artifactFiles := make(map[string]string)
 	var allTasks []*Task
-	for _, pc := range ciRequest.TaskYaml.PipelineConf {
-		for _, t := range append(pc.BeforeDockerBuild, pc.AfterDockerBuild...) {
-			allTasks = append(allTasks, t)
+	if ciRequest.TaskYaml != nil {
+		for _, pc := range ciRequest.TaskYaml.PipelineConf {
+			for _, t := range append(pc.BeforeDockerBuild, pc.AfterDockerBuild...) {
+				allTasks = append(allTasks, t)
+			}
 		}
 	}
+
 	allTasks = append(allTasks, ciRequest.BeforeDockerBuild...)
 	allTasks = append(allTasks, ciRequest.AfterDockerBuild...)
 
