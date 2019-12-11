@@ -73,7 +73,8 @@ type CiProjectDetails struct {
 	CheckoutPath  string     `json:"checkoutPath"`
 	CommitHash    string     `json:"commitHash"`
 	CommitTime    time.Time  `json:"commitTime"`
-	Branch        string     `json:"branch"`
+	SourceType    SourceType `json:"sourceType"`
+	SourceValue   string     `json:"sourceValue"`
 	Type          string     `json:"type"`
 	Message       string     `json:"message"`
 	Author        string     `json:"author"`
@@ -94,6 +95,15 @@ const (
 	AUTH_MODE_SSH               AuthMode = "SSH"
 	AUTH_MODE_ACCESS_TOKEN      AuthMode = "ACCESS_TOKEN"
 	AUTH_MODE_ANONYMOUS         AuthMode = "ANONYMOUS"
+)
+
+type SourceType string
+
+const (
+	SOURCE_TYPE_BRANCH_FIXED SourceType = "SOURCE_TYPE_BRANCH_FIXED"
+	SOURCE_TYPE_BRANCH_REGEX SourceType = "SOURCE_TYPE_BRANCH_REGEX"
+	SOURCE_TYPE_TAG_ANY      SourceType = "SOURCE_TYPE_TAG_ANY"
+	SOURCE_TYPE_TAG_REGEX    SourceType = "SOURCE_TYPE_TAG_REGEX"
 )
 
 const CI_COMPLETE_TOPIC = "CI-RUNNER.CI-COMPLETE"

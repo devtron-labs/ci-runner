@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 )
 
 type TaskYaml struct {
@@ -16,8 +17,8 @@ type TaskYaml struct {
 
 type PipelineConfig struct {
 	AppliesTo         []AppliesTo `yaml:"appliesTo"`
-	BeforeDockerBuild []*Task       `yaml:"beforeDockerBuildStages"`
-	AfterDockerBuild  []*Task       `yaml:"afterDockerBuildStages"`
+	BeforeDockerBuild []*Task     `yaml:"beforeDockerBuildStages"`
+	AfterDockerBuild  []*Task     `yaml:"afterDockerBuildStages"`
 }
 
 type AppliesTo struct {
@@ -64,7 +65,22 @@ func GetBeforeDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Tas
 				tasks = append(tasks, p.BeforeDockerBuild...)
 				filteredOut = true
 			case TAG_PATTERN:
-				// TODO:
+				isValidSourceType := true
+				for _, p := range ciRequest.CiProjectDetails {
+					if p.SourceType != SOURCE_TYPE_TAG_REGEX {
+						log.Println(devtron, "skipping invalid source type")
+						isValidSourceType = false
+						break
+					}
+				}
+				if isValidSourceType {
+					if !isValidTag(ciRequest, a) {
+						log.Println(devtron, "skipping current AppliesTo")
+						continue
+					}
+					tasks = append(tasks, p.BeforeDockerBuild...)
+					filteredOut = true
+				}
 			}
 		}
 
@@ -78,7 +94,7 @@ func GetAfterDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task
 		return nil, nil
 	}
 
-	if taskYaml.Version != "0.0.1" {	// TODO: Get version from ciRequest based on ci_pipeline
+	if taskYaml.Version != "0.0.1" { // TODO: Get version from ciRequest based on ci_pipeline
 		log.Println("invalid version for devtron-ci.yaml")
 		return nil, errors.New("invalid version for devtron-ci.yaml")
 	}
@@ -96,19 +112,39 @@ func GetAfterDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task
 			triggerType := a.Type
 			switch triggerType {
 			case BRANCH_FIXED:
-				branches := a.Value
-				branchesMap := make(map[string]bool)
-				for _, b := range branches {
-					branchesMap[b] = true
+				isValidSourceType := true
+				for _, p := range ciRequest.CiProjectDetails {
+					if p.SourceType != SOURCE_TYPE_BRANCH_FIXED {
+						log.Println(devtron, "skipping invalid source type")
+						isValidSourceType = false
+						break
+					}
 				}
-				if !isValidBranch(ciRequest, a) {
-					log.Println(devtron, "skipping current AppliesTo")
-					continue
+				if isValidSourceType {
+					if !isValidBranch(ciRequest, a) {
+						log.Println(devtron, "skipping current AppliesTo")
+						continue
+					}
+					tasks = append(tasks, p.AfterDockerBuild...)
+					filteredOut = true
 				}
-				tasks = append(tasks, p.AfterDockerBuild...)
-				filteredOut = true
 			case TAG_PATTERN:
-				// TODO:
+				isValidSourceType := true
+				for _, p := range ciRequest.CiProjectDetails {
+					if p.SourceType != SOURCE_TYPE_TAG_REGEX {
+						log.Println(devtron, "skipping invalid source type")
+						isValidSourceType = false
+						break
+					}
+				}
+				if isValidSourceType {
+					if !isValidTag(ciRequest, a) {
+						log.Println(devtron, "skipping current AppliesTo")
+						continue
+					}
+					tasks = append(tasks, p.AfterDockerBuild...)
+					filteredOut = true
+				}
 			}
 		}
 	}
@@ -123,13 +159,32 @@ func isValidBranch(ciRequest *CiRequest, a AppliesTo) bool {
 	}
 	isValidBranch := true
 	for _, prj := range ciRequest.CiProjectDetails {
-		if _, ok := branchesMap[prj.Branch]; !ok {
+		if _, ok := branchesMap[prj.SourceValue]; !ok {
 			log.Println(devtron, "invalid branch")
 			isValidBranch = false
 			break
 		}
 	}
 	return isValidBranch
+}
+
+func isValidTag(ciRequest *CiRequest, a AppliesTo) bool {
+	tagsRegex := a.Value
+	isValidTag := true
+	for _, prj := range ciRequest.CiProjectDetails {
+		if prj.SourceValue == "" {
+			continue
+		}
+		for _, t := range tagsRegex {
+			match, _ := regexp.MatchString(t, prj.SourceValue)
+			if !match {
+				log.Println(devtron, "invalid tag")
+				isValidTag = false
+				break
+			}
+		}
+	}
+	return isValidTag
 }
 
 func GetTaskYaml(yamlLocation string) (*TaskYaml, error) {
@@ -143,6 +198,11 @@ func GetTaskYaml(yamlLocation string) (*TaskYaml, error) {
 	if err != nil {
 		log.Println(err)
 		return nil, err
+	}
+
+	if yamlFile == nil || string(yamlFile) == "" {
+		log.Println("file not found", filename)
+		return nil, nil
 	}
 
 	taskYaml := &TaskYaml{}
