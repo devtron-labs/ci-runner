@@ -13,31 +13,31 @@ import (
 )
 
 type CiRequest struct {
-	CiProjectDetails   []CiProjectDetails `json:"ciProjectDetails"`
-	DockerImageTag     string             `json:"dockerImageTag"`
-	DockerRegistryType string             `json:"dockerRegistryType"`
-	DockerRegistryURL  string             `json:"dockerRegistryURL"`
-	DockerRepository   string             `json:"dockerRepository"`
-	DockerBuildArgs    string             `json:"dockerBuildArgs"`
-	DockerFileLocation string             `json:"dockerfileLocation"`
-	DockerUsername     string             `json:"dockerUsername"`
-	DockerPassword     string             `json:"dockerPassword"`
-	AwsRegion          string             `json:"awsRegion"`
-	AccessKey          string             `json:"accessKey"`
-	SecretKey          string             `json:"secretKey"`
-	CiCacheLocation    string             `json:"ciCacheLocation"`
-	CiArtifactLocation string             `json:"ciArtifactLocation"` // s3 bucket+ path
-	CiCacheRegion      string             `json:"ciCacheRegion"`
-	CiCacheFileName    string             `json:"ciCacheFileName"`
-	PipelineId         int                `json:"pipelineId"`
-	PipelineName       string             `json:"pipelineName"`
-	WorkflowId         int                `json:"workflowId"`
-	TriggeredBy        int                `json:"triggeredBy"`
-	CacheLimit         int64              `json:"cacheLimit"`
-	BeforeDockerBuild  []*Task            `json:"beforeDockerBuildScripts"`
-	AfterDockerBuild   []*Task            `json:"afterDockerBuildScripts"`
-	CiYamlLocation     string             `json:"CiYamlLocations"`
-
+	CiProjectDetails            []CiProjectDetails           `json:"ciProjectDetails"`
+	DockerImageTag              string                       `json:"dockerImageTag"`
+	DockerRegistryType          string                       `json:"dockerRegistryType"`
+	DockerRegistryURL           string                       `json:"dockerRegistryURL"`
+	DockerRepository            string                       `json:"dockerRepository"`
+	DockerBuildArgs             string                       `json:"dockerBuildArgs"`
+	DockerFileLocation          string                       `json:"dockerfileLocation"`
+	DockerUsername              string                       `json:"dockerUsername"`
+	DockerPassword              string                       `json:"dockerPassword"`
+	AwsRegion                   string                       `json:"awsRegion"`
+	AccessKey                   string                       `json:"accessKey"`
+	SecretKey                   string                       `json:"secretKey"`
+	CiCacheLocation             string                       `json:"ciCacheLocation"`
+	CiArtifactLocation          string                       `json:"ciArtifactLocation"` // s3 bucket+ path
+	CiCacheRegion               string                       `json:"ciCacheRegion"`
+	CiCacheFileName             string                       `json:"ciCacheFileName"`
+	PipelineId                  int                          `json:"pipelineId"`
+	PipelineName                string                       `json:"pipelineName"`
+	WorkflowId                  int                          `json:"workflowId"`
+	TriggeredBy                 int                          `json:"triggeredBy"`
+	CacheLimit                  int64                        `json:"cacheLimit"`
+	BeforeDockerBuild           []*Task                      `json:"beforeDockerBuildScripts"`
+	AfterDockerBuild            []*Task                      `json:"afterDockerBuildScripts"`
+	CiYamlLocation              string                       `json:"CiYamlLocations"`
+	TaskYaml                    *TaskYaml                    `json:"-"`
 	TestExecutorImageProperties *TestExecutorImageProperties `json:"testExecutorImageProperties"`
 }
 
@@ -155,7 +155,23 @@ func main() {
 
 func collectAndUploadArtifact(ciRequest *CiRequest) error {
 	artifactFiles := make(map[string]string)
-	for _, task := range append(ciRequest.BeforeDockerBuild, ciRequest.AfterDockerBuild...) {
+	var allTasks []*Task
+	for _, pc := range ciRequest.TaskYaml.PipelineConf {
+		for _, b := range pc.BeforeDockerBuild {
+			if b.runStatus {
+				allTasks = append(allTasks, b)
+			}
+		}
+		for _, a := range pc.AfterDockerBuild {
+			if a.runStatus {
+				allTasks = append(allTasks, a)
+			}
+		}
+	}
+	allTasks = append(allTasks, ciRequest.BeforeDockerBuild...)
+	allTasks = append(allTasks, ciRequest.AfterDockerBuild...)
+
+	for _, task := range allTasks {
 		if task.runStatus {
 			if _, err := os.Stat(task.OutputLocation); os.IsNotExist(err) { // Ignore if no file/folder
 				log.Println(devtron, "artifact not found ", err)
@@ -220,6 +236,7 @@ func run(ciRequest *CiRequest) error {
 	if err != nil {
 		return err
 	}
+	ciRequest.TaskYaml = taskYaml
 
 	// run pre artifact processing
 	err = RunPreDockerBuildTasks(ciRequest, scriptEnvs, taskYaml)
