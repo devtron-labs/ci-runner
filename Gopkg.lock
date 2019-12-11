@@ -320,6 +320,14 @@
   revision = "ec4a0fea49c7b46c2aeb0b51aac55779c607e52b"
   version = "v0.1.2"
 
+[[projects]]
+  digest = "1:b75b3deb2bce8bc079e16bb2aecfe01eb80098f5650f9e93e5643ca8b7b73737"
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "1f64d6156d11335c3f22d9330b0ad14fc1e789ce"
+  version = "v2.2.7"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -338,6 +346,7 @@
     "gopkg.in/src-d/go-git.v4",
     "gopkg.in/src-d/go-git.v4/plumbing",
     "gopkg.in/src-d/go-git.v4/plumbing/transport/http",
+    "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -1,0 +1,30 @@
+version: 0.0.1
+pipelineConf:
+  - appliesTo:
+      - type: BRANCH_FIXED
+        value:
+          - master
+          - qa
+      - type: TAG_PATTERN
+        value:
+          - "%d.%d.%d-rc"
+    beforeDockerBuildStages:
+      - name: "test-1"
+        script: |
+          date > abc.report
+          echo 'hello'
+        outputLocation: "./abc1.report"
+      - name: "test-2"
+        script: |
+          date > abc.report
+        outputLocation: "./abcd2.report"
+    afterDockerBuildStages:
+      - name: "test-3"
+        script: |
+          date > abc.report
+          echo 'hello'
+        outputLocation: "./abc3.report"
+      - name: "test-4"
+        script: |
+          date > abc.report
+        outputLocation: "./abcd4.report"

@@ -8,44 +8,46 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 type CiRequest struct {
-	CiProjectDetails   []CiProjectDetails `json:"ciProjectDetails"`
-	DockerImageTag     string             `json:"dockerImageTag"`
-	DockerRegistryType string             `json:"dockerRegistryType"`
-	DockerRegistryURL  string             `json:"dockerRegistryURL"`
-	DockerRepository   string             `json:"dockerRepository"`
-	DockerBuildArgs    string             `json:"dockerBuildArgs"`
-	DockerFileLocation string             `json:"dockerfileLocation"`
-	DockerUsername     string             `json:"dockerUsername"`
-	DockerPassword     string             `json:"dockerPassword"`
-	AwsRegion          string             `json:"awsRegion"`
-	AccessKey          string             `json:"accessKey"`
-	SecretKey          string             `json:"secretKey"`
-	CiCacheLocation    string             `json:"ciCacheLocation"`
-	CiArtifactLocation string             `json:"ciArtifactLocation"` // s3 bucket+ path
-	CiCacheRegion      string             `json:"ciCacheRegion"`
-	CiCacheFileName    string             `json:"ciCacheFileName"`
-	PipelineId         int                `json:"pipelineId"`
-	PipelineName       string             `json:"pipelineName"`
-	WorkflowId         int                `json:"workflowId"`
-	TriggeredBy        int                `json:"triggeredBy"`
-	CacheLimit         int64              `json:"cacheLimit"`
-	BeforeDockerBuild  []*Task            `json:"beforeDockerBuildScripts"`
-	AfterDockerBuild   []*Task            `json:"afterDockerBuildScripts"`
-
+	CiProjectDetails            []CiProjectDetails           `json:"ciProjectDetails"`
+	DockerImageTag              string                       `json:"dockerImageTag"`
+	DockerRegistryType          string                       `json:"dockerRegistryType"`
+	DockerRegistryURL           string                       `json:"dockerRegistryURL"`
+	DockerRepository            string                       `json:"dockerRepository"`
+	DockerBuildArgs             string                       `json:"dockerBuildArgs"`
+	DockerFileLocation          string                       `json:"dockerfileLocation"`
+	DockerUsername              string                       `json:"dockerUsername"`
+	DockerPassword              string                       `json:"dockerPassword"`
+	AwsRegion                   string                       `json:"awsRegion"`
+	AccessKey                   string                       `json:"accessKey"`
+	SecretKey                   string                       `json:"secretKey"`
+	CiCacheLocation             string                       `json:"ciCacheLocation"`
+	CiArtifactLocation          string                       `json:"ciArtifactLocation"` // s3 bucket+ path
+	CiCacheRegion               string                       `json:"ciCacheRegion"`
+	CiCacheFileName             string                       `json:"ciCacheFileName"`
+	PipelineId                  int                          `json:"pipelineId"`
+	PipelineName                string                       `json:"pipelineName"`
+	WorkflowId                  int                          `json:"workflowId"`
+	TriggeredBy                 int                          `json:"triggeredBy"`
+	CacheLimit                  int64                        `json:"cacheLimit"`
+	BeforeDockerBuild           []*Task                      `json:"beforeDockerBuildScripts"`
+	AfterDockerBuild            []*Task                      `json:"afterDockerBuildScripts"`
+	CiYamlLocation              string                       `json:"CiYamlLocations"`
+	TaskYaml                    *TaskYaml                    `json:"-"`
 	TestExecutorImageProperties *TestExecutorImageProperties `json:"testExecutorImageProperties"`
 }
 
 type Task struct {
 	Id             int    `json:"id"`
 	Index          int    `json:"index"`
-	Name           string `json:"name"`
-	Script         string `json:"script"`
-	OutputLocation string `json:"outputLocation"` // file/dir
-	runStatus      bool   `json:"-"`              // task run was attempted or not
+	Name           string `json:"name" yaml:"name"`
+	Script         string `json:"script" yaml:"script"`
+	OutputLocation string `json:"outputLocation" yaml:"outputLocation"` // file/dir
+	runStatus      bool   `json:"-"`                                    // task run was attempted or not
 }
 
 type TestExecutorImageProperties struct {
@@ -153,7 +155,19 @@ func main() {
 
 func collectAndUploadArtifact(ciRequest *CiRequest) error {
 	artifactFiles := make(map[string]string)
-	for _, task := range append(ciRequest.BeforeDockerBuild, ciRequest.AfterDockerBuild...) {
+	var allTasks []*Task
+	if ciRequest.TaskYaml != nil {
+		for _, pc := range ciRequest.TaskYaml.PipelineConf {
+			for _, t := range append(pc.BeforeDockerBuild, pc.AfterDockerBuild...) {
+				allTasks = append(allTasks, t)
+			}
+		}
+	}
+
+	allTasks = append(allTasks, ciRequest.BeforeDockerBuild...)
+	allTasks = append(allTasks, ciRequest.AfterDockerBuild...)
+
+	for _, task := range allTasks {
 		if task.runStatus {
 			if _, err := os.Stat(task.OutputLocation); os.IsNotExist(err) { // Ignore if no file/folder
 				log.Println(devtron, "artifact not found ", err)
@@ -210,17 +224,23 @@ func run(ciRequest *CiRequest) error {
 	log.Println(devtron, " docker-build")
 	StartDockerDaemon()
 	scriptEnvs := getScriptEnvVariables(ciRequest)
-	//before task
-	for i, task := range ciRequest.BeforeDockerBuild {
-		task.runStatus = true
-		log.Println(devtron, "pre", task)
-		//log running cmd
-		logStage(task.Name)
-		err = RunScripts(output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs)
-		if err != nil {
-			return err
-		}
+
+	// Get devtron-ci yaml
+	yamlLocation := ciRequest.DockerFileLocation[:strings.LastIndex(ciRequest.DockerFileLocation, "/")+1]
+	log.Println(devtron, "devtron-ci yaml location ", yamlLocation)
+	taskYaml, err := GetTaskYaml(yamlLocation)
+	if err != nil {
+		return err
 	}
+	ciRequest.TaskYaml = taskYaml
+
+	// run pre artifact processing
+	err = RunPreDockerBuildTasks(ciRequest, scriptEnvs, taskYaml)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
 	logStage("docker build")
 	// build
 	dest, err := BuildArtifact(ciRequest)
@@ -230,17 +250,9 @@ func run(ciRequest *CiRequest) error {
 	log.Println(devtron, " /docker-build")
 
 	// run post artifact processing
-	log.Println(devtron, " docker-build-post-processing")
-	//after task
-	for i, task := range ciRequest.AfterDockerBuild {
-		task.runStatus = true
-		log.Println(devtron, "post", task)
-		logStage(task.Name)
-		err = RunScripts(output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs)
-		if err != nil {
-			return err
-		}
-
+	err = RunPostDockerBuildTasks(ciRequest, scriptEnvs, taskYaml)
+	if err != nil {
+		return err
 	}
 
 	logStage("docker push")
