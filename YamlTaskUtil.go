@@ -173,18 +173,15 @@ func isValidBranch(ciRequest *CiRequest, a AppliesTo) bool {
 
 func isValidTag(ciRequest *CiRequest, a AppliesTo) bool {
 	tagsRegex := a.Value
-	isValidTag := true
 	for _, prj := range ciRequest.CiProjectDetails {
 		for _, t := range tagsRegex {
 			match, _ := regexp.MatchString(t, prj.GitTag)
-			if !match {
-				log.Println(devtron, "invalid tag")
-				isValidTag = false
-				break
+			if match {
+				return true
 			}
 		}
 	}
-	return isValidTag
+	return false
 }
 
 func GetTaskYaml(yamlLocation string) (*TaskYaml, error) {
