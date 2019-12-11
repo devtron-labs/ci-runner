@@ -136,6 +136,9 @@ func GetAfterDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task
 						isValidSourceType = false
 						break
 					}
+					if len(ciRequest.CiProjectDetails) > 1 {
+						isValidSourceType = false
+					}
 				}
 				if isValidSourceType {
 					if !isValidTag(ciRequest, a) {
@@ -172,9 +175,6 @@ func isValidTag(ciRequest *CiRequest, a AppliesTo) bool {
 	tagsRegex := a.Value
 	isValidTag := true
 	for _, prj := range ciRequest.CiProjectDetails {
-		if prj.SourceValue == "" {
-			continue
-		}
 		for _, t := range tagsRegex {
 			match, _ := regexp.MatchString(t, prj.SourceValue)
 			if !match {
