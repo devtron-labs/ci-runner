@@ -43,7 +43,11 @@ func GetBeforeDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Tas
 	log.Println(devtron, "pipelineConf length: ", len(pipelineConfig))
 
 	var tasks []*Task
+	filteredOut := false
 	for _, p := range pipelineConfig {
+		if filteredOut {
+			break
+		}
 		for _, a := range p.AppliesTo {
 			triggerType := a.Type
 			switch triggerType {
@@ -58,6 +62,7 @@ func GetBeforeDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Tas
 					continue
 				}
 				tasks = append(tasks, p.BeforeDockerBuild...)
+				filteredOut = true
 			case TAG_PATTERN:
 				// TODO:
 			}
@@ -82,7 +87,11 @@ func GetAfterDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task
 	log.Println(devtron, "pipelineConf length: ", len(pipelineConfig))
 
 	var tasks []*Task
+	filteredOut := false
 	for _, p := range pipelineConfig {
+		if filteredOut {
+			break
+		}
 		for _, a := range p.AppliesTo {
 			triggerType := a.Type
 			switch triggerType {
@@ -97,6 +106,7 @@ func GetAfterDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task
 					continue
 				}
 				tasks = append(tasks, p.AfterDockerBuild...)
+				filteredOut = true
 			case TAG_PATTERN:
 				// TODO:
 			}
