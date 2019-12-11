@@ -50,7 +50,7 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 				Auth:          auth,
 				URL:           prj.GitRepository,
 				Progress:      os.Stdout,
-				ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/tags/%s", prj.SourceValue)),
+				ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/tags/%s", prj.GitTag)),
 				SingleBranch:  true,
 			})
 		}
