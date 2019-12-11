@@ -157,14 +157,9 @@ func collectAndUploadArtifact(ciRequest *CiRequest) error {
 	artifactFiles := make(map[string]string)
 	var allTasks []*Task
 	for _, pc := range ciRequest.TaskYaml.PipelineConf {
-		for _, b := range pc.BeforeDockerBuild {
-			if b.runStatus {
-				allTasks = append(allTasks, b)
-			}
-		}
-		for _, a := range pc.AfterDockerBuild {
-			if a.runStatus {
-				allTasks = append(allTasks, a)
+		for _, t := range append(pc.BeforeDockerBuild, pc.AfterDockerBuild...) {
+			if t.runStatus {
+				allTasks = append(allTasks, t)
 			}
 		}
 	}
