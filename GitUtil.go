@@ -52,7 +52,6 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 				Progress:      os.Stdout,
 				ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/tags/%s", prj.GitTag)),
 				SingleBranch:  true,
-
 			})
 		}
 
@@ -67,19 +66,10 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 
 		if prj.CommitHash != "" {
 			log.Println("-----> " + prj.GitRepository + " git checking out commit " + prj.CommitHash)
-			switch prj.SourceType {
-			case SOURCE_TYPE_BRANCH_FIXED:
-				cErr := checkoutHash(w, prj.CommitHash)
-				if cErr != nil {
-					log.Println(cErr)
-					return cErr
-				}
-			case SOURCE_TYPE_TAG_REGEX:
-				cErr := checkoutHashForTag(w, prj.CommitHash)
-				if cErr != nil {
-					log.Println(cErr)
-					return cErr
-				}
+			cErr := checkoutHash(w, prj.CommitHash)
+			if cErr != nil {
+				log.Println(cErr)
+				return cErr
 			}
 		}
 	}
@@ -88,15 +78,7 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 
 func checkoutHash(workTree *git.Worktree, hash string) error {
 	err := workTree.Checkout(&git.CheckoutOptions{
-		Hash: plumbing.NewHash(hash),
-
-	})
-	return err
-}
-
-func checkoutHashForTag(workTree *git.Worktree, hash string) error {
-	err := workTree.Checkout(&git.CheckoutOptions{
-		Hash: plumbing.NewHash(hash),
+		Hash:  plumbing.NewHash(hash),
 		Force: true,
 	})
 	return err
