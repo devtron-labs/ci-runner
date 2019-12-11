@@ -280,12 +280,6 @@ func run(ciRequest *CiRequest) error {
 }
 
 func RunPreDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, taskYaml *TaskYaml) error {
-	beforeYamlTasks, err := GetBeforeDockerBuildTasks(ciRequest, taskYaml)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
 	//before task
 	beforeTaskMap := make(map[string]*Task)
 	for i, task := range ciRequest.BeforeDockerBuild {
@@ -294,10 +288,16 @@ func RunPreDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, 
 		log.Println(devtron, "pre", task)
 		//log running cmd
 		logStage(task.Name)
-		err = RunScripts(output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs)
+		err := RunScripts(output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return err
 		}
+	}
+
+	beforeYamlTasks, err := GetBeforeDockerBuildTasks(ciRequest, taskYaml)
+	if err != nil {
+		log.Println(err)
+		return err
 	}
 
 	// run before yaml tasks
@@ -319,12 +319,6 @@ func RunPreDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, 
 }
 
 func RunPostDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, taskYaml *TaskYaml) error {
-	afterYamlTasks, err := GetAfterDockerBuildTasks(ciRequest, taskYaml)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
 	log.Println(devtron, " docker-build-post-processing")
 	afterTaskMap := make(map[string]*Task)
 	for i, task := range ciRequest.AfterDockerBuild {
@@ -332,11 +326,18 @@ func RunPostDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string,
 		afterTaskMap[task.Name] = task
 		log.Println(devtron, "post", task)
 		logStage(task.Name)
-		err = RunScripts(output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs)
+		err := RunScripts(output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return err
 		}
 	}
+
+	afterYamlTasks, err := GetAfterDockerBuildTasks(ciRequest, taskYaml)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
 	for i, task := range afterYamlTasks {
 		if _, ok := afterTaskMap[task.Name]; ok {
 			log.Println("duplicate task found in yaml, already run so ignoring")

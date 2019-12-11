@@ -72,7 +72,7 @@ func GetAfterDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task
 		return nil, nil
 	}
 
-	if taskYaml.Version != "0.0.1" {
+	if taskYaml.Version != "0.0.1" {	// TODO: Get version from ciRequest based on ci_pipeline
 		log.Println("invalid version for devtron-ci.yaml")
 		return nil, errors.New("invalid version for devtron-ci.yaml")
 	}
