@@ -30,17 +30,31 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 		case AUTH_MODE_ACCESS_TOKEN:
 			auth = &http.BasicAuth{Password: prj.GitOptions.AccessToken, Username: prj.GitOptions.UserName}
 		}
-		if len(prj.Branch) == 0 {
-			prj.Branch = "master"
+
+		switch prj.SourceType {
+		case SOURCE_TYPE_BRANCH_FIXED:
+			if len(prj.SourceValue) == 0 {
+				prj.SourceValue = "master"
+			}
+			log.Println("-----> " + prj.GitRepository + " checking out branch " + prj.SourceValue)
+			r, cErr = git.PlainClone(filepath.Join(workingDir, prj.CheckoutPath), false, &git.CloneOptions{
+				Auth:          auth,
+				URL:           prj.GitRepository,
+				Progress:      os.Stdout,
+				ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", prj.SourceValue)),
+				SingleBranch:  true,
+			})
+		case SOURCE_TYPE_TAG_REGEX:
+			log.Println("-----> " + prj.GitRepository + " checking out tag " + prj.GitTag)
+			r, cErr = git.PlainClone(filepath.Join(workingDir, prj.CheckoutPath), false, &git.CloneOptions{
+				Auth:          auth,
+				URL:           prj.GitRepository,
+				Progress:      os.Stdout,
+				ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/tags/%s", prj.GitTag)),
+				SingleBranch:  true,
+			})
 		}
-		log.Println("-----> " + prj.GitRepository + " checking out branch " + prj.Branch)
-		r, cErr = git.PlainClone(filepath.Join(workingDir, prj.CheckoutPath), false, &git.CloneOptions{
-			Auth:          auth,
-			URL:           prj.GitRepository,
-			Progress:      os.Stdout,
-			ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", prj.Branch)),
-			SingleBranch:  true,
-		})
+
 		if cErr != nil {
 			log.Fatal("could not clone branch ", " err ", cErr)
 		}
@@ -64,7 +78,8 @@ func CloneAndCheckout(ciRequest *CiRequest) error {
 
 func checkoutHash(workTree *git.Worktree, hash string) error {
 	err := workTree.Checkout(&git.CheckoutOptions{
-		Hash: plumbing.NewHash(hash),
+		Hash:  plumbing.NewHash(hash),
+		Force: true,
 	})
 	return err
 }
