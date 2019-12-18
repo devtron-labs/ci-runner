@@ -12,6 +12,25 @@ import (
 	"time"
 )
 
+type CiCdTriggerEvent struct {
+	Type      string     `json:"type"`
+	CiRequest *CiRequest `json:"ciRequest"`
+	CdRequest *CdRequest `json:"cdRequest"`
+}
+
+type CdRequest struct {
+	AwsRegion        string             `json:"awsRegion"`
+	AccessKey        string             `json:"accessKey"`
+	SecretKey        string             `json:"secretKey"`
+	WorkflowId       int                `json:"workflowId"`
+	CdPipelineId     int                `json:"cdPipelineId"`
+	TriggeredBy      int32              `json:"triggeredBy"`
+	StageYaml        string             `json:"stageYaml"`
+	ArtifactLocation string             `json:"artifactLocation"`
+	TaskYaml         *TaskYaml          `json:"-"`
+	CiProjectDetails []CiProjectDetails `json:"ciProjectDetails"`
+}
+
 type CiRequest struct {
 	CiProjectDetails            []CiProjectDetails           `json:"ciProjectDetails"`
 	DockerImageTag              string                       `json:"dockerImageTag"`
@@ -67,6 +86,17 @@ type CiCompleteEvent struct {
 	MaterialType     string             `json:"materialType"`
 }
 
+type CdStageCompleteEvent struct {
+	CiProjectDetails []CiProjectDetails `json:"ciProjectDetails"`
+	WorkflowId       int                `json:"workflowId"`
+	CdPipelineId     int                `json:"cdPipelineId"`
+	TriggeredBy      int32              `json:"triggeredBy"`
+	StageYaml        string             `json:"stageYaml"`
+	ArtifactLocation string             `json:"artifactLocation"`
+	TaskYaml         *TaskYaml          `json:"-"`
+	PipelineName     string             `json:"pipelineName"`
+}
+
 type CiProjectDetails struct {
 	GitRepository string     `json:"gitRepository"`
 	MaterialName  string     `json:"materialName"`
@@ -108,6 +138,7 @@ const (
 )
 
 const CI_COMPLETE_TOPIC = "CI-RUNNER.CI-COMPLETE"
+const CD_COMPLETE_TOPIC = "CI-RUNNER.CD-COMPLETE"
 
 type PubSubClient struct {
 	Conn stan.Conn
@@ -122,6 +153,9 @@ type PubSubConfig struct {
 const retryCount = 10
 const workingDir = "/devtroncd"
 const devtron = "DEVTRON"
+
+const ciEvent = "CI"
+const cdStage = "CD"
 
 var (
 	output_path = filepath.Join("./process")
@@ -139,29 +173,63 @@ STAGE:  %s
 func main() {
 	// ' {"workflowNamePrefix":"55-suraj-23-ci-suraj-test-pipeline-8","pipelineName":"suraj-23-ci-suraj-test-pipeline","pipelineId":8,"dockerImageTag":"a6b809c4be87c217feba4af15cf5ebc3cafe21e0","dockerRegistryURL":"686244538589.dkr.ecr.us-east-2.amazonaws.com","dockerRepository":"test/suraj-23","dockerfileLocation":"./notifier/Dockerfile","awsRegion":"us-east-2","ciCacheLocation":"ci-caching","ciCacheFileName":"suraj-23-ci-suraj-test-pipeline.tar.gz","ciProjectDetails":[{"gitRepository":"https://gitlab.com/devtron/notifier.git","materialName":"1-notifier","checkoutPath":"./notifier","commitHash":"d4df38bcd065004014d255c2203d592a91585955","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"test-commit","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":"USERNAME_PASSWORD"}},{"gitRepository":"https://gitlab.com/devtron/orchestrator.git","materialName":"2-orchestrator","checkoutPath":"./orch","commitHash":"","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":""}}],"ciImage":"686244538589.dkr.ecr.us-east-2.amazonaws.com/cirunner:latest","namespace":"default"}'
 	args := os.Args[1]
-	ciRequest := &CiRequest{}
-	err := json.Unmarshal([]byte(args), ciRequest)
+	ciCdRequest := &CiCdTriggerEvent{}
+	err := json.Unmarshal([]byte(args), ciCdRequest)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
-	log.Println(devtron, " ci request details -----> ", args)
+	log.Println(devtron, " ci-cd request details -----> ", args)
 
-	err = run(ciRequest)
-	artifactUploadErr := collectAndUploadArtifact(ciRequest)
-	if err != nil || artifactUploadErr != nil {
-		log.Println(devtron, err, artifactUploadErr)
-		os.Exit(1)
-	}
+	if ciCdRequest.Type == ciEvent {
+		ciRequest := ciCdRequest.CiRequest
+		err = run(ciRequest)
+		artifactUploadErr := collectAndUploadArtifact(ciRequest)
+		if err != nil || artifactUploadErr != nil {
+			log.Println(devtron, err, artifactUploadErr)
+			os.Exit(1)
+		}
 
-	// sync cache
-	log.Println(devtron, " cache-push")
-	err = SyncCache(ciRequest)
-	if err != nil {
-		log.Println(err)
-		os.Exit(1)
+		// sync cache
+		log.Println(devtron, " cache-push")
+		err = SyncCache(ciRequest)
+		if err != nil {
+			log.Println(err)
+			os.Exit(1)
+		}
+		log.Println(devtron, " /cache-push")
+	} else {
+		cdRequest := ciCdRequest.CdRequest
+		err = runCDStages(cdRequest)
+		artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CdRequest)
+		if artifactUploadErr != nil {
+			log.Println(err)
+			os.Exit(1)
+		}
 	}
-	log.Println(devtron, " /cache-push")
+}
+
+func collectAndUploadCDArtifacts(cdRequest *CdRequest) error {
+	artifactFiles := make(map[string]string)
+	var allTasks []*Task
+	if cdRequest.TaskYaml != nil {
+		for _, pc := range cdRequest.TaskYaml.PipelineConf {
+			for _, t := range append(pc.BeforeTasks, pc.AfterTasks...) {
+				allTasks = append(allTasks, t)
+			}
+		}
+	}
+	for _, task := range allTasks {
+		if task.runStatus {
+			if _, err := os.Stat(task.OutputLocation); os.IsNotExist(err) { // Ignore if no file/folder
+				log.Println(devtron, "artifact not found ", err)
+				continue
+			}
+			artifactFiles[task.Name] = task.OutputLocation
+		}
+	}
+	log.Println(devtron, " artifacts", artifactFiles)
+	return UploadArtifact(artifactFiles, cdRequest.ArtifactLocation)
 }
 
 func collectAndUploadArtifact(ciRequest *CiRequest) error {
@@ -169,7 +237,7 @@ func collectAndUploadArtifact(ciRequest *CiRequest) error {
 	var allTasks []*Task
 	if ciRequest.TaskYaml != nil {
 		for _, pc := range ciRequest.TaskYaml.PipelineConf {
-			for _, t := range append(pc.BeforeDockerBuild, pc.AfterDockerBuild...) {
+			for _, t := range append(pc.BeforeTasks, pc.AfterTasks...) {
 				allTasks = append(allTasks, t)
 			}
 		}
@@ -224,7 +292,7 @@ func run(ciRequest *CiRequest) error {
 	}
 	// git handling
 	log.Println(devtron, " git")
-	err = CloneAndCheckout(ciRequest)
+	err = CloneAndCheckout(ciRequest.CiProjectDetails)
 	if err != nil {
 		log.Println(devtron, "clone err: ", err)
 		return err
@@ -277,6 +345,67 @@ func run(ciRequest *CiRequest) error {
 
 	log.Println(devtron, " event")
 	err = SendEvents(ciRequest, digest, dest)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	log.Println(devtron, " /event")
+
+	err = StopDocker()
+	if err != nil {
+		log.Println("err", err)
+		return err
+	}
+	return nil
+}
+
+func runCDStages(cdRequest *CdRequest) error {
+	err := os.Chdir("/")
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(workingDir); os.IsNotExist(err) {
+		_ = os.Mkdir(workingDir, os.ModeDir)
+	}
+	err = os.Chdir(workingDir)
+	if err != nil {
+		return err
+	}
+	// git handling
+	log.Println(devtron, " git")
+	err = CloneAndCheckout(cdRequest.CiProjectDetails)
+	if err != nil {
+		log.Println(devtron, "clone err: ", err)
+		return err
+	}
+	log.Println(devtron, " /git")
+
+	// Start docker daemon
+	log.Println(devtron, " docker-build")
+	StartDockerDaemon()
+
+	// Get devtron-cd yaml
+	taskYaml, err := ToTaskYaml([]byte(cdRequest.StageYaml))
+	if err != nil {
+		return err
+	}
+	cdRequest.TaskYaml = taskYaml
+
+	// run post artifact processing
+	var tasks []*Task
+	for _, t := range taskYaml.CdPipelineConfig {
+		tasks = append(tasks, t.BeforeTasks...)
+		tasks = append(tasks, t.AfterTasks...)
+	}
+
+	err = RunCdStageTasks(tasks)
+	if err != nil {
+		return err
+	}
+
+	log.Println(devtron, " event")
+	err = SendCDEvent(cdRequest)
 	if err != nil {
 		log.Println(err)
 		return err
