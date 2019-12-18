@@ -91,6 +91,10 @@ func RunCdStageTasks(tasks []*Task) error {
 	log.Println(devtron, " cd-stage-processing")
 	taskMap := make(map[string]*Task)
 	for i, task := range tasks {
+		if _, ok := taskMap[task.Name]; ok {
+			log.Println("duplicate task found in yaml, already run so ignoring")
+			continue
+		}
 		task.runStatus = true
 		taskMap[task.Name] = task
 		log.Println(devtron, "stage", task)
