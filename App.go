@@ -19,9 +19,6 @@ type CiCdTriggerEvent struct {
 }
 
 type CdRequest struct {
-	AwsRegion        string             `json:"awsRegion"`
-	AccessKey        string             `json:"accessKey"`
-	SecretKey        string             `json:"secretKey"`
 	WorkflowId       int                `json:"workflowId"`
 	CdPipelineId     int                `json:"cdPipelineId"`
 	TriggeredBy      int32              `json:"triggeredBy"`
@@ -29,6 +26,17 @@ type CdRequest struct {
 	ArtifactLocation string             `json:"artifactLocation"`
 	TaskYaml         *TaskYaml          `json:"-"`
 	CiProjectDetails []CiProjectDetails `json:"ciProjectDetails"`
+	CiArtifactDTO    CiArtifactDTO      `json:"ciArtifactDTO"`
+}
+
+type CiArtifactDTO struct {
+	Id           int    `json:"id"`
+	PipelineId   int    `json:"pipelineId"` //id of the ci pipeline from which this webhook was triggered
+	Image        string `json:"image"`
+	ImageDigest  string `json:"imageDigest"`
+	MaterialInfo string `json:"materialInfo"` //git material metadata json array string
+	DataSource   string `json:"dataSource"`
+	WorkflowId   *int   `json:"workflowId"`
 }
 
 type CiRequest struct {
@@ -95,6 +103,7 @@ type CdStageCompleteEvent struct {
 	ArtifactLocation string             `json:"artifactLocation"`
 	TaskYaml         *TaskYaml          `json:"-"`
 	PipelineName     string             `json:"pipelineName"`
+	CiArtifactDTO    CiArtifactDTO      `json:"ciArtifactDTO"`
 }
 
 type CiProjectDetails struct {
