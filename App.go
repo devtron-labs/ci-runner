@@ -224,7 +224,7 @@ func collectAndUploadCDArtifacts(cdRequest *CdRequest) error {
 	artifactFiles := make(map[string]string)
 	var allTasks []*Task
 	if cdRequest.TaskYaml != nil {
-		for _, pc := range cdRequest.TaskYaml.PipelineConf {
+		for _, pc := range cdRequest.TaskYaml.CdPipelineConfig {
 			for _, t := range append(pc.BeforeTasks, pc.AfterTasks...) {
 				allTasks = append(allTasks, t)
 			}
@@ -393,17 +393,19 @@ func runCDStages(cdRequest *CdRequest) error {
 	log.Println(devtron, " /git")
 
 	// Start docker daemon
-	log.Println(devtron, " docker-build")
+	log.Println(devtron, " docker-start")
 	StartDockerDaemon()
 
 	// Get devtron-cd yaml
 	taskYaml, err := ToTaskYaml([]byte(cdRequest.StageYaml))
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	cdRequest.TaskYaml = taskYaml
 
 	// run post artifact processing
+	log.Println(devtron, " stage yaml", taskYaml)
 	var tasks []*Task
 	for _, t := range taskYaml.CdPipelineConfig {
 		tasks = append(tasks, t.BeforeTasks...)
