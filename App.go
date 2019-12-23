@@ -98,6 +98,7 @@ type CiCompleteEvent struct {
 type CdStageCompleteEvent struct {
 	CiProjectDetails []CiProjectDetails `json:"ciProjectDetails"`
 	WorkflowId       int                `json:"workflowId"`
+	WorkflowRunnerId int                `json:"workflowRunnerId"`
 	CdPipelineId     int                `json:"cdPipelineId"`
 	TriggeredBy      int32              `json:"triggeredBy"`
 	StageYaml        string             `json:"stageYaml"`

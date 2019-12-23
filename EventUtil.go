@@ -22,6 +22,7 @@ func SendCDEvent(cdRequest *CdRequest) error {
 		CiProjectDetails: cdRequest.CiProjectDetails,
 		CdPipelineId:     cdRequest.CdPipelineId,
 		WorkflowId:       cdRequest.WorkflowId,
+		WorkflowRunnerId: cdRequest.WorkflowRunnerId,
 		CiArtifactDTO:    cdRequest.CiArtifactDTO,
 		TriggeredBy:      cdRequest.TriggeredBy,
 	}
