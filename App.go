@@ -20,6 +20,7 @@ type CiCdTriggerEvent struct {
 
 type CdRequest struct {
 	WorkflowId       int                `json:"workflowId"`
+	WorkflowRunnerId int                `json:"workflowRunnerId"`
 	CdPipelineId     int                `json:"cdPipelineId"`
 	TriggeredBy      int32              `json:"triggeredBy"`
 	StageYaml        string             `json:"stageYaml"`
