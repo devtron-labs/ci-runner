@@ -149,7 +149,7 @@ const (
 )
 
 const CI_COMPLETE_TOPIC = "CI-RUNNER.CI-COMPLETE"
-const CD_COMPLETE_TOPIC = "CI-RUNNER.CD-COMPLETE"
+const CD_COMPLETE_TOPIC = "CI-RUNNER.CD-STAGE-COMPLETE"
 
 type PubSubClient struct {
 	Conn stan.Conn
