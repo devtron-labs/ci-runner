@@ -11,14 +11,20 @@ import (
 )
 
 type TaskYaml struct {
-	Version      string           `yaml:"version"`
-	PipelineConf []PipelineConfig `yaml:"pipelineConf"`
+	Version          string             `yaml:"version"`
+	PipelineConf     []PipelineConfig   `yaml:"pipelineConf"`
+	CdPipelineConfig []CdPipelineConfig `yaml:"cdPipelineConf"`
 }
 
 type PipelineConfig struct {
-	AppliesTo         []AppliesTo `yaml:"appliesTo"`
-	BeforeDockerBuild []*Task     `yaml:"beforeDockerBuildStages"`
-	AfterDockerBuild  []*Task     `yaml:"afterDockerBuildStages"`
+	AppliesTo   []AppliesTo `yaml:"appliesTo"`
+	BeforeTasks []*Task     `yaml:"beforeDockerBuildStages"`
+	AfterTasks  []*Task     `yaml:"afterDockerBuildStages"`
+}
+
+type CdPipelineConfig struct {
+	BeforeTasks []*Task     `yaml:"beforeStages"`
+	AfterTasks  []*Task     `yaml:"afterStages"`
 }
 
 type AppliesTo struct {
@@ -62,7 +68,7 @@ func GetBeforeDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Tas
 					log.Println(devtron, "skipping current AppliesTo")
 					continue
 				}
-				tasks = append(tasks, p.BeforeDockerBuild...)
+				tasks = append(tasks, p.BeforeTasks...)
 				filteredOut = true
 			case TAG_PATTERN:
 				isValidSourceType := true
@@ -78,7 +84,7 @@ func GetBeforeDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Tas
 						log.Println(devtron, "skipping current AppliesTo")
 						continue
 					}
-					tasks = append(tasks, p.BeforeDockerBuild...)
+					tasks = append(tasks, p.BeforeTasks...)
 					filteredOut = true
 				}
 			}
@@ -125,7 +131,7 @@ func GetAfterDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task
 						log.Println(devtron, "skipping current AppliesTo")
 						continue
 					}
-					tasks = append(tasks, p.AfterDockerBuild...)
+					tasks = append(tasks, p.AfterTasks...)
 					filteredOut = true
 				}
 			case TAG_PATTERN:
@@ -145,7 +151,7 @@ func GetAfterDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task
 						log.Println(devtron, "skipping current AppliesTo")
 						continue
 					}
-					tasks = append(tasks, p.AfterDockerBuild...)
+					tasks = append(tasks, p.AfterTasks...)
 					filteredOut = true
 				}
 			}
@@ -202,8 +208,7 @@ func GetTaskYaml(yamlLocation string) (*TaskYaml, error) {
 		return nil, nil
 	}
 
-	taskYaml := &TaskYaml{}
-	err = yaml.Unmarshal(yamlFile, taskYaml)
+	taskYaml, err := ToTaskYaml(yamlFile)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -211,4 +216,10 @@ func GetTaskYaml(yamlLocation string) (*TaskYaml, error) {
 
 	log.Println("yaml version: ", taskYaml.Version)
 	return taskYaml, nil
+}
+
+func ToTaskYaml(yamlFile []byte) (*TaskYaml, error) {
+	taskYaml := &TaskYaml{}
+	err := yaml.Unmarshal(yamlFile, taskYaml)
+	return taskYaml, err
 }

@@ -87,6 +87,25 @@ func RunPostDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string,
 	return nil
 }
 
+func RunCdStageTasks(tasks []*Task) error {
+	log.Println(devtron, " cd-stage-processing")
+	taskMap := make(map[string]*Task)
+	for i, task := range tasks {
+		if _, ok := taskMap[task.Name]; ok {
+			log.Println("duplicate task found in yaml, already run so ignoring")
+			continue
+		}
+		task.runStatus = true
+		taskMap[task.Name] = task
+		log.Println(devtron, "stage", task)
+		logStage(task.Name)
+		err := RunScripts(output_path, fmt.Sprintf("stage-%d", i), task.Script, make(map[string]string))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func RunScripts(outputPath string, bashScript string, script string, envVars map[string]string) error {
 	log.Println("running script commands")
