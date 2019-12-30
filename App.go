@@ -194,7 +194,7 @@ func main() {
 
 	if ciCdRequest.Type == ciEvent {
 		ciRequest := ciCdRequest.CiRequest
-		err = run(ciRequest)
+		err = run(ciCdRequest)
 		artifactUploadErr := collectAndUploadArtifact(ciRequest)
 		if err != nil || artifactUploadErr != nil {
 			log.Println(devtron, err, artifactUploadErr)
@@ -210,8 +210,7 @@ func main() {
 		}
 		log.Println(devtron, " /cache-push")
 	} else {
-		cdRequest := ciCdRequest.CdRequest
-		err = runCDStages(cdRequest)
+		err = runCDStages(ciCdRequest)
 		artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CdRequest)
 		if artifactUploadErr != nil {
 			log.Println(err)
@@ -270,16 +269,20 @@ func collectAndUploadArtifact(ciRequest *CiRequest) error {
 	return UploadArtifact(artifactFiles, ciRequest.CiArtifactLocation)
 }
 
-func getScriptEnvVariables(ciRequest *CiRequest) map[string]string {
+func getScriptEnvVariables(cicdRequest *CiCdTriggerEvent) map[string]string {
 	envs := make(map[string]string)
 	//TODO ADD MORE env variable
-	envs["DOCKER_IMAGE_TAG"] = ciRequest.DockerImageTag
-	envs["DOCKER_REPOSITORY"] = ciRequest.DockerRepository
-	envs["DOCKER_REGISTRY_URL"] = ciRequest.DockerRegistryURL
+	if cicdRequest.Type == ciEvent {
+		envs["DOCKER_IMAGE_TAG"] = cicdRequest.CiRequest.DockerImageTag
+		envs["DOCKER_REPOSITORY"] = cicdRequest.CiRequest.DockerRepository
+		envs["DOCKER_REGISTRY_URL"] = cicdRequest.CiRequest.DockerRegistryURL
+	} else {
+		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
+	}
 	return envs
 }
 
-func run(ciRequest *CiRequest) error {
+func run(ciCdRequest *CiCdTriggerEvent) error {
 	err := os.Chdir("/")
 	if err != nil {
 		return err
@@ -291,7 +294,7 @@ func run(ciRequest *CiRequest) error {
 
 	// Get ci cache
 	log.Println(devtron, " cache-pull")
-	err = GetCache(ciRequest)
+	err = GetCache(ciCdRequest.CiRequest)
 	if err != nil {
 		return err
 	}
@@ -303,7 +306,7 @@ func run(ciRequest *CiRequest) error {
 	}
 	// git handling
 	log.Println(devtron, " git")
-	err = CloneAndCheckout(ciRequest.CiProjectDetails)
+	err = CloneAndCheckout(ciCdRequest.CiRequest.CiProjectDetails)
 	if err != nil {
 		log.Println(devtron, "clone err: ", err)
 		return err
@@ -313,19 +316,19 @@ func run(ciRequest *CiRequest) error {
 	// Start docker daemon
 	log.Println(devtron, " docker-build")
 	StartDockerDaemon()
-	scriptEnvs := getScriptEnvVariables(ciRequest)
+	scriptEnvs := getScriptEnvVariables(ciCdRequest)
 
 	// Get devtron-ci yaml
-	yamlLocation := ciRequest.DockerFileLocation[:strings.LastIndex(ciRequest.DockerFileLocation, "/")+1]
+	yamlLocation := ciCdRequest.CiRequest.DockerFileLocation[:strings.LastIndex(ciCdRequest.CiRequest.DockerFileLocation, "/")+1]
 	log.Println(devtron, "devtron-ci yaml location ", yamlLocation)
 	taskYaml, err := GetTaskYaml(yamlLocation)
 	if err != nil {
 		return err
 	}
-	ciRequest.TaskYaml = taskYaml
+	ciCdRequest.CiRequest.TaskYaml = taskYaml
 
 	// run pre artifact processing
-	err = RunPreDockerBuildTasks(ciRequest, scriptEnvs, taskYaml)
+	err = RunPreDockerBuildTasks(ciCdRequest.CiRequest, scriptEnvs, taskYaml)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -333,14 +336,14 @@ func run(ciRequest *CiRequest) error {
 
 	logStage("docker build")
 	// build
-	dest, err := BuildArtifact(ciRequest)
+	dest, err := BuildArtifact(ciCdRequest.CiRequest)
 	if err != nil {
 		return err
 	}
 	log.Println(devtron, " /docker-build")
 
 	// run post artifact processing
-	err = RunPostDockerBuildTasks(ciRequest, scriptEnvs, taskYaml)
+	err = RunPostDockerBuildTasks(ciCdRequest.CiRequest, scriptEnvs, taskYaml)
 	if err != nil {
 		return err
 	}
@@ -348,14 +351,14 @@ func run(ciRequest *CiRequest) error {
 	logStage("docker push")
 	// push to dest
 	log.Println(devtron, " docker-push")
-	digest, err := PushArtifact(ciRequest, dest)
+	digest, err := PushArtifact(ciCdRequest.CiRequest, dest)
 	if err != nil {
 		return err
 	}
 	log.Println(devtron, " /docker-push")
 
 	log.Println(devtron, " event")
-	err = SendEvents(ciRequest, digest, dest)
+	err = SendEvents(ciCdRequest.CiRequest, digest, dest)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -370,7 +373,7 @@ func run(ciRequest *CiRequest) error {
 	return nil
 }
 
-func runCDStages(cdRequest *CdRequest) error {
+func runCDStages(cicdRequest *CiCdTriggerEvent) error {
 	err := os.Chdir("/")
 	if err != nil {
 		return err
@@ -385,7 +388,7 @@ func runCDStages(cdRequest *CdRequest) error {
 	}
 	// git handling
 	log.Println(devtron, " git")
-	err = CloneAndCheckout(cdRequest.CiProjectDetails)
+	err = CloneAndCheckout(cicdRequest.CdRequest.CiProjectDetails)
 	if err != nil {
 		log.Println(devtron, "clone err: ", err)
 		return err
@@ -397,12 +400,12 @@ func runCDStages(cdRequest *CdRequest) error {
 	StartDockerDaemon()
 
 	// Get devtron-cd yaml
-	taskYaml, err := ToTaskYaml([]byte(cdRequest.StageYaml))
+	taskYaml, err := ToTaskYaml([]byte(cicdRequest.CdRequest.StageYaml))
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-	cdRequest.TaskYaml = taskYaml
+	cicdRequest.CdRequest.TaskYaml = taskYaml
 
 	// run post artifact processing
 	log.Println(devtron, " stage yaml", taskYaml)
@@ -412,13 +415,14 @@ func runCDStages(cdRequest *CdRequest) error {
 		tasks = append(tasks, t.AfterTasks...)
 	}
 
-	err = RunCdStageTasks(tasks)
+	scriptEnvs := getScriptEnvVariables(cicdRequest)
+	err = RunCdStageTasks(tasks, scriptEnvs)
 	if err != nil {
 		return err
 	}
 
 	log.Println(devtron, " event")
-	err = SendCDEvent(cdRequest)
+	err = SendCDEvent(cicdRequest.CdRequest)
 	if err != nil {
 		log.Println(err)
 		return err
