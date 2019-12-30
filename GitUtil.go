@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 )
 
-func CloneAndCheckout(ciRequest *CiRequest) error {
-	for _, prj := range ciRequest.CiProjectDetails {
+func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
+	for _, prj := range ciProjectDetails {
 		// git clone
 		log.Println("-----> git cloning " + prj.GitRepository)
 
