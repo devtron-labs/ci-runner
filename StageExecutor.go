@@ -87,7 +87,7 @@ func RunPostDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string,
 	return nil
 }
 
-func RunCdStageTasks(tasks []*Task) error {
+func RunCdStageTasks(tasks []*Task, scriptEnvs map[string]string) error {
 	log.Println(devtron, " cd-stage-processing")
 	taskMap := make(map[string]*Task)
 	for i, task := range tasks {
@@ -99,7 +99,7 @@ func RunCdStageTasks(tasks []*Task) error {
 		taskMap[task.Name] = task
 		log.Println(devtron, "stage", task)
 		logStage(task.Name)
-		err := RunScripts(output_path, fmt.Sprintf("stage-%d", i), task.Script, make(map[string]string))
+		err := RunScripts(output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return err
 		}
