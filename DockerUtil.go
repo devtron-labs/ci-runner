@@ -27,45 +27,58 @@ func StartDockerDaemon() {
 	waitForDockerDaemon(retryCount)
 }
 
-func BuildArtifact(ciRequest *CiRequest) (string, error) {
-	username := ciRequest.DockerUsername
-	pwd := ciRequest.DockerPassword
+type DockerCredentials struct {
+	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType string
+}
 
-	if ciRequest.DockerRegistryType == "ecr" {
+func DockerLogin(dockerCredentials *DockerCredentials) error {
+	username := dockerCredentials.DockerUsername
+	pwd := dockerCredentials.DockerPassword
+	if dockerCredentials.DockerRegistryType == "ecr" {
 		svc := ecr.New(session.New(&aws.Config{
-			Region:      &ciRequest.AwsRegion,
-			Credentials: credentials.NewStaticCredentials(ciRequest.AccessKey, ciRequest.SecretKey, ""),
+			Region:      &dockerCredentials.AwsRegion,
+			Credentials: credentials.NewStaticCredentials(dockerCredentials.AccessKey, dockerCredentials.SecretKey, ""),
 		}))
-
 		input := &ecr.GetAuthorizationTokenInput{}
 		authData, err := svc.GetAuthorizationToken(input)
 		if err != nil {
 			log.Println(err)
-			return "", err
+			return err
 		}
-
 		// decode token
 		token := authData.AuthorizationData[0].AuthorizationToken
 		decodedToken, err := base64.StdEncoding.DecodeString(*token)
 		if err != nil {
 			log.Println(err)
-			return "", err
+			return err
 		}
-
 		credsSlice := strings.Split(string(decodedToken), ":")
 		username = credsSlice[0]
 		pwd = credsSlice[1]
 	}
-
-	dockerLogin := "docker login -u " + username + " -p " + pwd + " " + ciRequest.DockerRegistryURL
+	dockerLogin := "docker login -u " + username + " -p " + pwd + " " + dockerCredentials.DockerRegistryURL
 	log.Println(devtron, " -----> "+dockerLogin)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
 	err := RunCommand(awsLoginCmd)
 	if err != nil {
 		log.Println(err)
+		return err
+	}
+	return nil
+}
+func BuildArtifact(ciRequest *CiRequest) (string, error) {
+	err := DockerLogin(&DockerCredentials{
+		DockerUsername:     ciRequest.DockerUsername,
+		DockerPassword:     ciRequest.DockerPassword,
+		AwsRegion:          ciRequest.AwsRegion,
+		AccessKey:          ciRequest.AccessKey,
+		SecretKey:          ciRequest.SecretKey,
+		DockerRegistryURL:  ciRequest.DockerRegistryURL,
+		DockerRegistryType: ciRequest.DockerRegistryType,
+	})
+	if err != nil {
 		return "", err
 	}
-
 	if ciRequest.DockerImageTag == "" {
 		ciRequest.DockerImageTag = "latest"
 	}
@@ -170,7 +183,7 @@ func StopDocker() error {
 			log.Fatal(err)
 			return err
 		}
-		removeContainerCmds:= "docker rm -v -f $(docker ps -a -q)"
+		removeContainerCmds := "docker rm -v -f $(docker ps -a -q)"
 		log.Println(devtron, " -----> removing docker container")
 		removeContainerCmd := exec.Command("/bin/sh", "-c", removeContainerCmds)
 		err = RunCommand(removeContainerCmd)
