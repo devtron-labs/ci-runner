@@ -19,15 +19,22 @@ type CiCdTriggerEvent struct {
 }
 
 type CdRequest struct {
-	WorkflowId       int                `json:"workflowId"`
-	WorkflowRunnerId int                `json:"workflowRunnerId"`
-	CdPipelineId     int                `json:"cdPipelineId"`
-	TriggeredBy      int32              `json:"triggeredBy"`
-	StageYaml        string             `json:"stageYaml"`
-	ArtifactLocation string             `json:"artifactLocation"`
-	TaskYaml         *TaskYaml          `json:"-"`
-	CiProjectDetails []CiProjectDetails `json:"ciProjectDetails"`
-	CiArtifactDTO    CiArtifactDTO      `json:"ciArtifactDTO"`
+	WorkflowId         int                `json:"workflowId"`
+	WorkflowRunnerId   int                `json:"workflowRunnerId"`
+	CdPipelineId       int                `json:"cdPipelineId"`
+	TriggeredBy        int32              `json:"triggeredBy"`
+	StageYaml          string             `json:"stageYaml"`
+	ArtifactLocation   string             `json:"artifactLocation"`
+	TaskYaml           *TaskYaml          `json:"-"`
+	CiProjectDetails   []CiProjectDetails `json:"ciProjectDetails"`
+	CiArtifactDTO      CiArtifactDTO      `json:"ciArtifactDTO"`
+	DockerUsername     string             `json:"dockerUsername"`
+	DockerPassword     string             `json:"dockerPassword"`
+	AwsRegion          string             `json:"awsRegion"`
+	AccessKey          string             `json:"accessKey"`
+	SecretKey          string             `json:"secretKey"`
+	DockerRegistryURL  string             `json:"dockerRegistryUrl"`
+	DockerRegistryType string             `json:"dockerRegistryType"`
 }
 
 type CiArtifactDTO struct {
@@ -398,7 +405,18 @@ func runCDStages(cicdRequest *CiCdTriggerEvent) error {
 	// Start docker daemon
 	log.Println(devtron, " docker-start")
 	StartDockerDaemon()
-
+	err = DockerLogin(&DockerCredentials{
+		DockerUsername:     cicdRequest.CdRequest.DockerUsername,
+		DockerPassword:     cicdRequest.CdRequest.DockerPassword,
+		AwsRegion:         cicdRequest. CdRequest.AwsRegion,
+		AccessKey:         cicdRequest. CdRequest.AccessKey,
+		SecretKey:         cicdRequest. CdRequest.SecretKey,
+		DockerRegistryURL: cicdRequest. CdRequest.DockerRegistryURL,
+		DockerRegistryType:cicdRequest. CdRequest.DockerRegistryType,
+	})
+	if err != nil {
+		return err
+	}
 	// Get devtron-cd yaml
 	taskYaml, err := ToTaskYaml([]byte(cicdRequest.CdRequest.StageYaml))
 	if err != nil {
