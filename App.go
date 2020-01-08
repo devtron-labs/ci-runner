@@ -219,7 +219,7 @@ func main() {
 	} else {
 		err = runCDStages(ciCdRequest)
 		artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CdRequest)
-		if artifactUploadErr != nil {
+		if err != nil || artifactUploadErr != nil {
 			log.Println(err)
 			os.Exit(1)
 		}
@@ -408,11 +408,11 @@ func runCDStages(cicdRequest *CiCdTriggerEvent) error {
 	err = DockerLogin(&DockerCredentials{
 		DockerUsername:     cicdRequest.CdRequest.DockerUsername,
 		DockerPassword:     cicdRequest.CdRequest.DockerPassword,
-		AwsRegion:         cicdRequest. CdRequest.AwsRegion,
-		AccessKey:         cicdRequest. CdRequest.AccessKey,
-		SecretKey:         cicdRequest. CdRequest.SecretKey,
-		DockerRegistryURL: cicdRequest. CdRequest.DockerRegistryURL,
-		DockerRegistryType:cicdRequest. CdRequest.DockerRegistryType,
+		AwsRegion:          cicdRequest.CdRequest.AwsRegion,
+		AccessKey:          cicdRequest.CdRequest.AccessKey,
+		SecretKey:          cicdRequest.CdRequest.SecretKey,
+		DockerRegistryURL:  cicdRequest.CdRequest.DockerRegistryURL,
+		DockerRegistryType: cicdRequest.CdRequest.DockerRegistryType,
 	})
 	if err != nil {
 		return err
