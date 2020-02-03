@@ -13,11 +13,7 @@ import (
 )
 
 func SendCDEvent(cdRequest *CdRequest) error {
-	client, err := NewPubSubClient()
-	if err != nil {
-		log.Println("err", err)
-		os.Exit(1)
-	}
+
 	event := CdStageCompleteEvent{
 		CiProjectDetails: cdRequest.CiProjectDetails,
 		CdPipelineId:     cdRequest.CdPipelineId,
@@ -26,29 +22,16 @@ func SendCDEvent(cdRequest *CdRequest) error {
 		CiArtifactDTO:    cdRequest.CiArtifactDTO,
 		TriggeredBy:      cdRequest.TriggeredBy,
 	}
-	err = SendCdCompleteEvent(client, event)
-	nc := client.Conn.NatsConn()
-
-	err = client.Conn.Close()
+	err := SendCdCompleteEvent(event)
 	if err != nil {
-		log.Println(devtron, " error in closing stan", "err", err)
+		log.Println("err", err)
+		return err
 	}
-
-	err = nc.Drain()
-	if err != nil {
-		log.Println(devtron, " error in draining nats", "err", err)
-	}
-	nc.Close()
-	log.Println(devtron, " housekeeping done. exiting now")
-	return err
+	return nil
 }
 
 func SendEvents(ciRequest *CiRequest, digest string, image string) error {
-	client, err := NewPubSubClient()
-	if err != nil {
-		log.Println("err", err)
-		os.Exit(1)
-	}
+
 	event := CiCompleteEvent{
 		CiProjectDetails: ciRequest.CiProjectDetails,
 		DockerImage:      image,
@@ -60,21 +43,13 @@ func SendEvents(ciRequest *CiRequest, digest string, image string) error {
 		TriggeredBy:      ciRequest.TriggeredBy,
 		MaterialType:     "git",
 	}
-	err = SendCiCompleteEvent(client, event)
-	nc := client.Conn.NatsConn()
-
-	err = client.Conn.Close()
+	err := SendCiCompleteEvent(event)
 	if err != nil {
-		log.Println(devtron, " error in closing stan", "err", err)
+		log.Println("err", err)
+		return err
 	}
-
-	err = nc.Drain()
-	if err != nil {
-		log.Println(devtron, " error in draining nats", "err", err)
-	}
-	nc.Close()
 	log.Println(devtron, " housekeeping done. exiting now")
-	return err
+	return nil
 }
 
 func NewPubSubClient() (*PubSubClient, error) {
@@ -102,35 +77,58 @@ func NewPubSubClient() (*PubSubClient, error) {
 	return natsClient, nil
 }
 
-func SendCiCompleteEvent(client *PubSubClient, event CiCompleteEvent) error {
+func SendCiCompleteEvent(event CiCompleteEvent) error {
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
 		log.Println(devtron, "err", err)
 		return err
 	}
-	err = PublishEvent(client, jsonBody, CI_COMPLETE_TOPIC)
+	err = PublishEvent(jsonBody, CI_COMPLETE_TOPIC)
 	log.Println(devtron, "ci complete event notification done")
 	return err
 }
 
-func SendCdCompleteEvent(client *PubSubClient, event CdStageCompleteEvent) error {
+func SendCdCompleteEvent(event CdStageCompleteEvent) error {
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
 		log.Println(devtron, "err", err)
 		return err
 	}
-	err = PublishEvent(client, jsonBody, CD_COMPLETE_TOPIC)
+	err = PublishEvent(jsonBody, CD_COMPLETE_TOPIC)
 	log.Println(devtron, "cd stage complete event notification done")
 	return err
 }
 
-func PublishEvent(client *PubSubClient, jsonBody []byte, topic string) error {
+func PublishEvent(jsonBody []byte, topic string) error {
+	return PublishEventsOnNats(jsonBody, topic)
+}
+
+func PublishEventsOnNats(jsonBody []byte, topic string) error {
+	client, err := NewPubSubClient()
+	if err != nil {
+		log.Println("err", err)
+		os.Exit(1)
+	}
+
 	var reqBody = []byte(jsonBody)
-	err := client.Conn.Publish(topic, reqBody)
+	err = client.Conn.Publish(topic, reqBody)
 	if err != nil {
 		log.Println(devtron, "publish err", "err", err)
 		return err
 	}
 	log.Println(devtron, "ci complete event notification done")
+	nc := client.Conn.NatsConn()
+
+	err = client.Conn.Close()
+	if err != nil {
+		log.Println(devtron, " error in closing stan", "err", err)
+	}
+
+	err = nc.Drain()
+	if err != nil {
+		log.Println(devtron, " error in draining nats", "err", err)
+	}
+	nc.Close()
+	log.Println(devtron, " housekeeping done. exiting now")
 	return nil
 }
