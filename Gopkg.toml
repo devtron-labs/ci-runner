@@ -65,3 +65,7 @@
 [[constraint]]
   name = "gopkg.in/yaml.v2"
   version = "2.2.7"
+
+[[constraint]]
+  name = "gopkg.in/go-resty/resty.v2"
+  version = "2.1.0"

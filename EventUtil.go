@@ -5,6 +5,7 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
+	"gopkg.in/go-resty/resty.v2"
 	"log"
 	"math/rand"
 	"os"
@@ -100,7 +101,8 @@ func SendCdCompleteEvent(event CdStageCompleteEvent) error {
 }
 
 func PublishEvent(jsonBody []byte, topic string) error {
-	return PublishEventsOnNats(jsonBody, topic)
+	//return PublishEventsOnNats(jsonBody, topic)
+	return PublishEventsOnRest(jsonBody, topic)
 }
 
 func PublishEventsOnNats(jsonBody []byte, topic string) error {
@@ -130,5 +132,29 @@ func PublishEventsOnNats(jsonBody []byte, topic string) error {
 	}
 	nc.Close()
 	log.Println(devtron, " housekeeping done. exiting now")
+	return nil
+}
+
+type PublishRequest struct {
+	Topic   string          `json:"topic"`
+	Payload json.RawMessage `json:"payload"`
+}
+
+func PublishEventsOnRest(jsonBody []byte, topic string) error {
+	publishRequest := &PublishRequest{
+		Topic:   topic,
+		Payload: jsonBody,
+	}
+	client := resty.New()
+	resp, err := client.SetRetryCount(4).R().
+		SetHeader("Content-Type", "application/json").
+		SetBody(publishRequest).
+		//SetResult().    // or SetResult(AuthSuccess{}).
+		Post("http://devtroncd-orchestrator-service-prod.devtroncd/webhook/msg/nats")
+	if err != nil {
+		log.Println("err in publishing over rest", err)
+		return err
+	}
+	log.Println("res ", string(resp.Body()))
 	return nil
 }
