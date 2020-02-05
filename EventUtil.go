@@ -23,7 +23,7 @@ func SendCDEvent(cdRequest *CdRequest) error {
 		CiArtifactDTO:    cdRequest.CiArtifactDTO,
 		TriggeredBy:      cdRequest.TriggeredBy,
 	}
-	err := SendCdCompleteEvent(event)
+	err := SendCdCompleteEvent(cdRequest, event)
 	if err != nil {
 		log.Println("err", err)
 		return err
@@ -89,20 +89,26 @@ func SendCiCompleteEvent(event CiCompleteEvent) error {
 	return err
 }
 
-func SendCdCompleteEvent(event CdStageCompleteEvent) error {
+func SendCdCompleteEvent(cdRequest *CdRequest, event CdStageCompleteEvent) error {
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
 		log.Println(devtron, "err", err)
 		return err
 	}
-	err = PublishEvent(jsonBody, CD_COMPLETE_TOPIC)
+	err = PublishCDEvent(jsonBody, CD_COMPLETE_TOPIC, cdRequest)
 	log.Println(devtron, "cd stage complete event notification done")
 	return err
 }
 
+func PublishCDEvent(jsonBody []byte, topic string, cdRequest *CdRequest) error {
+	if cdRequest.IsExtRun {
+		return PublishEventsOnRest(jsonBody, topic, cdRequest)
+	}
+	return PublishEventsOnNats(jsonBody, topic)
+}
+
 func PublishEvent(jsonBody []byte, topic string) error {
-	//return PublishEventsOnNats(jsonBody, topic)
-	return PublishEventsOnRest(jsonBody, topic)
+	return PublishEventsOnNats(jsonBody, topic)
 }
 
 func PublishEventsOnNats(jsonBody []byte, topic string) error {
@@ -140,7 +146,7 @@ type PublishRequest struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
-func PublishEventsOnRest(jsonBody []byte, topic string) error {
+func PublishEventsOnRest(jsonBody []byte, topic string, cdRequest *CdRequest) error {
 	publishRequest := &PublishRequest{
 		Topic:   topic,
 		Payload: jsonBody,
@@ -150,7 +156,7 @@ func PublishEventsOnRest(jsonBody []byte, topic string) error {
 		SetHeader("Content-Type", "application/json").
 		SetBody(publishRequest).
 		//SetResult().    // or SetResult(AuthSuccess{}).
-		Post("http://devtroncd-orchestrator-service-prod.devtroncd/webhook/msg/nats")
+		Post(cdRequest.OrchestratorHost)
 	if err != nil {
 		log.Println("err in publishing over rest", err)
 		return err
