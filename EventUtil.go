@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"github.com/caarlos0/env"
 	"github.com/nats-io/nats.go"
@@ -152,6 +153,7 @@ func PublishEventsOnRest(jsonBody []byte, topic string, cdRequest *CdRequest) er
 		Payload: jsonBody,
 	}
 	client := resty.New()
+	client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 	resp, err := client.SetRetryCount(4).R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(publishRequest).
