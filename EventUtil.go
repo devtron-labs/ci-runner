@@ -26,7 +26,7 @@ func SendCDEvent(cdRequest *CdRequest) error {
 	}
 	err := SendCdCompleteEvent(cdRequest, event)
 	if err != nil {
-		log.Println("err", err)
+		log.Println(devtron,"err", err)
 		return err
 	}
 	return nil
@@ -47,7 +47,7 @@ func SendEvents(ciRequest *CiRequest, digest string, image string) error {
 	}
 	err := SendCiCompleteEvent(event)
 	if err != nil {
-		log.Println("err", err)
+		log.Println( devtron,"err", err)
 		return err
 	}
 	log.Println(devtron, " housekeeping done. exiting now")
@@ -62,7 +62,7 @@ func NewPubSubClient() (*PubSubClient, error) {
 	}
 	nc, err := nats.Connect(cfg.NatsServerHost)
 	if err != nil {
-		log.Println("err", err)
+		log.Println(devtron,"err", err)
 		os.Exit(1)
 	}
 	s := rand.NewSource(time.Now().UnixNano())
@@ -115,7 +115,7 @@ func PublishEvent(jsonBody []byte, topic string) error {
 func PublishEventsOnNats(jsonBody []byte, topic string) error {
 	client, err := NewPubSubClient()
 	if err != nil {
-		log.Println("err", err)
+		log.Println(devtron,"err", err)
 		os.Exit(1)
 	}
 
