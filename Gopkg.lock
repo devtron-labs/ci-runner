@@ -226,12 +226,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c3e095ce762c6eb934a2c9d117387970076a0213c009b0ad8e6e9f80fef7475a"
+  digest = "1:cbebd92bb90b30c4114178526d069e9aaa33fd7eee789e69ae96bc65f34bbad6"
   name = "golang.org/x/net"
   packages = [
     "context",
+    "idna",
     "internal/socks",
     "proxy",
+    "publicsuffix",
   ]
   pruneopts = "UT"
   revision = "da137c7871d730100384dbcf36e6f8fa493aef5b"
@@ -247,6 +249,39 @@
   ]
   pruneopts = "UT"
   revision = "6ec70d6a5542cba804c6d16ebe8392601a0b7b60"
+
+[[projects]]
+  digest = "1:8d8faad6b12a3a4c819a3f9618cb6ee1fa1cfc33253abeeea8b55336721e3405"
+  name = "golang.org/x/text"
+  packages = [
+    "collate",
+    "collate/build",
+    "internal/colltab",
+    "internal/gen",
+    "internal/language",
+    "internal/language/compact",
+    "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
+    "language",
+    "secure/bidirule",
+    "transform",
+    "unicode/bidi",
+    "unicode/cldr",
+    "unicode/norm",
+    "unicode/rangetable",
+  ]
+  pruneopts = "UT"
+  revision = "342b2e1fbaa52c93f31447ad2c6abc048c63e475"
+  version = "v0.3.2"
+
+[[projects]]
+  digest = "1:e63cd05da63802f9af5033119ac3e4710052872ce3e1f947e1e95c973420c88f"
+  name = "gopkg.in/go-resty/resty.v2"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "de0735f66dae7abf8fb1073b4ace3032c1491424"
+  version = "v2.1.0"
 
 [[projects]]
   digest = "1:8721691b59945f5f21cb170066a62340fe7fc900986355b4ce31d41ab86ca503"
@@ -343,6 +378,7 @@
     "github.com/nats-io/nats.go",
     "github.com/nats-io/stan.go",
     "github.com/otiai10/copy",
+    "gopkg.in/go-resty/resty.v2",
     "gopkg.in/src-d/go-git.v4",
     "gopkg.in/src-d/go-git.v4/plumbing",
     "gopkg.in/src-d/go-git.v4/plumbing/transport/http",
