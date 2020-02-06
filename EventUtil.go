@@ -157,6 +157,7 @@ func PublishEventsOnRest(jsonBody []byte, topic string, cdRequest *CdRequest) er
 	resp, err := client.SetRetryCount(4).R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(publishRequest).
+		SetAuthToken(cdRequest.OrchestratorToken).
 		//SetResult().    // or SetResult(AuthSuccess{}).
 		Post(cdRequest.OrchestratorHost)
 	if err != nil {
