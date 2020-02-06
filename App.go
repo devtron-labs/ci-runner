@@ -35,6 +35,9 @@ type CdRequest struct {
 	SecretKey          string             `json:"secretKey"`
 	DockerRegistryURL  string             `json:"dockerRegistryUrl"`
 	DockerRegistryType string             `json:"dockerRegistryType"`
+	OrchestratorHost   string             `json:"orchestratorHost"`
+	OrchestratorToken  string             `json:"orchestratorToken"`
+	IsExtRun           bool               `json:"isExtRun"`
 }
 
 type CiArtifactDTO struct {
