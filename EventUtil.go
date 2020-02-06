@@ -161,9 +161,9 @@ func PublishEventsOnRest(jsonBody []byte, topic string, cdRequest *CdRequest) er
 		//SetResult().    // or SetResult(AuthSuccess{}).
 		Post(cdRequest.OrchestratorHost)
 	if err != nil {
-		log.Println("err in publishing over rest", err)
+		log.Println(devtron,"err in publishing over rest", err)
 		return err
 	}
-	log.Println("res ", string(resp.Body()))
+	log.Println(devtron,"res ", string(resp.Body()))
 	return nil
 }
