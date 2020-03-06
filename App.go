@@ -77,6 +77,7 @@ type CiRequest struct {
 	CiYamlLocation              string                       `json:"CiYamlLocations"`
 	TaskYaml                    *TaskYaml                    `json:"-"`
 	TestExecutorImageProperties *TestExecutorImageProperties `json:"testExecutorImageProperties"`
+	InvalidateCache             bool                         `json:"invalidateCache"`
 }
 
 type Task struct {
