@@ -12,6 +12,10 @@ import (
 )
 
 func GetCache(ciRequest *CiRequest) error {
+	if ciRequest.InvalidateCache {
+		log.Println("ignoring cache ... ")
+		return nil
+	}
 	log.Println("setting build cache ...............")
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(ciRequest.CiCacheRegion),
