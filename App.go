@@ -206,6 +206,7 @@ func main() {
 	if ciCdRequest.Type == ciEvent {
 		ciRequest := ciCdRequest.CiRequest
 		artifactUploaded,err := run(ciCdRequest)
+		log.Println(devtron, artifactUploaded, err)
 		var artifactUploadErr error
 		if artifactUploaded{
 			artifactUploadErr = collectAndUploadArtifact(ciRequest)
