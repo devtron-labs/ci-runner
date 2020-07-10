@@ -208,7 +208,7 @@ func main() {
 		artifactUploaded,err := run(ciCdRequest)
 		log.Println(devtron, artifactUploaded, err)
 		var artifactUploadErr error
-		if artifactUploaded{
+		if !artifactUploaded{
 			artifactUploadErr = collectAndUploadArtifact(ciRequest)
 		}
 
