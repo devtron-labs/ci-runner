@@ -205,8 +205,13 @@ func main() {
 
 	if ciCdRequest.Type == ciEvent {
 		ciRequest := ciCdRequest.CiRequest
-		err = run(ciCdRequest)
-		artifactUploadErr := collectAndUploadArtifact(ciRequest)
+		artifactUploaded,err := run(ciCdRequest)
+		log.Println(devtron, artifactUploaded, err)
+		var artifactUploadErr error
+		if !artifactUploaded{
+			artifactUploadErr = collectAndUploadArtifact(ciRequest)
+		}
+
 		if err != nil || artifactUploadErr != nil {
 			log.Println(devtron, err, artifactUploadErr)
 			os.Exit(1)
@@ -293,10 +298,11 @@ func getScriptEnvVariables(cicdRequest *CiCdTriggerEvent) map[string]string {
 	return envs
 }
 
-func run(ciCdRequest *CiCdTriggerEvent) error {
-	err := os.Chdir("/")
+func run(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err error) {
+	artifactUploaded = false
+	err = os.Chdir("/")
 	if err != nil {
-		return err
+		return artifactUploaded, err
 	}
 
 	if _, err := os.Stat(workingDir); os.IsNotExist(err) {
@@ -307,20 +313,20 @@ func run(ciCdRequest *CiCdTriggerEvent) error {
 	log.Println(devtron, " cache-pull")
 	err = GetCache(ciCdRequest.CiRequest)
 	if err != nil {
-		return err
+		return artifactUploaded, err
 	}
 	log.Println(devtron, " /cache-pull")
 
 	err = os.Chdir(workingDir)
 	if err != nil {
-		return err
+		return artifactUploaded, err
 	}
 	// git handling
 	log.Println(devtron, " git")
 	err = CloneAndCheckout(ciCdRequest.CiRequest.CiProjectDetails)
 	if err != nil {
 		log.Println(devtron, "clone err: ", err)
-		return err
+		return artifactUploaded, err
 	}
 	log.Println(devtron, " /git")
 
@@ -334,7 +340,7 @@ func run(ciCdRequest *CiCdTriggerEvent) error {
 	log.Println(devtron, "devtron-ci yaml location ", yamlLocation)
 	taskYaml, err := GetTaskYaml(yamlLocation)
 	if err != nil {
-		return err
+		return artifactUploaded, err
 	}
 	ciCdRequest.CiRequest.TaskYaml = taskYaml
 
@@ -342,21 +348,21 @@ func run(ciCdRequest *CiCdTriggerEvent) error {
 	err = RunPreDockerBuildTasks(ciCdRequest.CiRequest, scriptEnvs, taskYaml)
 	if err != nil {
 		log.Println(err)
-		return err
+		return artifactUploaded, err
 	}
 
 	logStage("docker build")
 	// build
 	dest, err := BuildArtifact(ciCdRequest.CiRequest)
 	if err != nil {
-		return err
+		return artifactUploaded, err
 	}
 	log.Println(devtron, " /docker-build")
 
 	// run post artifact processing
 	err = RunPostDockerBuildTasks(ciCdRequest.CiRequest, scriptEnvs, taskYaml)
 	if err != nil {
-		return err
+		return artifactUploaded, err
 	}
 
 	logStage("docker push")
@@ -364,24 +370,32 @@ func run(ciCdRequest *CiCdTriggerEvent) error {
 	log.Println(devtron, " docker-push")
 	digest, err := PushArtifact(ciCdRequest.CiRequest, dest)
 	if err != nil {
-		return err
+		return artifactUploaded, err
 	}
 	log.Println(devtron, " /docker-push")
 
+	log.Println(devtron, " artifact-upload")
+	err = collectAndUploadArtifact(ciCdRequest.CiRequest)
+	if err != nil {
+		return artifactUploaded, err
+	} else {
+		artifactUploaded = true
+	}
+	log.Println(devtron, " /artifact-upload")
 	log.Println(devtron, " event")
 	err = SendEvents(ciCdRequest.CiRequest, digest, dest)
 	if err != nil {
 		log.Println(err)
-		return err
+		return artifactUploaded, err
 	}
 	log.Println(devtron, " /event")
 
 	err = StopDocker()
 	if err != nil {
 		log.Println("err", err)
-		return err
+		return artifactUploaded, err
 	}
-	return nil
+	return artifactUploaded, nil
 }
 
 func runCDStages(cicdRequest *CiCdTriggerEvent) error {
