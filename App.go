@@ -19,25 +19,26 @@ type CiCdTriggerEvent struct {
 }
 
 type CdRequest struct {
-	WorkflowId         int                `json:"workflowId"`
-	WorkflowRunnerId   int                `json:"workflowRunnerId"`
-	CdPipelineId       int                `json:"cdPipelineId"`
-	TriggeredBy        int32              `json:"triggeredBy"`
-	StageYaml          string             `json:"stageYaml"`
-	ArtifactLocation   string             `json:"artifactLocation"`
-	TaskYaml           *TaskYaml          `json:"-"`
-	CiProjectDetails   []CiProjectDetails `json:"ciProjectDetails"`
-	CiArtifactDTO      CiArtifactDTO      `json:"ciArtifactDTO"`
-	DockerUsername     string             `json:"dockerUsername"`
-	DockerPassword     string             `json:"dockerPassword"`
-	AwsRegion          string             `json:"awsRegion"`
-	AccessKey          string             `json:"accessKey"`
-	SecretKey          string             `json:"secretKey"`
-	DockerRegistryURL  string             `json:"dockerRegistryUrl"`
-	DockerRegistryType string             `json:"dockerRegistryType"`
-	OrchestratorHost   string             `json:"orchestratorHost"`
-	OrchestratorToken  string             `json:"orchestratorToken"`
-	IsExtRun           bool               `json:"isExtRun"`
+	WorkflowId                int                `json:"workflowId"`
+	WorkflowRunnerId          int                `json:"workflowRunnerId"`
+	CdPipelineId              int                `json:"cdPipelineId"`
+	TriggeredBy               int32              `json:"triggeredBy"`
+	StageYaml                 string             `json:"stageYaml"`
+	ArtifactLocation          string             `json:"artifactLocation"`
+	TaskYaml                  *TaskYaml          `json:"-"`
+	CiProjectDetails          []CiProjectDetails `json:"ciProjectDetails"`
+	CiArtifactDTO             CiArtifactDTO      `json:"ciArtifactDTO"`
+	DockerUsername            string             `json:"dockerUsername"`
+	DockerPassword            string             `json:"dockerPassword"`
+	AwsRegion                 string             `json:"awsRegion"`
+	AccessKey                 string             `json:"accessKey"`
+	SecretKey                 string             `json:"secretKey"`
+	DockerRegistryURL         string             `json:"dockerRegistryUrl"`
+	DockerRegistryType        string             `json:"dockerRegistryType"`
+	OrchestratorHost          string             `json:"orchestratorHost"`
+	OrchestratorToken         string             `json:"orchestratorToken"`
+	IsExtRun                  bool               `json:"isExtRun"`
+	ExtraEnvironmentVariables map[string]string  `json:"extraEnvironmentVariables"`
 }
 
 type CiArtifactDTO struct {
@@ -289,6 +290,9 @@ func getScriptEnvVariables(cicdRequest *CiCdTriggerEvent) map[string]string {
 		envs["DOCKER_REGISTRY_URL"] = cicdRequest.CiRequest.DockerRegistryURL
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
+		for k, v := range cicdRequest.CdRequest.ExtraEnvironmentVariables {
+			envs[k] = v
+		}
 	}
 	return envs
 }
