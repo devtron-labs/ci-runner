@@ -290,9 +290,11 @@ func getScriptEnvVariables(cicdRequest *CiCdTriggerEvent) map[string]string {
 		envs["DOCKER_REGISTRY_URL"] = cicdRequest.CiRequest.DockerRegistryURL
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
+		log.Println(devtron, " extra env variables", cicdRequest.CdRequest.ExtraEnvironmentVariables)
 		for k, v := range cicdRequest.CdRequest.ExtraEnvironmentVariables {
 			envs[k] = v
 		}
+		log.Println(devtron, " all env variables", envs)
 	}
 	return envs
 }
