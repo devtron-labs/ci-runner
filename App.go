@@ -79,6 +79,7 @@ type CiRequest struct {
 	TaskYaml                    *TaskYaml                    `json:"-"`
 	TestExecutorImageProperties *TestExecutorImageProperties `json:"testExecutorImageProperties"`
 	InvalidateCache             bool                         `json:"invalidateCache"`
+	ScanEnabled                 bool                         `json:"scanEnabled"`
 }
 
 type Task struct {
@@ -162,6 +163,7 @@ const (
 
 const CI_COMPLETE_TOPIC = "CI-RUNNER.CI-COMPLETE"
 const CD_COMPLETE_TOPIC = "CI-RUNNER.CD-STAGE-COMPLETE"
+const TOPIC_CI_SCAN = "CI-SCAN"
 
 type PubSubClient struct {
 	Conn stan.Conn
@@ -179,6 +181,8 @@ const devtron = "DEVTRON"
 
 const ciEvent = "CI"
 const cdStage = "CD"
+
+const ImageScannerEndpoint string = "http://image-scanner-new-demo-devtroncd-service.devtroncd:80"
 
 var (
 	output_path = filepath.Join("./process")
@@ -206,10 +210,10 @@ func main() {
 
 	if ciCdRequest.Type == ciEvent {
 		ciRequest := ciCdRequest.CiRequest
-		artifactUploaded,err := run(ciCdRequest)
+		artifactUploaded, err := run(ciCdRequest)
 		log.Println(devtron, artifactUploaded, err)
 		var artifactUploadErr error
-		if !artifactUploaded{
+		if !artifactUploaded {
 			artifactUploadErr = collectAndUploadArtifact(ciRequest)
 		}
 
@@ -386,6 +390,19 @@ func run(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err error) {
 		artifactUploaded = true
 	}
 	log.Println(devtron, " /artifact-upload")
+
+	// scan only if ci scan enabled
+	if ciCdRequest.CiRequest.ScanEnabled {
+		log.Println(devtron, " /image-scanner")
+		scanEvent := &ScanEvent{Image: dest, ImageDigest: digest, PipelineId: ciCdRequest.CiRequest.PipelineId, UserId: ciCdRequest.CiRequest.TriggeredBy}
+		err = SendEventToClairUtility(scanEvent)
+		if err != nil {
+			log.Println(err)
+			return artifactUploaded, err
+		}
+		log.Println(devtron, " /image-scanner")
+	}
+
 	log.Println(devtron, " event")
 	err = SendEvents(ciCdRequest.CiRequest, digest, dest)
 	if err != nil {
