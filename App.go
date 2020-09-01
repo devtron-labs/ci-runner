@@ -393,6 +393,7 @@ func run(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err error) {
 
 	// scan only if ci scan enabled
 	if ciCdRequest.CiRequest.ScanEnabled {
+		logStage("IMAGE SCAN")
 		log.Println(devtron, " /image-scanner")
 		scanEvent := &ScanEvent{Image: dest, ImageDigest: digest, PipelineId: ciCdRequest.CiRequest.PipelineId, UserId: ciCdRequest.CiRequest.TriggeredBy}
 		err = SendEventToClairUtility(scanEvent)
