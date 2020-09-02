@@ -170,9 +170,10 @@ type PubSubClient struct {
 }
 
 type PubSubConfig struct {
-	NatsServerHost string `env:"NATS_SERVER_HOST" envDefault:"nats://devtron-nats.devtroncd:4222"`
-	ClusterId      string `env:"CLUSTER_ID" envDefault:"devtron-stan"`
-	ClientId       string `env:"CLIENT_ID" envDefault:"CI-RUNNER"`
+	NatsServerHost       string `env:"NATS_SERVER_HOST" envDefault:"nats://devtron-nats.devtroncd:4222"`
+	ClusterId            string `env:"CLUSTER_ID" envDefault:"devtron-stan"`
+	ClientId             string `env:"CLIENT_ID" envDefault:"CI-RUNNER"`
+	ImageScannerEndpoint string `env:"Image_Scanner_Endpoint" envDefault:"http://image-scanner-new-demo-devtroncd-service.devtroncd:80"`
 }
 
 const retryCount = 10

@@ -183,12 +183,18 @@ func SendEventToClairUtility(event *ScanEvent) error {
 		}
 	*/
 
+	cfg := &PubSubConfig{}
+	err = env.Parse(cfg)
+	if err != nil {
+		return err
+	}
+
 	client := resty.New()
 	client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(jsonBody).
-		Post(fmt.Sprintf("%s/%s", ImageScannerEndpoint, "scanner/image"))
+		Post(fmt.Sprintf("%s/%s", cfg.ImageScannerEndpoint, "scanner/image"))
 	if err != nil {
 		log.Println(devtron, "err in image scanner app over rest", err)
 		return err
