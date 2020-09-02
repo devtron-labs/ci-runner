@@ -396,6 +396,8 @@ func run(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err error) {
 		logStage("IMAGE SCAN")
 		log.Println(devtron, " /image-scanner")
 		scanEvent := &ScanEvent{Image: dest, ImageDigest: digest, PipelineId: ciCdRequest.CiRequest.PipelineId, UserId: ciCdRequest.CiRequest.TriggeredBy}
+		scanEvent.AccessKey = ciCdRequest.CiRequest.AccessKey
+		scanEvent.SecretKey = ciCdRequest.CiRequest.SecretKey
 		err = SendEventToClairUtility(scanEvent)
 		if err != nil {
 			log.Println(err)

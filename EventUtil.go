@@ -211,4 +211,7 @@ type ScanEvent struct {
 	PipelineId   int    `json:"pipelineId"`
 	CiArtifactId int    `json:"ciArtifactId"`
 	UserId       int    `json:"userId"`
+	AccessKey    string `json:"accessKey"`
+	SecretKey    string `json:"secretKey"`
+	Token        string `json:"token"`
 }
