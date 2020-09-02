@@ -191,6 +191,7 @@ func SendEventToClairUtility(event *ScanEvent) error {
 
 	client := resty.New()
 	client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+	client.SetDebug(true)
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(jsonBody).
@@ -199,7 +200,8 @@ func SendEventToClairUtility(event *ScanEvent) error {
 		log.Println(devtron, "err in image scanner app over rest", err)
 		return err
 	}
-	log.Println(resp.StatusCode())
+	log.Println(devtron,resp.StatusCode())
+	log.Println(devtron,resp)
 	return nil
 }
 
