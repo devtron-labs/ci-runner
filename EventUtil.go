@@ -191,6 +191,7 @@ func SendEventToClairUtility(event *ScanEvent) error {
 
 	client := resty.New()
 	client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+	client.SetDebug(true)
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(jsonBody).
@@ -212,4 +213,7 @@ type ScanEvent struct {
 	PipelineId   int    `json:"pipelineId"`
 	CiArtifactId int    `json:"ciArtifactId"`
 	UserId       int    `json:"userId"`
+	AccessKey    string `json:"accessKey"`
+	SecretKey    string `json:"secretKey"`
+	Token        string `json:"token"`
 }
