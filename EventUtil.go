@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"github.com/caarlos0/env"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
@@ -26,7 +27,7 @@ func SendCDEvent(cdRequest *CdRequest) error {
 	}
 	err := SendCdCompleteEvent(cdRequest, event)
 	if err != nil {
-		log.Println(devtron,"err", err)
+		log.Println(devtron, "err", err)
 		return err
 	}
 	return nil
@@ -47,7 +48,7 @@ func SendEvents(ciRequest *CiRequest, digest string, image string) error {
 	}
 	err := SendCiCompleteEvent(event)
 	if err != nil {
-		log.Println( devtron,"err", err)
+		log.Println(devtron, "err", err)
 		return err
 	}
 	log.Println(devtron, " housekeeping done. exiting now")
@@ -62,7 +63,7 @@ func NewPubSubClient() (*PubSubClient, error) {
 	}
 	nc, err := nats.Connect(cfg.NatsServerHost)
 	if err != nil {
-		log.Println(devtron,"err", err)
+		log.Println(devtron, "err", err)
 		os.Exit(1)
 	}
 	s := rand.NewSource(time.Now().UnixNano())
@@ -115,7 +116,7 @@ func PublishEvent(jsonBody []byte, topic string) error {
 func PublishEventsOnNats(jsonBody []byte, topic string) error {
 	client, err := NewPubSubClient()
 	if err != nil {
-		log.Println(devtron,"err", err)
+		log.Println(devtron, "err", err)
 		os.Exit(1)
 	}
 
@@ -161,9 +162,58 @@ func PublishEventsOnRest(jsonBody []byte, topic string, cdRequest *CdRequest) er
 		//SetResult().    // or SetResult(AuthSuccess{}).
 		Post(cdRequest.OrchestratorHost)
 	if err != nil {
-		log.Println(devtron,"err in publishing over rest", err)
+		log.Println(devtron, "err in publishing over rest", err)
 		return err
 	}
-	log.Println(devtron,"res ", string(resp.Body()))
+	log.Println(devtron, "res ", string(resp.Body()))
 	return nil
+}
+
+func SendEventToClairUtility(event *ScanEvent) error {
+	jsonBody, err := json.Marshal(event)
+	if err != nil {
+		log.Println(devtron, "err", err)
+		return err
+	}
+	/*
+		err = PublishEventsOnNats(jsonBody, TOPIC_CI_SCAN)
+		if err != nil {
+			log.Println(devtron, "err", err)
+			return err
+		}
+	*/
+
+	cfg := &PubSubConfig{}
+	err = env.Parse(cfg)
+	if err != nil {
+		return err
+	}
+
+	client := resty.New()
+	client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+	//client.SetDebug(true)
+	resp, err := client.R().
+		SetHeader("Content-Type", "application/json").
+		SetBody(jsonBody).
+		Post(fmt.Sprintf("%s/%s", cfg.ImageScannerEndpoint, "scanner/image"))
+	if err != nil {
+		log.Println(devtron, "err in image scanner app over rest", err)
+		return err
+	}
+	log.Println(devtron,resp.StatusCode())
+	log.Println(devtron,resp)
+	return nil
+}
+
+type ScanEvent struct {
+	Image        string `json:"image"`
+	ImageDigest  string `json:"imageDigest"`
+	AppId        int    `json:"appId"`
+	EnvId        int    `json:"envId"`
+	PipelineId   int    `json:"pipelineId"`
+	CiArtifactId int    `json:"ciArtifactId"`
+	UserId       int    `json:"userId"`
+	AccessKey    string `json:"accessKey"`
+	SecretKey    string `json:"secretKey"`
+	Token        string `json:"token"`
 }
