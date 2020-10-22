@@ -6,8 +6,8 @@ RUN echo $GOPATH
 RUN apk add --no-cache git gcc musl-dev
 RUN apk add --update make
 
-WORKDIR /go/src/devtron.ai/cirunner
-ADD . /go/src/devtron.ai/cirunner/
+WORKDIR /go/src/github.com/devtron-labs/cirunner
+ADD . /go/src/github.com/devtron-labs/cirunner/
 COPY . .
 RUN pwd
 RUN echo $GOPATH
