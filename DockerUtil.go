@@ -27,6 +27,10 @@ func StartDockerDaemon() {
 	waitForDockerDaemon(retryCount)
 }
 
+const DOCKER_REGISTRY_TYPE_ECR = "ecr"
+const DOCKER_REGISTRY_TYPE_DOCKERHUB = "docker-hub"
+const DOCKER_REGISTRY_TYPE_OTHER = "other"
+
 type DockerCredentials struct {
 	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType string
 }
@@ -34,7 +38,7 @@ type DockerCredentials struct {
 func DockerLogin(dockerCredentials *DockerCredentials) error {
 	username := dockerCredentials.DockerUsername
 	pwd := dockerCredentials.DockerPassword
-	if dockerCredentials.DockerRegistryType == "ecr" {
+	if dockerCredentials.DockerRegistryType == DOCKER_REGISTRY_TYPE_ECR {
 		svc := ecr.New(session.New(&aws.Config{
 			Region:      &dockerCredentials.AwsRegion,
 			Credentials: credentials.NewStaticCredentials(dockerCredentials.AccessKey, dockerCredentials.SecretKey, ""),
@@ -109,11 +113,11 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	}
 
 	dest := ""
-	if "ecr" == ciRequest.DockerRegistryType {
+	if DOCKER_REGISTRY_TYPE_DOCKERHUB == ciRequest.DockerRegistryType {
+		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
+	} else {
 		dockerRegistryURL := strings.TrimPrefix(ciRequest.DockerRegistryURL, "https://")
 		dest = dockerRegistryURL + "/" + ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
-	} else {
-		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
 	}
 
 	dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
