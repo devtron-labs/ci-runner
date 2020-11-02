@@ -16,7 +16,7 @@ var (
 	setExitCode   = flag.Bool("set-exit-code", false, "set exit code to 1 if tests failed")
 )
 
-func main() {
+func main_repot() {
 	flag.Parse()
 
 	if flag.NArg() != 0 {

@@ -255,6 +255,8 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	main_repot()
 }
 
 func collectAndUploadCDArtifacts(cdRequest *CdRequest) error {
