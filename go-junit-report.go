@@ -3,10 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/devtron-labs/ci-runner/formatter"
+	"github.com/devtron-labs/ci-runner/parser"
 	"os"
-
-	"github.com/jstemmer/go-junit-report/formatter"
-	"github.com/jstemmer/go-junit-report/parser"
 )
 
 var (
