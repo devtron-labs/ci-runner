@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"github.com/devtron-labs/ci-runner/formatter"
+	"github.com/devtron-labs/ci-runner/parser"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -11,9 +13,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/jstemmer/go-junit-report/formatter"
-	"github.com/jstemmer/go-junit-report/parser"
 )
 
 var matchTest = flag.String("match", "", "only test testdata matching this pattern")
