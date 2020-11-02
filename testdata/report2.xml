@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+	<testsuite tests="1" failures="1" time="0.000" name="github.com/devtron-labs/ci-runner">
+		<properties>
+			<property name="go.version" value="go1.14"></property>
+		</properties>
+		<testcase classname="ci-runner" name="[build failed]" time="0.000">
+			<failure message="Failed" type="">./go-junit-report.go:19:6: main redeclared in this block&#xA;&#x9;previous declaration at ./App.go:217:6</failure>
+		</testcase>
+	</testsuite>
+</testsuites>
