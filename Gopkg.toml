@@ -69,3 +69,6 @@
 [[constraint]]
   name = "gopkg.in/go-resty/resty.v2"
   version = "2.1.0"
+
+[[constraint]]
+  name = "github.com/jstemmer/go-junit-report"
