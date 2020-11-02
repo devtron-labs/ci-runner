@@ -1,10 +1,9 @@
-package formatter
+package main
 
 import (
 	"bufio"
 	"encoding/xml"
 	"fmt"
-	"github.com/devtron-labs/ci-runner/parser"
 	"io"
 	"runtime"
 	"strings"
@@ -59,7 +58,7 @@ type JUnitFailure struct {
 
 // JUnitReportXML writes a JUnit xml representation of the given report to w
 // in the format described at http://windyroad.org/dl/Open%20Source/JUnit.xsd
-func JUnitReportXML(report *parser.Report, noXMLHeader bool, goVersion string, w io.Writer) error {
+func JUnitReportXML(report *Report, noXMLHeader bool, goVersion string, w io.Writer) error {
 	suites := JUnitTestSuites{}
 
 	// convert Report to JUnit test suites
@@ -98,7 +97,7 @@ func JUnitReportXML(report *parser.Report, noXMLHeader bool, goVersion string, w
 				Failure:   nil,
 			}
 
-			if test.Result == parser.FAIL {
+			if test.Result == FAIL {
 				ts.Failures++
 				testCase.Failure = &JUnitFailure{
 					Message:  "Failed",
@@ -107,7 +106,7 @@ func JUnitReportXML(report *parser.Report, noXMLHeader bool, goVersion string, w
 				}
 			}
 
-			if test.Result == parser.SKIP {
+			if test.Result == SKIP {
 				testCase.SkipMessage = &JUnitSkipMessage{strings.Join(test.Output, "\n")}
 			}
 
@@ -147,12 +146,12 @@ func JUnitReportXML(report *parser.Report, noXMLHeader bool, goVersion string, w
 	return nil
 }
 
-func mergeBenchmarks(benchmarks []*parser.Benchmark) []*parser.Benchmark {
-	var merged []*parser.Benchmark
-	benchmap := make(map[string][]*parser.Benchmark)
+func mergeBenchmarks(benchmarks []*Benchmark) []*Benchmark {
+	var merged []*Benchmark
+	benchmap := make(map[string][]*Benchmark)
 	for _, bm := range benchmarks {
 		if _, ok := benchmap[bm.Name]; !ok {
-			merged = append(merged, &parser.Benchmark{Name: bm.Name})
+			merged = append(merged, &Benchmark{Name: bm.Name})
 		}
 		benchmap[bm.Name] = append(benchmap[bm.Name], bm)
 	}

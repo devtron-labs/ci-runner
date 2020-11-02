@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
-	<testsuite tests="1" failures="1" time="0.000" name="github.com/devtron-labs/ci-runner">
+	<testsuite tests="6" failures="3" time="0.017" name="github.com/devtron-labs/ci-runner">
 		<properties>
 			<property name="go.version" value="go1.14"></property>
 		</properties>
-		<testcase classname="ci-runner" name="[build failed]" time="0.000">
-			<failure message="Failed" type="">./go-junit-report.go:19:6: main redeclared in this block&#xA;&#x9;previous declaration at ./App.go:217:6</failure>
+		<testcase classname="ci-runner" name="TestSuites_Unmarshal" time="0.000"></testcase>
+		<testcase classname="ci-runner" name="TestParser" time="0.000">
+			<failure message="Failed" type="">    TestParser: go-junit-report_test.go:1543: Test 01-pass.txt&#xA;    TestParser: go-junit-report_test.go:1547: open testdata/01-pass.txt: no such file or directory</failure>
 		</testcase>
+		<testcase classname="ci-runner" name="TestJUnitFormatter" time="0.000">
+			<failure message="Failed" type="">    TestJUnitFormatter: go-junit-report_test.go:1659: open testdata/01-report.xml: no such file or directory</failure>
+		</testcase>
+		<testcase classname="ci-runner" name="TestVersionFlag" time="0.000">
+			<failure message="Failed" type="">    TestVersionFlag: go-junit-report_test.go:1659: open testdata/01-report.xml: no such file or directory</failure>
+		</testcase>
+		<testcase classname="ci-runner" name="TestParseSeconds" time="0.000"></testcase>
+		<testcase classname="ci-runner" name="TestParseNanoseconds" time="0.000"></testcase>
 	</testsuite>
 </testsuites>
