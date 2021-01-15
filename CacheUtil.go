@@ -18,14 +18,22 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"log"
+	"net/url"
 	"os"
 	"os/exec"
+	"strconv"
+	"time"
 )
 
 func GetCache(ciRequest *CiRequest) error {
@@ -127,3 +135,110 @@ func SyncCache(ciRequest *CiRequest) error {
 	cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, "s3://"+ciRequest.CiCacheLocation+"/"+ciRequest.CiCacheFileName)
 	return RunCommand(cachePush)
 }
+//--------------------
+type AzureBlob struct {
+}
+
+func (impl *AzureBlob) getCredentials() {
+
+}
+func getMSIServicePrincipalToken(resource string) (*adal.ServicePrincipalToken, error) {
+
+	msiEndpoint, err := adal.GetMSIEndpoint()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the managed service identity endpoint: %v", err)
+	}
+
+	token, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, resource)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the managed service identity token: %v", err)
+	}
+	return token, nil
+
+}
+func cred() (azblob.TokenCredential, error) {
+	spToken, err := getMSIServicePrincipalToken(azure.PublicCloud.ResourceIdentifiers.Storage)
+	if err != nil {
+		return nil, fmt.Errorf("failure acquiring token from MSI endpoint %w", err)
+	}
+
+	err = spToken.Refresh()
+	if err != nil {
+		return nil, fmt.Errorf("failure refreshing token from MSI endpoint %w", err)
+	}
+
+	credential := azblob.NewTokenCredential(spToken.Token().AccessToken, defaultTokenRefreshFunction(spToken))
+	return credential, err
+}
+func buildContainerUrl() azblob.ContainerURL {
+	credential, err := cred()
+	if err != nil {
+		log.Fatal("cred with error: " + err.Error())
+	}
+	fmt.Println("credentials")
+	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
+
+	// Create a random string for the quick start container
+
+	// From the Azure portal, get your storage account blob service URL endpoint.
+	URL, _ := url.Parse(
+		fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, bucket))
+
+	// Create a ContainerURL object that wraps the container URL and a request
+	// pipeline to make requests.
+	containerURL := azblob.NewContainerURL(*URL, p)
+	return containerURL
+}
+
+func DownloadBlob(blobName string) {
+	containerURL := buildContainerUrl()
+	fmt.Println("containerURL")
+	res, err := containerURL.ListBlobsFlatSegment(context.Background(), azblob.Marker{}, azblob.ListBlobsSegmentOptions{
+		Details: azblob.BlobListingDetails{
+			Versions: false,
+		},
+		Prefix: "d1/wytboard.log",
+	})
+	if err != nil {
+		log.Fatal("ListBlobsFlatSegment with error: " + err.Error())
+	}
+	fmt.Println("versons")
+	var latestVersion string
+	for _, s := range res.Segment.BlobItems {
+		if *s.IsCurrentVersion {
+			latestVersion = *s.VersionID
+			break
+		}
+	}
+	fmt.Println("latest version")
+	blobURL := containerURL.NewBlobURL(blobName).WithVersionID(latestVersion)
+
+	f, err := os.Create("/tmp/dat2")
+	if err != nil {
+		log.Fatal("error in creating file: " + err.Error())
+	}
+	defer f.Close()
+
+	azblob.DownloadBlobToFile(context.TODO(), blobURL, 0, azblob.CountToEnd, f, azblob.DownloadFromBlobOptions{})
+}
+
+var defaultTokenRefreshFunction = func(spToken *adal.ServicePrincipalToken) func(credential azblob.TokenCredential) time.Duration {
+	return func(credential azblob.TokenCredential) time.Duration {
+		err := spToken.Refresh()
+		if err != nil {
+			return 0
+		}
+		expiresIn, err := strconv.ParseInt(string(spToken.Token().ExpiresIn), 10, 64)
+		if err != nil {
+			return 0
+		}
+		credential.SetToken(spToken.Token().AccessToken)
+		return time.Duration(expiresIn-tokenRefreshTolerance) * time.Second
+	}
+}
+
+const (
+	tokenRefreshTolerance = 300
+	accountName           = "devtron"
+	bucket                = "test"
+)
