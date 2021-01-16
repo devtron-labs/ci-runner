@@ -36,19 +36,10 @@ import (
 	"time"
 )
 
-func GetCache(ciRequest *CiRequest) error {
-	if ciRequest.InvalidateCache {
-		log.Println("ignoring cache ... ")
-		return nil
-	}
-	log.Println("setting build cache ...............")
+func DownLoadFromS3(file *os.File, ciRequest *CiRequest) error {
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(ciRequest.CiCacheRegion),
 	}))
-	file, err := os.Create("/" + ciRequest.CiCacheFileName)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	svc := s3.New(sess)
 	input := &s3.ListObjectVersionsInput{
@@ -101,7 +92,31 @@ func GetCache(ciRequest *CiRequest) error {
 		log.Println(devtron, " cache upper limit exceeded, ignoring old cache")
 		return nil
 	}
+	return nil
+}
 
+func GetCache(ciRequest *CiRequest) error {
+	if ciRequest.InvalidateCache {
+		log.Println("ignoring cache ... ")
+		return nil
+	}
+	log.Println("setting build cache ...............")
+	file, err := os.Create("/" + ciRequest.CiCacheFileName)
+	defer file.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	//----------download file
+	switch ciRequest.CloudProvider {
+	case CLOUD_PROVIDER_AWS:
+		err = DownLoadFromS3(file, ciRequest)
+	case CLOUD_PROVIDER_AZURE:
+		b := AzureBlob{}
+		err = b.DownloadBlob(context.Background(), ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig, file)
+	default:
+		return fmt.Errorf("cloudprovider %s not supported", ciRequest.CloudProvider)
+	}
+	///---------download file end
 	// Extract cache
 	if err == nil {
 		extractCmd := exec.Command("tar", "-xvzf", ciRequest.CiCacheFileName)
@@ -131,54 +146,52 @@ func SyncCache(ciRequest *CiRequest) error {
 	}
 
 	//aws s3 cp cache.tar.gz s3://ci-caching/
+	//----------upload file
+	switch ciRequest.CloudProvider {
+	case CLOUD_PROVIDER_AWS:
+		//err = DownLoadFromS3(file, ciRequest)
+		//----
+	case CLOUD_PROVIDER_AZURE:
+		b := AzureBlob{}
+		err = b.UploadBlob(context.Background(), ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig, ciRequest.CiCacheFileName)
+	default:
+		return fmt.Errorf("cloudprovider %s not supported", ciRequest.CloudProvider)
+	}
+	///---------upload file end
 	log.Println(devtron, " -----> pushing new cache")
 	cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, "s3://"+ciRequest.CiCacheLocation+"/"+ciRequest.CiCacheFileName)
 	return RunCommand(cachePush)
 }
+
 //--------------------
 type AzureBlob struct {
 }
 
-func (impl *AzureBlob) getCredentials() {
-
-}
-func getMSIServicePrincipalToken(resource string) (*adal.ServicePrincipalToken, error) {
-
+func (impl *AzureBlob) getCredentials() (azblob.TokenCredential, error) {
 	msiEndpoint, err := adal.GetMSIEndpoint()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the managed service identity endpoint: %v", err)
 	}
 
-	token, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, resource)
+	token, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, azure.PublicCloud.ResourceIdentifiers.Storage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the managed service identity token: %v", err)
 	}
-	return token, nil
-
-}
-func cred() (azblob.TokenCredential, error) {
-	spToken, err := getMSIServicePrincipalToken(azure.PublicCloud.ResourceIdentifiers.Storage)
-	if err != nil {
-		return nil, fmt.Errorf("failure acquiring token from MSI endpoint %w", err)
-	}
-
-	err = spToken.Refresh()
+	err = token.Refresh()
 	if err != nil {
 		return nil, fmt.Errorf("failure refreshing token from MSI endpoint %w", err)
 	}
 
-	credential := azblob.NewTokenCredential(spToken.Token().AccessToken, defaultTokenRefreshFunction(spToken))
+	credential := azblob.NewTokenCredential(token.Token().AccessToken, defaultTokenRefreshFunction(token))
 	return credential, err
 }
-func buildContainerUrl() azblob.ContainerURL {
-	credential, err := cred()
-	if err != nil {
-		log.Fatal("cred with error: " + err.Error())
-	}
-	fmt.Println("credentials")
-	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
 
-	// Create a random string for the quick start container
+func (impl *AzureBlob) buildContainerUrl(accountName, bucket string) (*azblob.ContainerURL, error) {
+	credential, err := impl.getCredentials()
+	if err != nil {
+		return nil, fmt.Errorf("failed in getting credentials: %v", err)
+	}
+	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
 
 	// From the Azure portal, get your storage account blob service URL endpoint.
 	URL, _ := url.Parse(
@@ -187,22 +200,23 @@ func buildContainerUrl() azblob.ContainerURL {
 	// Create a ContainerURL object that wraps the container URL and a request
 	// pipeline to make requests.
 	containerURL := azblob.NewContainerURL(*URL, p)
-	return containerURL
+	return &containerURL, nil
 }
 
-func DownloadBlob(blobName string) {
-	containerURL := buildContainerUrl()
-	fmt.Println("containerURL")
-	res, err := containerURL.ListBlobsFlatSegment(context.Background(), azblob.Marker{}, azblob.ListBlobsSegmentOptions{
+func (impl *AzureBlob) DownloadBlob(context context.Context, blobName string, config *AzureBlobConfig, file *os.File) error {
+	containerURL, err := impl.buildContainerUrl(config.AccountName, config.Bucket)
+	if err != nil {
+		return err
+	}
+	res, err := containerURL.ListBlobsFlatSegment(context, azblob.Marker{}, azblob.ListBlobsSegmentOptions{
 		Details: azblob.BlobListingDetails{
 			Versions: false,
 		},
-		Prefix: "d1/wytboard.log",
+		Prefix: blobName,
 	})
 	if err != nil {
-		log.Fatal("ListBlobsFlatSegment with error: " + err.Error())
+		return err
 	}
-	fmt.Println("versons")
 	var latestVersion string
 	for _, s := range res.Segment.BlobItems {
 		if *s.IsCurrentVersion {
@@ -210,16 +224,25 @@ func DownloadBlob(blobName string) {
 			break
 		}
 	}
-	fmt.Println("latest version")
+	fmt.Println("latest version" + latestVersion)
 	blobURL := containerURL.NewBlobURL(blobName).WithVersionID(latestVersion)
+	err = azblob.DownloadBlobToFile(context, blobURL, 0, azblob.CountToEnd, file, azblob.DownloadFromBlobOptions{})
+	return err
+}
 
-	f, err := os.Create("/tmp/dat2")
+func (impl *AzureBlob) UploadBlob(context context.Context, blobName string, config *AzureBlobConfig, cacheFileName string) error {
+	containerURL, err := impl.buildContainerUrl(config.AccountName, config.Bucket)
 	if err != nil {
-		log.Fatal("error in creating file: " + err.Error())
+		return err
 	}
-	defer f.Close()
-
-	azblob.DownloadBlobToFile(context.TODO(), blobURL, 0, azblob.CountToEnd, f, azblob.DownloadFromBlobOptions{})
+	blobURL := containerURL.NewBlockBlobURL(blobName)
+	file, err := os.Open(cacheFileName)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = azblob.UploadFileToBlockBlob(context, file, blobURL, azblob.UploadToBlockBlobOptions{})
+	return err
 }
 
 var defaultTokenRefreshFunction = func(spToken *adal.ServicePrincipalToken) func(credential azblob.TokenCredential) time.Duration {
@@ -233,12 +256,6 @@ var defaultTokenRefreshFunction = func(spToken *adal.ServicePrincipalToken) func
 			return 0
 		}
 		credential.SetToken(spToken.Token().AccessToken)
-		return time.Duration(expiresIn-tokenRefreshTolerance) * time.Second
+		return time.Duration(expiresIn-300) * time.Second
 	}
 }
-
-const (
-	tokenRefreshTolerance = 300
-	accountName           = "devtron"
-	bucket                = "test"
-)
