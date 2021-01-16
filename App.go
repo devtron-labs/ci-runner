@@ -106,9 +106,9 @@ const CLOUD_PROVIDER_AWS = "AWS"
 const CLOUD_PROVIDER_GCP = "GCP"
 
 type AzureBlobConfig struct {
-	Enabled     bool   `json:"enabled"`
-	AccountName string `json:"account_name"`
-	Bucket      string `json:"bucket"`
+	Enabled       bool   `json:"enabled"`
+	AccountName   string `json:"accountName"`
+	BlobContainer string `json:"blobContainer"`
 }
 
 type Task struct {

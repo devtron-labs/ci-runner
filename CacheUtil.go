@@ -204,7 +204,7 @@ func (impl *AzureBlob) buildContainerUrl(accountName, bucket string) (*azblob.Co
 }
 
 func (impl *AzureBlob) DownloadBlob(context context.Context, blobName string, config *AzureBlobConfig, file *os.File) error {
-	containerURL, err := impl.buildContainerUrl(config.AccountName, config.Bucket)
+	containerURL, err := impl.buildContainerUrl(config.AccountName, config.BlobContainer)
 	if err != nil {
 		return err
 	}
@@ -231,7 +231,7 @@ func (impl *AzureBlob) DownloadBlob(context context.Context, blobName string, co
 }
 
 func (impl *AzureBlob) UploadBlob(context context.Context, blobName string, config *AzureBlobConfig, cacheFileName string) error {
-	containerURL, err := impl.buildContainerUrl(config.AccountName, config.Bucket)
+	containerURL, err := impl.buildContainerUrl(config.AccountName, config.BlobContainer)
 	if err != nil {
 		return err
 	}
