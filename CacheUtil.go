@@ -147,10 +147,12 @@ func SyncCache(ciRequest *CiRequest) error {
 
 	//aws s3 cp cache.tar.gz s3://ci-caching/
 	//----------upload file
+	log.Println(devtron, " -----> pushing new cache")
 	switch ciRequest.CloudProvider {
 	case CLOUD_PROVIDER_AWS:
-		//err = DownLoadFromS3(file, ciRequest)
-		//----
+		cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, "s3://"+ciRequest.CiCacheLocation+"/"+ciRequest.CiCacheFileName)
+		err = RunCommand(cachePush)
+
 	case CLOUD_PROVIDER_AZURE:
 		b := AzureBlob{}
 		err = b.UploadBlob(context.Background(), ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig, ciRequest.CiCacheFileName)
@@ -158,9 +160,10 @@ func SyncCache(ciRequest *CiRequest) error {
 		return fmt.Errorf("cloudprovider %s not supported", ciRequest.CloudProvider)
 	}
 	///---------upload file end
-	log.Println(devtron, " -----> pushing new cache")
-	cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, "s3://"+ciRequest.CiCacheLocation+"/"+ciRequest.CiCacheFileName)
-	return RunCommand(cachePush)
+	if err != nil {
+		log.Println(devtron, " -----> push err", err)
+	}
+	return err
 }
 
 //--------------------
