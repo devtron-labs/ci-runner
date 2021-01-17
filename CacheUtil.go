@@ -125,6 +125,8 @@ func GetCache(ciRequest *CiRequest) error {
 		if err != nil {
 			log.Fatal(" Could not extract cache blob ", err)
 		}
+	}else {
+		log.Println(devtron,"build cache  error", err)
 	}
 	return nil
 }
