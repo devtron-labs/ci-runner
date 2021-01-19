@@ -125,8 +125,8 @@ func GetCache(ciRequest *CiRequest) error {
 		if err != nil {
 			log.Fatal(" Could not extract cache blob ", err)
 		}
-	}else {
-		log.Println(devtron,"build cache  error", err)
+	} else {
+		log.Println(devtron, "build cache  error", err)
 	}
 	return nil
 }
@@ -172,7 +172,15 @@ func SyncCache(ciRequest *CiRequest) error {
 type AzureBlob struct {
 }
 
-func (impl *AzureBlob) getCredentials() (azblob.TokenCredential, error) {
+func (impl *AzureBlob) getSharedCredentials(accountName, accountKey string) (*azblob.SharedKeyCredential, error) {
+	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal("Invalid credentials with error: " + err.Error())
+	}
+	return credential, err
+}
+
+func (impl *AzureBlob) getTokenCredentials() (azblob.TokenCredential, error) {
 	msiEndpoint, err := adal.GetMSIEndpoint()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the managed service identity endpoint: %v", err)
@@ -191,16 +199,25 @@ func (impl *AzureBlob) getCredentials() (azblob.TokenCredential, error) {
 	return credential, err
 }
 
-func (impl *AzureBlob) buildContainerUrl(accountName, bucket string) (*azblob.ContainerURL, error) {
-	credential, err := impl.getCredentials()
-	if err != nil {
-		return nil, fmt.Errorf("failed in getting credentials: %v", err)
+func (impl *AzureBlob) buildContainerUrl(config *AzureBlobConfig) (*azblob.ContainerURL, error) {
+	var credential azblob.Credential
+	var err error
+	if len(config.AccountKey) > 0 {
+		credential, err = impl.getSharedCredentials(config.AccountName, config.AccountKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed in getting credentials: %v", err)
+		}
+	} else {
+		credential, err = impl.getTokenCredentials()
+		if err != nil {
+			return nil, fmt.Errorf("failed in getting credentials: %v", err)
+		}
 	}
 	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
 
 	// From the Azure portal, get your storage account blob service URL endpoint.
 	URL, _ := url.Parse(
-		fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, bucket))
+		fmt.Sprintf("https://%s.blob.core.windows.net/%s", config.AccountName, config.BlobContainer))
 
 	// Create a ContainerURL object that wraps the container URL and a request
 	// pipeline to make requests.
@@ -209,7 +226,7 @@ func (impl *AzureBlob) buildContainerUrl(accountName, bucket string) (*azblob.Co
 }
 
 func (impl *AzureBlob) DownloadBlob(context context.Context, blobName string, config *AzureBlobConfig, file *os.File) error {
-	containerURL, err := impl.buildContainerUrl(config.AccountName, config.BlobContainer)
+	containerURL, err := impl.buildContainerUrl(config)
 	if err != nil {
 		return err
 	}
@@ -236,7 +253,7 @@ func (impl *AzureBlob) DownloadBlob(context context.Context, blobName string, co
 }
 
 func (impl *AzureBlob) UploadBlob(context context.Context, blobName string, config *AzureBlobConfig, cacheFileName string) error {
-	containerURL, err := impl.buildContainerUrl(config.AccountName, config.BlobContainer)
+	containerURL, err := impl.buildContainerUrl(config)
 	if err != nil {
 		return err
 	}
