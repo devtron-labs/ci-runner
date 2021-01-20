@@ -175,7 +175,7 @@ type AzureBlob struct {
 func (impl *AzureBlob) getSharedCredentials(accountName, accountKey string) (*azblob.SharedKeyCredential, error) {
 	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
-		log.Fatal(devtron,"Invalid credentials with error: " + err.Error())
+		log.Fatal(devtron, "Invalid credentials with error: "+err.Error())
 	}
 	return credential, err
 }
@@ -217,7 +217,7 @@ func (impl *AzureBlob) buildContainerUrl(config *AzureBlobConfig) (*azblob.Conta
 
 	// From the Azure portal, get your storage account blob service URL endpoint.
 	URL, _ := url.Parse(
-		fmt.Sprintf("https://%s.blob.core.windows.net/%s", config.AccountName, config.BlobContainer))
+		fmt.Sprintf("https://%s.blob.core.windows.net/%s", config.AccountName, config.BlobContainerCiLog))
 
 	// Create a ContainerURL object that wraps the container URL and a request
 	// pipeline to make requests.
