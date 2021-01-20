@@ -195,7 +195,7 @@ func (impl *AzureBlob) getTokenCredentials() (azblob.TokenCredential, error) {
 		return nil, fmt.Errorf("failure refreshing token from MSI endpoint %w", err)
 	}
 
-	credential := azblob.NewTokenCredential(token.Token().AccessToken, defaultTokenRefreshFunction(token))
+	credential := azblob.NewTokenCredential(token.Token().AccessToken, impl.defaultTokenRefreshFunction(token))
 	return credential, err
 }
 
@@ -267,7 +267,7 @@ func (impl *AzureBlob) UploadBlob(context context.Context, blobName string, conf
 	return err
 }
 
-var defaultTokenRefreshFunction = func(spToken *adal.ServicePrincipalToken) func(credential azblob.TokenCredential) time.Duration {
+func (impl *AzureBlob) defaultTokenRefreshFunction(spToken *adal.ServicePrincipalToken) func(credential azblob.TokenCredential) time.Duration {
 	return func(credential azblob.TokenCredential) time.Duration {
 		err := spToken.Refresh()
 		if err != nil {
