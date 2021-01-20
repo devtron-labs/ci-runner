@@ -175,7 +175,7 @@ type AzureBlob struct {
 func (impl *AzureBlob) getSharedCredentials(accountName, accountKey string) (*azblob.SharedKeyCredential, error) {
 	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
-		log.Fatal("Invalid credentials with error: " + err.Error())
+		log.Fatal(devtron,"Invalid credentials with error: " + err.Error())
 	}
 	return credential, err
 }
@@ -246,7 +246,7 @@ func (impl *AzureBlob) DownloadBlob(context context.Context, blobName string, co
 			break
 		}
 	}
-	fmt.Println("latest version" + latestVersion)
+	log.Println(devtron, " latest version", latestVersion)
 	blobURL := containerURL.NewBlobURL(blobName).WithVersionID(latestVersion)
 	err = azblob.DownloadBlobToFile(context, blobURL, 0, azblob.CountToEnd, file, azblob.DownloadFromBlobOptions{})
 	return err
