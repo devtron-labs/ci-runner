@@ -217,7 +217,7 @@ func (impl *AzureBlob) buildContainerUrl(config *AzureBlobConfig) (*azblob.Conta
 
 	// From the Azure portal, get your storage account blob service URL endpoint.
 	URL, _ := url.Parse(
-		fmt.Sprintf("https://%s.blob.core.windows.net/%s", config.AccountName, config.BlobContainerCiLog))
+		fmt.Sprintf("https://%s.blob.core.windows.net/%s", config.AccountName, config.BlobContainerCiCache))
 
 	// Create a ContainerURL object that wraps the container URL and a request
 	// pipeline to make requests.
