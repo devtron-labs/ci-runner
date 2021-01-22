@@ -175,7 +175,7 @@ type AzureBlob struct {
 func (impl *AzureBlob) getSharedCredentials(accountName, accountKey string) (*azblob.SharedKeyCredential, error) {
 	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
-		log.Fatal(devtron, "Invalid credentials with error: "+err.Error())
+		log.Println(devtron, "Invalid credentials with error: "+err.Error())
 	}
 	return credential, err
 }
