@@ -2,6 +2,39 @@
 
 
 [[projects]]
+  digest = "1:6fcb978ac3bd189345a7d7e80b21061ef2b767a20f2724eb393ba19c624dc9d0"
+  name = "github.com/Azure/azure-pipeline-go"
+  packages = ["pipeline"]
+  pruneopts = "UT"
+  revision = "dc95902f1d32034f8f743ccc6c3f2eb36b84da27"
+  version = "v0.2.3"
+
+[[projects]]
+  digest = "1:520f461acd1df9dc0955e88d42465f37618b94fb575e7ce2333bf96668bce4b0"
+  name = "github.com/Azure/azure-storage-blob-go"
+  packages = ["azblob"]
+  pruneopts = "UT"
+  revision = "6df5d9af221d67aa1173ad09073ef95c872beda0"
+  version = "v0.12.0"
+
+[[projects]]
+  digest = "1:b78604b91dda20e63b5f68f0bff9741dd67774f5649c015cb25a7e664fa95ba2"
+  name = "github.com/Azure/go-autorest"
+  packages = [
+    "autorest",
+    "autorest/adal",
+    "autorest/azure",
+    "autorest/azure/auth",
+    "autorest/azure/cli",
+    "autorest/date",
+    "logger",
+    "tracing",
+  ]
+  pruneopts = "UT"
+  revision = "e7b391b759b050d6719cc6fd8bb87b6dc038bca6"
+  version = "v14.2.0"
+
+[[projects]]
   digest = "1:5a8983066d5f437b57a5449d9f999556a9fb454e0e1dcafd508d15b7b5ec498b"
   name = "github.com/aws/aws-sdk-go"
   packages = [
@@ -58,6 +91,22 @@
   version = "v6.0.0"
 
 [[projects]]
+  digest = "1:76dc72490af7174349349838f2fe118996381b31ea83243812a97e5a0fd5ed55"
+  name = "github.com/dgrijalva/jwt-go"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
+  version = "v3.2.0"
+
+[[projects]]
+  digest = "1:66d043a2967e0aa8c3d66a4c150b5f1eb65c8f3126cc083208bd58a0ca2ecaca"
+  name = "github.com/dimchansky/utfbom"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "6ae8f945ca96f30defc7e8ab12ec5d10cf86ded4"
+  version = "v1.1.1"
+
+[[projects]]
   digest = "1:b498b36dbb2b306d1c5205ee5236c9e60352be8f9eea9bf08186723a9f75b4f3"
   name = "github.com/emirpasic/gods"
   packages = [
@@ -85,6 +134,14 @@
   version = "v1.2.1"
 
 [[projects]]
+  digest = "1:2ee9c0ffa0ba8949c0e4ea3c6b50e3f3d251040ad460f956bc9e064d906c4fc9"
+  name = "github.com/google/uuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "b5d0d36c983b13c35a93a356a9d2c14da0a1c3ab"
+  version = "v1.1.5"
+
+[[projects]]
   branch = "master"
   digest = "1:62fe3a7ea2050ecbd753a71889026f83d73329337ada66325cbafd5dea5f713d"
   name = "github.com/jbenet/go-context"
@@ -106,6 +163,14 @@
   pruneopts = "UT"
   revision = "81db2a75821ed34e682567d48be488a1c3121088"
   version = "0.5"
+
+[[projects]]
+  digest = "1:b6daaeddfaf9319ad476f37ad75c640d89a450b5dc51e950daea57b578a6aae6"
+  name = "github.com/mattn/go-ieproxy"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "439dd0581a2a03b415673a2462ad5c21eaabc588"
+  version = "v0.0.1"
 
 [[projects]]
   digest = "1:5d231480e1c64a726869bc4142d270184c419749d34f167646baa21008eb0a79"
@@ -201,7 +266,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1a1faf2ed72743398882e02b5ec6a01416a9f2e78c6ad8068357345c495d8588"
+  digest = "1:d875a64b125c0f08d3d6d94c3c4dab12940a0f3331bfe4cb7eaf7a16ab72462b"
   name = "golang.org/x/crypto"
   packages = [
     "cast5",
@@ -216,6 +281,8 @@
     "openpgp/errors",
     "openpgp/packet",
     "openpgp/s2k",
+    "pkcs12",
+    "pkcs12/internal/rc2",
     "poly1305",
     "ssh",
     "ssh/agent",
@@ -226,10 +293,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:cbebd92bb90b30c4114178526d069e9aaa33fd7eee789e69ae96bc65f34bbad6"
+  digest = "1:12a6e1bbaefcb0ab76eeab2065043dcb283c23da1d7effecf9b963325b541c94"
   name = "golang.org/x/net"
   packages = [
     "context",
+    "http/httpproxy",
     "idna",
     "internal/socks",
     "proxy",
@@ -240,12 +308,13 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a401497567643b1f62cc7f7db6dc987307dabab80466210b2477c0cbd003c526"
+  digest = "1:6bc29948ea458346fb74e249a02f3bb4d6ca5edc6c0d69c80789789277434353"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
     "unix",
     "windows",
+    "windows/registry",
   ]
   pruneopts = "UT"
   revision = "6ec70d6a5542cba804c6d16ebe8392601a0b7b60"
@@ -367,6 +436,10 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/Azure/azure-storage-blob-go/azblob",
+    "github.com/Azure/go-autorest/autorest/adal",
+    "github.com/Azure/go-autorest/autorest/azure",
+    "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/awserr",
     "github.com/aws/aws-sdk-go/aws/credentials",

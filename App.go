@@ -97,6 +97,20 @@ type CiRequest struct {
 	TestExecutorImageProperties *TestExecutorImageProperties `json:"testExecutorImageProperties"`
 	InvalidateCache             bool                         `json:"invalidateCache"`
 	ScanEnabled                 bool                         `json:"scanEnabled"`
+	CloudProvider               string                       `json:"cloudProvider"`
+	AzureBlobConfig             *AzureBlobConfig             `json:"azureBlobConfig"`
+}
+
+const CLOUD_PROVIDER_AZURE = "AZURE"
+const CLOUD_PROVIDER_AWS = "AWS"
+const CLOUD_PROVIDER_GCP = "GCP"
+
+type AzureBlobConfig struct {
+	Enabled              bool   `json:"enabled"`
+	AccountName          string `json:"accountName"`
+	BlobContainerCiLog   string `json:"blobContainerCiLog"`
+	BlobContainerCiCache string `json:"blobContainerCiCache"`
+	AccountKey           string `json:"accountKey"`
 }
 
 type Task struct {
