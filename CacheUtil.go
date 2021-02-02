@@ -36,10 +36,7 @@ import (
 	"time"
 )
 
-func DownLoadFromS3(file *os.File, ciRequest *CiRequest) error {
-	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(ciRequest.CiCacheRegion),
-	}))
+func DownLoadFromS3(file *os.File, ciRequest *CiRequest, sess *session.Session) error {
 
 	svc := s3.New(sess)
 	input := &s3.ListObjectVersionsInput{
@@ -109,7 +106,18 @@ func GetCache(ciRequest *CiRequest) error {
 	//----------download file
 	switch ciRequest.CloudProvider {
 	case CLOUD_PROVIDER_AWS:
-		err = DownLoadFromS3(file, ciRequest)
+		sess := session.Must(session.NewSession(&aws.Config{
+			Region: aws.String(ciRequest.CiCacheRegion),
+		}))
+		err = DownLoadFromS3(file, ciRequest, sess)
+	case MINIO:
+		sess := session.Must(session.NewSession(&aws.Config{
+			Region:           aws.String("us-west-2"),
+			Endpoint:         aws.String(ciRequest.MinioEndpoint),
+			DisableSSL:       aws.Bool(true),
+			S3ForcePathStyle: aws.Bool(true),
+		}))
+		err = DownLoadFromS3(file, ciRequest, sess)
 	case CLOUD_PROVIDER_AZURE:
 		b := AzureBlob{}
 		err = b.DownloadBlob(context.Background(), ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig, file)
@@ -154,7 +162,9 @@ func SyncCache(ciRequest *CiRequest) error {
 	case CLOUD_PROVIDER_AWS:
 		cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, "s3://"+ciRequest.CiCacheLocation+"/"+ciRequest.CiCacheFileName)
 		err = RunCommand(cachePush)
-
+	case MINIO:
+		cachePush := exec.Command("aws", "--endpoint-url", ciRequest.MinioEndpoint, "s3", "cp", ciRequest.CiCacheFileName, "s3://"+ciRequest.CiCacheLocation+"/"+ciRequest.CiCacheFileName)
+		err = RunCommand(cachePush)
 	case CLOUD_PROVIDER_AZURE:
 		b := AzureBlob{}
 		err = b.UploadBlob(context.Background(), ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig, ciRequest.CiCacheFileName)

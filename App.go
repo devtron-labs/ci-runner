@@ -99,11 +99,13 @@ type CiRequest struct {
 	ScanEnabled                 bool                         `json:"scanEnabled"`
 	CloudProvider               string                       `json:"cloudProvider"`
 	AzureBlobConfig             *AzureBlobConfig             `json:"azureBlobConfig"`
+	MinioEndpoint               string                       `json:"minioEndpoint"`
 }
 
 const CLOUD_PROVIDER_AZURE = "AZURE"
 const CLOUD_PROVIDER_AWS = "AWS"
 const CLOUD_PROVIDER_GCP = "GCP"
+const MINIO = "MINIO"
 
 type AzureBlobConfig struct {
 	Enabled              bool   `json:"enabled"`
