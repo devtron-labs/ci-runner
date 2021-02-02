@@ -105,7 +105,7 @@ type CiRequest struct {
 const CLOUD_PROVIDER_AZURE = "AZURE"
 const CLOUD_PROVIDER_AWS = "AWS"
 const CLOUD_PROVIDER_GCP = "GCP"
-const MINIO = "MINIO"
+const BLOB_STORAGE_MINIO = "MINIO"
 
 type AzureBlobConfig struct {
 	Enabled              bool   `json:"enabled"`

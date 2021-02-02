@@ -110,7 +110,7 @@ func GetCache(ciRequest *CiRequest) error {
 			Region: aws.String(ciRequest.CiCacheRegion),
 		}))
 		err = DownLoadFromS3(file, ciRequest, sess)
-	case MINIO:
+	case BLOB_STORAGE_MINIO:
 		sess := session.Must(session.NewSession(&aws.Config{
 			Region:           aws.String("us-west-2"),
 			Endpoint:         aws.String(ciRequest.MinioEndpoint),
@@ -162,7 +162,7 @@ func SyncCache(ciRequest *CiRequest) error {
 	case CLOUD_PROVIDER_AWS:
 		cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, "s3://"+ciRequest.CiCacheLocation+"/"+ciRequest.CiCacheFileName)
 		err = RunCommand(cachePush)
-	case MINIO:
+	case BLOB_STORAGE_MINIO:
 		cachePush := exec.Command("aws", "--endpoint-url", ciRequest.MinioEndpoint, "s3", "cp", ciRequest.CiCacheFileName, "s3://"+ciRequest.CiCacheLocation+"/"+ciRequest.CiCacheFileName)
 		err = RunCommand(cachePush)
 	case CLOUD_PROVIDER_AZURE:
