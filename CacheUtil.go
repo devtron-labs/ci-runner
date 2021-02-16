@@ -36,7 +36,7 @@ import (
 	"time"
 )
 
-func DownLoadFromS3(file *os.File, ciRequest *CiRequest) error {
+func DownLoadFromS3(file *os.File, ciRequest *CiRequest) (success bool, err error) {
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(ciRequest.CiCacheRegion),
 	}))
@@ -56,7 +56,7 @@ func DownLoadFromS3(file *os.File, ciRequest *CiRequest) error {
 		} else {
 			log.Println(err.Error())
 		}
-		return err
+		return false, err
 	}
 
 	var version *string
@@ -79,20 +79,20 @@ func DownLoadFromS3(file *os.File, ciRequest *CiRequest) error {
 		})
 	if err != nil {
 		log.Println("Couldn't download cache file")
-		return nil
+		return false, nil
 	}
 	log.Println(devtron, " downloaded ", file.Name(), numBytes, " bytes ")
 
 	if numBytes != size {
 		log.Println(devtron, " cache sizes don't match, skipping step ", " version cache size ", size, " downloaded size ", numBytes)
-		return nil
+		return false, nil
 	}
 
 	if numBytes >= ciRequest.CacheLimit {
 		log.Println(devtron, " cache upper limit exceeded, ignoring old cache")
-		return nil
+		return false, nil
 	}
-	return nil
+	return true, nil
 }
 
 func GetCache(ciRequest *CiRequest) error {
@@ -107,25 +107,26 @@ func GetCache(ciRequest *CiRequest) error {
 		log.Fatal(err)
 	}
 	//----------download file
+	downloadSuccess := false
 	switch ciRequest.CloudProvider {
 	case CLOUD_PROVIDER_AWS:
-		err = DownLoadFromS3(file, ciRequest)
+		downloadSuccess, err = DownLoadFromS3(file, ciRequest)
 	case CLOUD_PROVIDER_AZURE:
 		b := AzureBlob{}
-		err = b.DownloadBlob(context.Background(), ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig, file)
+		downloadSuccess, err = b.DownloadBlob(context.Background(), ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig, file)
 	default:
 		return fmt.Errorf("cloudprovider %s not supported", ciRequest.CloudProvider)
 	}
 	///---------download file end
 	// Extract cache
-	if err == nil {
+	if err == nil && downloadSuccess {
 		extractCmd := exec.Command("tar", "-xvzf", ciRequest.CiCacheFileName)
 		extractCmd.Dir = "/"
 		err = extractCmd.Run()
 		if err != nil {
 			log.Fatal(" Could not extract cache blob ", err)
 		}
-	} else {
+	} else if err != nil {
 		log.Println(devtron, "build cache  error", err.Error())
 	}
 	return nil
@@ -225,10 +226,10 @@ func (impl *AzureBlob) buildContainerUrl(config *AzureBlobConfig) (*azblob.Conta
 	return &containerURL, nil
 }
 
-func (impl *AzureBlob) DownloadBlob(context context.Context, blobName string, config *AzureBlobConfig, file *os.File) error {
+func (impl *AzureBlob) DownloadBlob(context context.Context, blobName string, config *AzureBlobConfig, file *os.File) (success bool, err error) {
 	containerURL, err := impl.buildContainerUrl(config)
 	if err != nil {
-		return err
+		return false, err
 	}
 	res, err := containerURL.ListBlobsFlatSegment(context, azblob.Marker{}, azblob.ListBlobsSegmentOptions{
 		Details: azblob.BlobListingDetails{
@@ -237,7 +238,7 @@ func (impl *AzureBlob) DownloadBlob(context context.Context, blobName string, co
 		Prefix: blobName,
 	})
 	if err != nil {
-		return err
+		return false, err
 	}
 	var latestVersion string
 	for _, s := range res.Segment.BlobItems {
@@ -249,7 +250,7 @@ func (impl *AzureBlob) DownloadBlob(context context.Context, blobName string, co
 	log.Println(devtron, " latest version", latestVersion)
 	blobURL := containerURL.NewBlobURL(blobName).WithVersionID(latestVersion)
 	err = azblob.DownloadBlobToFile(context, blobURL, 0, azblob.CountToEnd, file, azblob.DownloadFromBlobOptions{})
-	return err
+	return true, err
 }
 
 func (impl *AzureBlob) UploadBlob(context context.Context, blobName string, config *AzureBlobConfig, cacheFileName string) error {
