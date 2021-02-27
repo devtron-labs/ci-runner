@@ -36,11 +36,7 @@ import (
 	"time"
 )
 
-func DownLoadFromS3(file *os.File, ciRequest *CiRequest) (success bool, err error) {
-	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(ciRequest.CiCacheRegion),
-	}))
-
+func DownLoadFromS3(file *os.File, ciRequest *CiRequest, sess *session.Session) (success bool, err error) {
 	svc := s3.New(sess)
 	input := &s3.ListObjectVersionsInput{
 		Bucket: aws.String(ciRequest.CiCacheLocation),
@@ -109,9 +105,20 @@ func GetCache(ciRequest *CiRequest) error {
 	//----------download file
 	downloadSuccess := false
 	switch ciRequest.CloudProvider {
-	case CLOUD_PROVIDER_AWS:
-		downloadSuccess, err = DownLoadFromS3(file, ciRequest)
-	case CLOUD_PROVIDER_AZURE:
+	case BLOB_STORAGE_S3:
+		sess := session.Must(session.NewSession(&aws.Config{
+			Region: aws.String(ciRequest.CiCacheRegion),
+		}))
+		downloadSuccess, err = DownLoadFromS3(file, ciRequest, sess)
+	case BLOB_STORAGE_MINIO:
+		sess := session.Must(session.NewSession(&aws.Config{
+			Region:           aws.String("us-west-2"),
+			Endpoint:         aws.String(ciRequest.MinioEndpoint),
+			DisableSSL:       aws.Bool(true),
+			S3ForcePathStyle: aws.Bool(true),
+		}))
+		downloadSuccess, err = DownLoadFromS3(file, ciRequest, sess)
+	case BLOB_STORAGE_AZURE:
 		b := AzureBlob{}
 		downloadSuccess, err = b.DownloadBlob(context.Background(), ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig, file)
 	default:
@@ -152,11 +159,13 @@ func SyncCache(ciRequest *CiRequest) error {
 	//----------upload file
 	log.Println(devtron, " -----> pushing new cache")
 	switch ciRequest.CloudProvider {
-	case CLOUD_PROVIDER_AWS:
+	case BLOB_STORAGE_S3:
 		cachePush := exec.Command("aws", "s3", "cp", ciRequest.CiCacheFileName, "s3://"+ciRequest.CiCacheLocation+"/"+ciRequest.CiCacheFileName)
 		err = RunCommand(cachePush)
-
-	case CLOUD_PROVIDER_AZURE:
+	case BLOB_STORAGE_MINIO:
+		cachePush := exec.Command("aws", "--endpoint-url", ciRequest.MinioEndpoint, "s3", "cp", ciRequest.CiCacheFileName, "s3://"+ciRequest.CiCacheLocation+"/"+ciRequest.CiCacheFileName)
+		err = RunCommand(cachePush)
+	case BLOB_STORAGE_AZURE:
 		b := AzureBlob{}
 		err = b.UploadBlob(context.Background(), ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig, ciRequest.CiCacheFileName)
 	default:
