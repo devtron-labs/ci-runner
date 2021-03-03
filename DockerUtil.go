@@ -29,8 +29,10 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"syscall"
@@ -133,8 +135,14 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	if DOCKER_REGISTRY_TYPE_DOCKERHUB == ciRequest.DockerRegistryType {
 		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
 	} else {
-		dockerRegistryURL := strings.TrimPrefix(ciRequest.DockerRegistryURL, "https://")
-		dest = dockerRegistryURL + "/" + ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
+		u, err := url.Parse(ciRequest.DockerRegistryURL)
+		if err != nil {
+			log.Println("not a valid docker repository url")
+			return "", err
+		}
+		u.Path = path.Join(u.Path, ciRequest.DockerRepository)
+		dockerRegistryURL := strings.TrimPrefix(u.String(), u.Scheme)
+		dest = dockerRegistryURL + ":" + ciRequest.DockerImageTag
 	}
 
 	dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
