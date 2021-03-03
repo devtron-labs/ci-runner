@@ -141,7 +141,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 		u.Path = path.Join(u.Path, ciRequest.DockerRepository)
-		dockerRegistryURL := strings.TrimPrefix(u.String(), u.Scheme)
+		dockerRegistryURL := strings.TrimPrefix(strings.TrimPrefix(u.String(), u.Scheme), "//")
 		dest = dockerRegistryURL + ":" + ciRequest.DockerImageTag
 	}
 
