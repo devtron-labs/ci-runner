@@ -140,7 +140,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			log.Println("not a valid docker repository url")
 			return "", err
 		}
-		u.Path = path.Join(u.Path, ciRequest.DockerRepository)
+		u.Path = path.Join(u.Path, "/" ,ciRequest.DockerRepository)
 		dockerRegistryURL := u.Host + u.Path
 		dest = dockerRegistryURL + ":" + ciRequest.DockerImageTag
 	}
