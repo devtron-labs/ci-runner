@@ -57,6 +57,10 @@ func (impl *GitUtil) runCommand(cmd *exec.Cmd) (response, errMsg string, err err
 		return "", errOutput, err
 	}
 	output := string(outBytes)
+	outputLen := len(output)
+	if outputLen > 0 && output[outputLen-1] == '\n' {
+		output = output[0 : outputLen-1]
+	}
 	output = strings.TrimSpace(output)
 	return output, "", nil
 }
