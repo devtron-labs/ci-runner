@@ -18,7 +18,6 @@
 package main
 
 import (
-	"fmt"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
@@ -28,7 +27,9 @@ import (
 )
 
 func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
+	gitCli := NewGitUtil()
 	for _, prj := range ciProjectDetails {
+
 		// git clone
 		log.Println("-----> git cloning " + prj.GitRepository)
 
@@ -37,8 +38,6 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 				_ = os.Mkdir(prj.CheckoutPath, os.ModeDir)
 			}
 		}
-
-		var r *git.Repository
 		var cErr error
 		var auth *http.BasicAuth
 		switch prj.GitOptions.AuthMode {
@@ -46,48 +45,32 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			auth = &http.BasicAuth{Password: prj.GitOptions.Password, Username: prj.GitOptions.UserName}
 		case AUTH_MODE_ACCESS_TOKEN:
 			auth = &http.BasicAuth{Password: prj.GitOptions.AccessToken, Username: prj.GitOptions.UserName}
+		default:
+			auth = &http.BasicAuth{}
 		}
 
-		switch prj.SourceType {
-		case SOURCE_TYPE_BRANCH_FIXED:
-			if len(prj.SourceValue) == 0 {
-				prj.SourceValue = "master"
-			}
-			log.Println("-----> " + prj.GitRepository + " checking out branch " + prj.SourceValue)
-			r, cErr = git.PlainClone(filepath.Join(workingDir, prj.CheckoutPath), false, &git.CloneOptions{
-				Auth:          auth,
-				URL:           prj.GitRepository,
-				Progress:      os.Stdout,
-				ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", prj.SourceValue)),
-				SingleBranch:  true,
-			})
-		case SOURCE_TYPE_TAG_REGEX:
-			log.Println("-----> " + prj.GitRepository + " checking out tag " + prj.GitTag)
-			r, cErr = git.PlainClone(filepath.Join(workingDir, prj.CheckoutPath), false, &git.CloneOptions{
-				Auth:          auth,
-				URL:           prj.GitRepository,
-				Progress:      os.Stdout,
-				ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/tags/%s", prj.GitTag)),
-				SingleBranch:  true,
-			})
-		}
-
+		_, msgMsg, cErr := gitCli.Clone(filepath.Join(workingDir, prj.CheckoutPath), prj.GitRepository, auth.Username, auth.Password)
 		if cErr != nil {
-			log.Fatal("could not clone branch ", " err ", cErr)
+			log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
 		}
-
-		w, wErr := r.Worktree()
-		if wErr != nil {
-			log.Fatal(wErr)
-		}
-
-		if prj.CommitHash != "" {
-			log.Println("-----> " + prj.GitRepository + " git checking out commit " + prj.CommitHash)
-			cErr := checkoutHash(w, prj.CommitHash)
-			if cErr != nil {
-				log.Println(cErr)
-				return cErr
+		checkoutSource := ""
+		if prj.SourceType == SOURCE_TYPE_BRANCH_FIXED {
+			if len(prj.CommitHash) > 0 {
+				checkoutSource = prj.CommitHash
+			} else {
+				if len(prj.SourceValue) == 0 {
+					prj.SourceValue = "main"
+				}
+				checkoutSource = prj.SourceValue
 			}
+
+		} else if prj.SourceType == SOURCE_TYPE_TAG_REGEX {
+			checkoutSource = prj.GitTag
+		}
+
+		_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), checkoutSource)
+		if cErr != nil {
+			log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 		}
 	}
 	return nil

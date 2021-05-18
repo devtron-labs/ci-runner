@@ -31,6 +31,9 @@ RUN apk --purge -v del py-pip
 RUN rm /var/cache/apk/*
 COPY --from=docker/compose:latest /usr/local/bin/docker-compose /usr/bin/docker-compose
 
+COPY ./git-ask-pass.sh /git-ask-pass.sh
+RUN chmod +x /git-ask-pass.sh
+
 COPY --from=build-env /go/bin/cirunner .
 ENTRYPOINT ["./cirunner"]
 
