@@ -137,7 +137,8 @@ func GetAfterDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task
 			case BRANCH_FIXED:
 				isValidSourceType := true
 				for _, p := range ciRequest.CiProjectDetails {
-					if p.SourceType != SOURCE_TYPE_BRANCH_FIXED {
+					// SOURCE_TYPE_PULL_REQUEST is not yet supported for pre-ci-stages. so handling here to get rid of fatal
+					if p.SourceType != SOURCE_TYPE_BRANCH_FIXED &&  p.SourceType != SOURCE_TYPE_PULL_REQUEST {
 						log.Println(devtron, "skipping invalid source type")
 						isValidSourceType = false
 						break
@@ -154,7 +155,8 @@ func GetAfterDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task
 			case TAG_PATTERN:
 				isValidSourceType := true
 				for _, p := range ciRequest.CiProjectDetails {
-					if p.SourceType != SOURCE_TYPE_TAG_REGEX {
+					// SOURCE_TYPE_PULL_REQUEST is not yet supported for pre-ci-stages. so handling here to get rid of fatal
+					if p.SourceType != SOURCE_TYPE_TAG_REGEX && p.SourceType != SOURCE_TYPE_PULL_REQUEST{
 						log.Println(devtron, "skipping invalid source type")
 						isValidSourceType = false
 						break

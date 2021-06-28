@@ -53,8 +53,11 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 		if cErr != nil {
 			log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
 		}
-		checkoutSource := ""
+
+		// checkout code
 		if prj.SourceType == SOURCE_TYPE_BRANCH_FIXED {
+			// checkout incoming commit hash or branch name
+			checkoutSource := ""
 			if len(prj.CommitHash) > 0 {
 				checkoutSource = prj.CommitHash
 			} else {
@@ -63,15 +66,34 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 				}
 				checkoutSource = prj.SourceValue
 			}
+			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), checkoutSource)
+			if cErr != nil {
+				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
+			}
 
 		} else if prj.SourceType == SOURCE_TYPE_TAG_REGEX {
-			checkoutSource = prj.GitTag
+			// checkout incoming tag
+			checkoutSource := prj.GitTag
+			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), checkoutSource)
+			if cErr != nil {
+				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
+			}
+		} else if prj.SourceType == SOURCE_TYPE_PULL_REQUEST {
+			// checkout target hash
+			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), prj.PrData.TargetBranchHash)
+			if cErr != nil {
+				log.Fatal("could not checkout hash ", "hash ", prj.PrData.TargetBranchHash, " err ", cErr, "msgMsg", msgMsg)
+				return cErr
+			}
+
+			// merge source hash
+			_, msgMsg, cErr = gitCli.Merge(filepath.Join(workingDir, prj.CheckoutPath), prj.PrData.SourceBranchHash)
+			if cErr != nil {
+				log.Fatal("could not merge hash ", "hash ", prj.PrData.SourceBranchHash, "err ", cErr, "msgMsg", msgMsg)
+				return cErr
+			}
 		}
 
-		_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), checkoutSource)
-		if cErr != nil {
-			log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
-		}
 	}
 	return nil
 }

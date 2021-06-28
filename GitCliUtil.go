@@ -89,3 +89,11 @@ func (impl *GitUtil) Clone(rootDir string, remoteUrl string, username string, pa
 	response, errMsg, err = impl.Fetch(rootDir, username, password)
 	return response, errMsg, err
 }
+
+func (impl *GitUtil) Merge(rootDir string, branch string) (response, errMsg string, err error) {
+	log.Println(devtron, "git merge ", "location", rootDir)
+	cmd := exec.Command("git", "-C", rootDir, "merge", branch, "--no-edit")
+	output, errMsg, err := impl.runCommand(cmd)
+	log.Println(devtron, "merge output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
+	return output, errMsg, err
+}

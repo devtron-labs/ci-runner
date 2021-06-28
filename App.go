@@ -167,6 +167,7 @@ type CiProjectDetails struct {
 	Message       string     `json:"message"`
 	Author        string     `json:"author"`
 	GitOptions    GitOptions `json:"gitOptions"`
+	PrData 		  PrData	 `json:"prData"`
 }
 
 type GitOptions struct {
@@ -176,6 +177,22 @@ type GitOptions struct {
 	AccessToken string   `json:"accessToken"`
 	AuthMode    AuthMode `json:"authMode"`
 }
+
+type PrData struct {
+	Id					int 		`json:"id"`
+	PrTitle        		string  	`json:"prTitle"`
+	PrUrl        		string		`json:"prUrl"`
+	SourceBranchName    string		`json:"sourceBranchName"`
+	SourceBranchHash    string		`json:"sourceBranchHash"`
+	TargetBranchName    string		`json:"targetBranchName"`
+	TargetBranchHash    string		`json:"targetBranchHash"`
+	AuthorName		    string		`json:"authorName"`
+	LastCommitMessage	string		`json:"lastCommitMessage"`
+	PrCreatedOn   		time.Time 	`json:"prCreatedOn"`
+	PrUpdatedOn   		time.Time 	`json:"prUpdatedOn"`
+}
+
+
 type AuthMode string
 
 const (
@@ -192,6 +209,7 @@ const (
 	SOURCE_TYPE_BRANCH_REGEX SourceType = "SOURCE_TYPE_BRANCH_REGEX"
 	SOURCE_TYPE_TAG_ANY      SourceType = "SOURCE_TYPE_TAG_ANY"
 	SOURCE_TYPE_TAG_REGEX    SourceType = "SOURCE_TYPE_TAG_REGEX"
+	SOURCE_TYPE_PULL_REQUEST SourceType = "SOURCE_TYPE_PULL_REQUEST"
 )
 
 const CI_COMPLETE_TOPIC = "CI-RUNNER.CI-COMPLETE"
@@ -243,7 +261,7 @@ func main() {
 
 	if ciCdRequest.Type == ciEvent {
 		ciRequest := ciCdRequest.CiRequest
-		artifactUploaded, err := run(ciCdRequest)
+		artifactUploaded, err := runCIStages(ciCdRequest)
 		log.Println(devtron, artifactUploaded, err)
 		var artifactUploadErr error
 		if !artifactUploaded {
@@ -339,7 +357,7 @@ func getScriptEnvVariables(cicdRequest *CiCdTriggerEvent) map[string]string {
 	return envs
 }
 
-func run(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err error) {
+func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err error) {
 	artifactUploaded = false
 	err = os.Chdir("/")
 	if err != nil {
