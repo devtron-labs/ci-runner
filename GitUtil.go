@@ -18,8 +18,6 @@
 package main
 
 import (
-	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"log"
 	"os"
@@ -78,30 +76,32 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			if cErr != nil {
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 			}
-		} else if prj.SourceType == SOURCE_TYPE_PULL_REQUEST {
+		} else if prj.SourceType == SOURCE_TYPE_WEBHOOK {
+
+			targetCommitHash := prj.WebhookData.Data[WEBHOOK_SELECTOR_TARGET_COMMIT_HASH_NAME]
+			if len(targetCommitHash) == 0{
+				log.Fatal("could not get target commit hash from request data")
+			}
+
 			// checkout target hash
-			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), prj.PrData.TargetBranchHash)
+			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), targetCommitHash)
 			if cErr != nil {
-				log.Fatal("could not checkout hash ", "hash ", prj.PrData.TargetBranchHash, " err ", cErr, "msgMsg", msgMsg)
+				log.Fatal("could not checkout hash ", "hash ", targetCommitHash, " err ", cErr, "msgMsg", msgMsg)
 				return cErr
 			}
 
-			// merge source hash
-			_, msgMsg, cErr = gitCli.Merge(filepath.Join(workingDir, prj.CheckoutPath), prj.PrData.SourceBranchHash)
-			if cErr != nil {
-				log.Fatal("could not merge hash ", "hash ", prj.PrData.SourceBranchHash, "err ", cErr, "msgMsg", msgMsg)
-				return cErr
+			// merge source hash if found
+			sourceCommitHash := prj.WebhookData.Data[WEBHOOK_SELECTOR_SOURCE_COMMIT_HASH_NAME]
+			if len(sourceCommitHash) != 0 {
+				_, msgMsg, cErr = gitCli.Merge(filepath.Join(workingDir, prj.CheckoutPath), sourceCommitHash)
+				if cErr != nil {
+					log.Fatal("could not merge hash ", "hash ", sourceCommitHash, "err ", cErr, "msgMsg", msgMsg)
+					return cErr
+				}
 			}
+
 		}
 
 	}
 	return nil
-}
-
-func checkoutHash(workTree *git.Worktree, hash string) error {
-	err := workTree.Checkout(&git.CheckoutOptions{
-		Hash:  plumbing.NewHash(hash),
-		Force: true,
-	})
-	return err
 }

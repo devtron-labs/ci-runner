@@ -167,7 +167,7 @@ type CiProjectDetails struct {
 	Message       string     `json:"message"`
 	Author        string     `json:"author"`
 	GitOptions    GitOptions `json:"gitOptions"`
-	PrData 		  PrData	 `json:"prData"`
+	WebhookData   WebhookData	 `json:"webhookData"`
 }
 
 type GitOptions struct {
@@ -178,18 +178,9 @@ type GitOptions struct {
 	AuthMode    AuthMode `json:"authMode"`
 }
 
-type PrData struct {
-	Id					int 		`json:"id"`
-	PrTitle        		string  	`json:"prTitle"`
-	PrUrl        		string		`json:"prUrl"`
-	SourceBranchName    string		`json:"sourceBranchName"`
-	SourceBranchHash    string		`json:"sourceBranchHash"`
-	TargetBranchName    string		`json:"targetBranchName"`
-	TargetBranchHash    string		`json:"targetBranchHash"`
-	AuthorName		    string		`json:"authorName"`
-	LastCommitMessage	string		`json:"lastCommitMessage"`
-	PrCreatedOn   		time.Time 	`json:"prCreatedOn"`
-	PrUpdatedOn   		time.Time 	`json:"prUpdatedOn"`
+type WebhookData struct {
+	Id					int 				`json:"id"`
+	Data        		map[string]string	`json:"data"`
 }
 
 
@@ -209,11 +200,18 @@ const (
 	SOURCE_TYPE_BRANCH_REGEX SourceType = "SOURCE_TYPE_BRANCH_REGEX"
 	SOURCE_TYPE_TAG_ANY      SourceType = "SOURCE_TYPE_TAG_ANY"
 	SOURCE_TYPE_TAG_REGEX    SourceType = "SOURCE_TYPE_TAG_REGEX"
-	SOURCE_TYPE_PULL_REQUEST SourceType = "SOURCE_TYPE_PULL_REQUEST"
+	SOURCE_TYPE_WEBHOOK 	 SourceType = "WEBHOOK"
 )
+
 
 const CI_COMPLETE_TOPIC = "CI-RUNNER.CI-COMPLETE"
 const CD_COMPLETE_TOPIC = "CI-RUNNER.CD-STAGE-COMPLETE"
+
+
+const (
+	WEBHOOK_SELECTOR_TARGET_COMMIT_HASH_NAME string = "target commit hash"
+	WEBHOOK_SELECTOR_SOURCE_COMMIT_HASH_NAME string = "source commit hash"
+)
 
 type PubSubClient struct {
 	Conn stan.Conn
