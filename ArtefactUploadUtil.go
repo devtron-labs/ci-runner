@@ -62,15 +62,16 @@ func UploadArtifact(artifactFiles map[string]string, s3Location string, cloudPro
 		artifactPush := exec.Command("aws", "s3", "cp", zipFile, s3Location)
 		err = RunCommand(artifactPush)
 	case BLOB_STORAGE_MINIO:
+
+		log.Println("minioEndpoint", minioEndpoint)
 		artifactPush := exec.Command("aws", "--endpoint-url", minioEndpoint, "s3", "cp", zipFile, s3Location)
 		err = RunCommand(artifactPush)
-/*	case BLOB_STORAGE_AZURE:
-		b := AzureBlob{}
-		err = b.UploadBlob(context.Background(), ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig, ciRequest.CiCacheFileName)*/
+		/*	case BLOB_STORAGE_AZURE:
+			b := AzureBlob{}
+			err = b.UploadBlob(context.Background(), ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig, ciRequest.CiCacheFileName)*/
 	default:
 		return fmt.Errorf("cloudprovider %s not supported", cloudProvider)
 	}
-
 
 	artifactPush := exec.Command("aws", "s3", "cp", zipFile, s3Location)
 	/*	tail := exec.Command("/bin/sh", "-c", "tail -f /dev/null")
