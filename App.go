@@ -180,6 +180,7 @@ type GitOptions struct {
 
 type WebhookData struct {
 	Id					int 				`json:"id"`
+	EventActionType		string 				`json:"eventActionType"`
 	Data        		map[string]string	`json:"data"`
 }
 
@@ -197,9 +198,6 @@ type SourceType string
 
 const (
 	SOURCE_TYPE_BRANCH_FIXED SourceType = "SOURCE_TYPE_BRANCH_FIXED"
-	SOURCE_TYPE_BRANCH_REGEX SourceType = "SOURCE_TYPE_BRANCH_REGEX"
-	SOURCE_TYPE_TAG_ANY      SourceType = "SOURCE_TYPE_TAG_ANY"
-	SOURCE_TYPE_TAG_REGEX    SourceType = "SOURCE_TYPE_TAG_REGEX"
 	SOURCE_TYPE_WEBHOOK 	 SourceType = "WEBHOOK"
 )
 
@@ -209,8 +207,11 @@ const CD_COMPLETE_TOPIC = "CI-RUNNER.CD-STAGE-COMPLETE"
 
 
 const (
-	WEBHOOK_SELECTOR_TARGET_COMMIT_HASH_NAME string = "target commit hash"
-	WEBHOOK_SELECTOR_SOURCE_COMMIT_HASH_NAME string = "source commit hash"
+	WEBHOOK_SELECTOR_TARGET_CHECKOUT_NAME string = "target checkout"
+	WEBHOOK_SELECTOR_SOURCE_CHECKOUT_NAME string = "source checkout"
+
+	WEBHOOK_EVENT_MERGED_ACTION_TYPE string = "merged"
+	WEBHOOK_EVENT_NON_MERGED_ACTION_TYPE string = "non-merged"
 )
 
 type PubSubClient struct {

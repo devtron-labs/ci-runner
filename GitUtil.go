@@ -69,35 +69,39 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 			}
 
-		} else if prj.SourceType == SOURCE_TYPE_TAG_REGEX {
-			// checkout incoming tag
-			checkoutSource := prj.GitTag
-			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), checkoutSource)
-			if cErr != nil {
-				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
-			}
 		} else if prj.SourceType == SOURCE_TYPE_WEBHOOK {
 
-			targetCommitHash := prj.WebhookData.Data[WEBHOOK_SELECTOR_TARGET_COMMIT_HASH_NAME]
-			if len(targetCommitHash) == 0{
-				log.Fatal("could not get target commit hash from request data")
+			webhookData := prj.WebhookData
+			webhookDataData := webhookData.Data
+
+			targetCheckout := webhookDataData[WEBHOOK_SELECTOR_TARGET_CHECKOUT_NAME]
+			if len(targetCheckout) == 0{
+				log.Fatal("could not get target checkout from request data")
 			}
 
 			// checkout target hash
-			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), targetCommitHash)
+			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), targetCheckout)
 			if cErr != nil {
-				log.Fatal("could not checkout hash ", "hash ", targetCommitHash, " err ", cErr, "msgMsg", msgMsg)
+				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, "msgMsg", msgMsg)
 				return cErr
 			}
 
-			// merge source hash if found
-			sourceCommitHash := prj.WebhookData.Data[WEBHOOK_SELECTOR_SOURCE_COMMIT_HASH_NAME]
-			if len(sourceCommitHash) != 0 {
-				_, msgMsg, cErr = gitCli.Merge(filepath.Join(workingDir, prj.CheckoutPath), sourceCommitHash)
+			// merge source if action type is merged
+			if webhookData.EventActionType == WEBHOOK_EVENT_MERGED_ACTION_TYPE {
+				sourceCheckout := webhookDataData[WEBHOOK_SELECTOR_SOURCE_CHECKOUT_NAME]
+
+				// throw error if source checkout is empty
+				if len(sourceCheckout) == 0 {
+					log.Fatal("sourceCheckout is empty")
+				}
+
+				// merge source
+				_, msgMsg, cErr = gitCli.Merge(filepath.Join(workingDir, prj.CheckoutPath), sourceCheckout)
 				if cErr != nil {
-					log.Fatal("could not merge hash ", "hash ", sourceCommitHash, "err ", cErr, "msgMsg", msgMsg)
+					log.Fatal("could not merge ", "sourceCheckout ", sourceCheckout, "err ", cErr, "msgMsg", msgMsg)
 					return cErr
 				}
+
 			}
 
 		}
