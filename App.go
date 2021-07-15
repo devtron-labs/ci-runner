@@ -293,7 +293,7 @@ func collectAndUploadCDArtifacts(cdRequest *CdRequest) error {
 		}
 	}
 	log.Println(devtron, " artifacts", artifactFiles)
-	return UploadArtifact(artifactFiles, cdRequest.ArtifactLocation)
+	return UploadArtifact(artifactFiles, cdRequest.ArtifactLocation, "S3", "")
 }
 
 func collectAndUploadArtifact(ciRequest *CiRequest) error {
@@ -320,7 +320,7 @@ func collectAndUploadArtifact(ciRequest *CiRequest) error {
 		}
 	}
 	log.Println(devtron, " artifacts", artifactFiles)
-	return UploadArtifact(artifactFiles, ciRequest.CiArtifactLocation)
+	return UploadArtifact(artifactFiles, ciRequest.CiArtifactLocation, ciRequest.CloudProvider, ciRequest.MinioEndpoint)
 }
 
 func getScriptEnvVariables(cicdRequest *CiCdTriggerEvent) map[string]string {

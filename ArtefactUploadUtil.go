@@ -18,6 +18,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/otiai10/copy"
 	"log"
 	"os"
@@ -27,7 +28,7 @@ import (
 
 var tmpArtifactLocation = "./job-artifact"
 
-func UploadArtifact(artifactFiles map[string]string, s3Location string) error {
+func UploadArtifact(artifactFiles map[string]string, s3Location string, cloudProvider string, minioEndpoint string) error {
 	if len(artifactFiles) == 0 {
 		log.Println(devtron, "no artifact to upload")
 		return nil
@@ -56,6 +57,21 @@ func UploadArtifact(artifactFiles map[string]string, s3Location string) error {
 		return err
 	}
 	log.Println(devtron, " artifact upload to ", zipFile, s3Location)
+	switch cloudProvider {
+	case BLOB_STORAGE_S3:
+		artifactPush := exec.Command("aws", "s3", "cp", zipFile, s3Location)
+		err = RunCommand(artifactPush)
+	case BLOB_STORAGE_MINIO:
+		artifactPush := exec.Command("aws", "--endpoint-url", minioEndpoint, "s3", "cp", zipFile, s3Location)
+		err = RunCommand(artifactPush)
+/*	case BLOB_STORAGE_AZURE:
+		b := AzureBlob{}
+		err = b.UploadBlob(context.Background(), ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig, ciRequest.CiCacheFileName)*/
+	default:
+		return fmt.Errorf("cloudprovider %s not supported", cloudProvider)
+	}
+
+
 	artifactPush := exec.Command("aws", "s3", "cp", zipFile, s3Location)
 	/*	tail := exec.Command("/bin/sh", "-c", "tail -f /dev/null")
 		err = RunCommand(tail)
