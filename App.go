@@ -56,6 +56,9 @@ type CdRequest struct {
 	OrchestratorToken         string             `json:"orchestratorToken"`
 	IsExtRun                  bool               `json:"isExtRun"`
 	ExtraEnvironmentVariables map[string]string  `json:"extraEnvironmentVariables"`
+	CloudProvider             string             `json:"cloudProvider"`
+	AzureBlobConfig           *AzureBlobConfig   `json:"azureBlobConfig"`
+	MinioEndpoint             string             `json:"minioEndpoint"`
 }
 
 type CiArtifactDTO struct {
@@ -293,7 +296,7 @@ func collectAndUploadCDArtifacts(cdRequest *CdRequest) error {
 		}
 	}
 	log.Println(devtron, " artifacts", artifactFiles)
-	return UploadArtifact(artifactFiles, cdRequest.ArtifactLocation, "S3", "")
+	return UploadArtifact(artifactFiles, cdRequest.ArtifactLocation, cdRequest.CloudProvider, cdRequest.MinioEndpoint, cdRequest.AzureBlobConfig)
 }
 
 func collectAndUploadArtifact(ciRequest *CiRequest) error {
@@ -320,7 +323,7 @@ func collectAndUploadArtifact(ciRequest *CiRequest) error {
 		}
 	}
 	log.Println(devtron, " artifacts", artifactFiles)
-	return UploadArtifact(artifactFiles, ciRequest.CiArtifactLocation, ciRequest.CloudProvider, ciRequest.MinioEndpoint)
+	return UploadArtifact(artifactFiles, ciRequest.CiArtifactLocation, ciRequest.CloudProvider, ciRequest.MinioEndpoint, ciRequest.AzureBlobConfig)
 }
 
 func getScriptEnvVariables(cicdRequest *CiCdTriggerEvent) map[string]string {
