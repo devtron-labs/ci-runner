@@ -262,13 +262,13 @@ func (impl *AzureBlob) DownloadBlob(context context.Context, blobName string, co
 	return true, err
 }
 
-func (impl *AzureBlob) UploadBlob(context context.Context, blobName string, config *AzureBlobConfig, cacheFileName string) error {
+func (impl *AzureBlob) UploadBlob(context context.Context, blobName string, config *AzureBlobConfig, inputFileName string) error {
 	containerURL, err := impl.buildContainerUrl(config)
 	if err != nil {
 		return err
 	}
 	blobURL := containerURL.NewBlockBlobURL(blobName)
-	file, err := os.Open(cacheFileName)
+	file, err := os.Open(inputFileName)
 	if err != nil {
 		return err
 	}
