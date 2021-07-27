@@ -56,6 +56,9 @@ type CdRequest struct {
 	OrchestratorToken         string             `json:"orchestratorToken"`
 	IsExtRun                  bool               `json:"isExtRun"`
 	ExtraEnvironmentVariables map[string]string  `json:"extraEnvironmentVariables"`
+	CloudProvider             string             `json:"cloudProvider"`
+	AzureBlobConfig           *AzureBlobConfig   `json:"azureBlobConfig"`
+	MinioEndpoint             string             `json:"minioEndpoint"`
 }
 
 type CiArtifactDTO struct {
@@ -231,7 +234,7 @@ STAGE:  %s
 }
 
 func main() {
-	// ' {"workflowNamePrefix":"55-suraj-23-ci-suraj-test-pipeline-8","pipelineName":"suraj-23-ci-suraj-test-pipeline","pipelineId":8,"dockerImageTag":"a6b809c4be87c217feba4af15cf5ebc3cafe21e0","dockerRegistryURL":"686244538589.dkr.ecr.us-east-2.amazonaws.com","dockerRepository":"test/suraj-23","dockerfileLocation":"./notifier/Dockerfile","awsRegion":"us-east-2","ciCacheLocation":"ci-caching","ciCacheFileName":"suraj-23-ci-suraj-test-pipeline.tar.gz","ciProjectDetails":[{"gitRepository":"https://gitlab.com/devtron/notifier.git","materialName":"1-notifier","checkoutPath":"./notifier","commitHash":"d4df38bcd065004014d255c2203d592a91585955","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"test-commit","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":"USERNAME_PASSWORD"}},{"gitRepository":"https://gitlab.com/devtron/orchestrator.git","materialName":"2-orchestrator","checkoutPath":"./orch","commitHash":"","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":""}}],"ciImage":"686244538589.dkr.ecr.us-east-2.amazonaws.com/cirunner:latest","namespace":"default"}'
+	//' {"workflowNamePrefix":"55-suraj-23-ci-suraj-test-pipeline-8","pipelineName":"suraj-23-ci-suraj-test-pipeline","pipelineId":8,"dockerImageTag":"a6b809c4be87c217feba4af15cf5ebc3cafe21e0","dockerRegistryURL":"686244538589.dkr.ecr.us-east-2.amazonaws.com","dockerRepository":"test/suraj-23","dockerfileLocation":"./notifier/Dockerfile","awsRegion":"us-east-2","ciCacheLocation":"ci-caching","ciCacheFileName":"suraj-23-ci-suraj-test-pipeline.tar.gz","ciProjectDetails":[{"gitRepository":"https://gitlab.com/devtron/notifier.git","materialName":"1-notifier","checkoutPath":"./notifier","commitHash":"d4df38bcd065004014d255c2203d592a91585955","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"test-commit","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":"USERNAME_PASSWORD"}},{"gitRepository":"https://gitlab.com/devtron/orchestrator.git","materialName":"2-orchestrator","checkoutPath":"./orch","commitHash":"","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":""}}],"ciImage":"686244538589.dkr.ecr.us-east-2.amazonaws.com/cirunner:latest","namespace":"default"}'
 	args := os.Args[1]
 	ciCdRequest := &CiCdTriggerEvent{}
 	err := json.Unmarshal([]byte(args), ciCdRequest)
@@ -293,7 +296,7 @@ func collectAndUploadCDArtifacts(cdRequest *CdRequest) error {
 		}
 	}
 	log.Println(devtron, " artifacts", artifactFiles)
-	return UploadArtifact(artifactFiles, cdRequest.ArtifactLocation, "S3", "")
+	return UploadArtifact(artifactFiles, cdRequest.ArtifactLocation, cdRequest.CloudProvider, cdRequest.MinioEndpoint, cdRequest.AzureBlobConfig)
 }
 
 func collectAndUploadArtifact(ciRequest *CiRequest) error {
@@ -320,7 +323,7 @@ func collectAndUploadArtifact(ciRequest *CiRequest) error {
 		}
 	}
 	log.Println(devtron, " artifacts", artifactFiles)
-	return UploadArtifact(artifactFiles, ciRequest.CiArtifactLocation, ciRequest.CloudProvider, ciRequest.MinioEndpoint)
+	return UploadArtifact(artifactFiles, ciRequest.CiArtifactLocation, ciRequest.CloudProvider, ciRequest.MinioEndpoint, ciRequest.AzureBlobConfig)
 }
 
 func getScriptEnvVariables(cicdRequest *CiCdTriggerEvent) map[string]string {
