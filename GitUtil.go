@@ -64,7 +64,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 				}
 				checkoutSource = prj.SourceValue
 			}
-			log.Println(devtron, "checkout commit in branch fix : ", checkoutSource)
+			log.Println("checkout commit in branch fix : ", checkoutSource)
 			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), checkoutSource)
 			if cErr != nil {
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
@@ -80,7 +80,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 				log.Fatal("could not get target checkout from request data")
 			}
 
-			log.Println(devtron, "checkout commit in webhook : ", targetCheckout)
+			log.Println("checkout commit in webhook : ", targetCheckout)
 
 			// checkout target hash
 			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), targetCheckout)
@@ -98,7 +98,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 					log.Fatal("sourceCheckout is empty")
 				}
 
-				log.Println(devtron, "merge commit in webhook : ", sourceCheckout)
+				log.Println("merge commit in webhook : ", sourceCheckout)
 
 				// merge source
 				_, msgMsg, cErr = gitCli.Merge(filepath.Join(workingDir, prj.CheckoutPath), sourceCheckout)
