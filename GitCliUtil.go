@@ -90,9 +90,11 @@ func (impl *GitUtil) Clone(rootDir string, remoteUrl string, username string, pa
 	return response, errMsg, err
 }
 
-func (impl *GitUtil) Merge(rootDir string, branch string) (response, errMsg string, err error) {
+// setting user.name and user.email as for non-fast-forward merge, git ask for user.name and email
+func (impl *GitUtil) Merge(rootDir string, commit string) (response, errMsg string, err error) {
 	log.Println(devtron, "git merge ", "location", rootDir)
-	cmd := exec.Command("git", "-C", rootDir, "merge", branch, "--no-commit")
+	command := "cd " + rootDir + " && git config user.email git@devtron.com && git config user.name Devtron && git merge " + commit + " --no-commit"
+	cmd := exec.Command("/bin/sh", "-c", command)
 	output, errMsg, err := impl.runCommand(cmd)
 	log.Println(devtron, "merge output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, errMsg, err
