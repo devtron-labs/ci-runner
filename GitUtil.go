@@ -18,8 +18,6 @@
 package main
 
 import (
-	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"log"
 	"os"
@@ -53,8 +51,11 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 		if cErr != nil {
 			log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
 		}
-		checkoutSource := ""
+
+		// checkout code
 		if prj.SourceType == SOURCE_TYPE_BRANCH_FIXED {
+			// checkout incoming commit hash or branch name
+			checkoutSource := ""
 			if len(prj.CommitHash) > 0 {
 				checkoutSource = prj.CommitHash
 			} else {
@@ -63,23 +64,53 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 				}
 				checkoutSource = prj.SourceValue
 			}
+			log.Println("checkout commit in branch fix : ", checkoutSource)
+			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), checkoutSource)
+			if cErr != nil {
+				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
+			}
 
-		} else if prj.SourceType == SOURCE_TYPE_TAG_REGEX {
-			checkoutSource = prj.GitTag
+		} else if prj.SourceType == SOURCE_TYPE_WEBHOOK {
+
+			webhookData := prj.WebhookData
+			webhookDataData := webhookData.Data
+
+			targetCheckout := webhookDataData[WEBHOOK_SELECTOR_TARGET_CHECKOUT_NAME]
+			if len(targetCheckout) == 0{
+				log.Fatal("could not get target checkout from request data")
+			}
+
+			log.Println("checkout commit in webhook : ", targetCheckout)
+
+			// checkout target hash
+			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), targetCheckout)
+			if cErr != nil {
+				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
+				return cErr
+			}
+
+			// merge source if action type is merged
+			if webhookData.EventActionType == WEBHOOK_EVENT_MERGED_ACTION_TYPE {
+				sourceCheckout := webhookDataData[WEBHOOK_SELECTOR_SOURCE_CHECKOUT_NAME]
+
+				// throw error if source checkout is empty
+				if len(sourceCheckout) == 0 {
+					log.Fatal("sourceCheckout is empty")
+				}
+
+				log.Println("merge commit in webhook : ", sourceCheckout)
+
+				// merge source
+				_, msgMsg, cErr = gitCli.Merge(filepath.Join(workingDir, prj.CheckoutPath), sourceCheckout)
+				if cErr != nil {
+					log.Fatal("could not merge ", "sourceCheckout ", sourceCheckout, " err ", cErr, " msgMsg", msgMsg)
+					return cErr
+				}
+
+			}
+
 		}
 
-		_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), checkoutSource)
-		if cErr != nil {
-			log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
-		}
 	}
 	return nil
-}
-
-func checkoutHash(workTree *git.Worktree, hash string) error {
-	err := workTree.Checkout(&git.CheckoutOptions{
-		Hash:  plumbing.NewHash(hash),
-		Force: true,
-	})
-	return err
 }
