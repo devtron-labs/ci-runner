@@ -170,6 +170,7 @@ type CiProjectDetails struct {
 	Message       string     `json:"message"`
 	Author        string     `json:"author"`
 	GitOptions    GitOptions `json:"gitOptions"`
+	WebhookData   WebhookData	 `json:"webhookData"`
 }
 
 type GitOptions struct {
@@ -179,6 +180,14 @@ type GitOptions struct {
 	AccessToken string   `json:"accessToken"`
 	AuthMode    AuthMode `json:"authMode"`
 }
+
+type WebhookData struct {
+	Id					int 				`json:"id"`
+	EventActionType		string 				`json:"eventActionType"`
+	Data        		map[string]string	`json:"data"`
+}
+
+
 type AuthMode string
 
 const (
@@ -192,13 +201,21 @@ type SourceType string
 
 const (
 	SOURCE_TYPE_BRANCH_FIXED SourceType = "SOURCE_TYPE_BRANCH_FIXED"
-	SOURCE_TYPE_BRANCH_REGEX SourceType = "SOURCE_TYPE_BRANCH_REGEX"
-	SOURCE_TYPE_TAG_ANY      SourceType = "SOURCE_TYPE_TAG_ANY"
-	SOURCE_TYPE_TAG_REGEX    SourceType = "SOURCE_TYPE_TAG_REGEX"
+	SOURCE_TYPE_WEBHOOK 	 SourceType = "WEBHOOK"
 )
+
 
 const CI_COMPLETE_TOPIC = "CI-RUNNER.CI-COMPLETE"
 const CD_COMPLETE_TOPIC = "CI-RUNNER.CD-STAGE-COMPLETE"
+
+
+const (
+	WEBHOOK_SELECTOR_TARGET_CHECKOUT_NAME string = "target checkout"
+	WEBHOOK_SELECTOR_SOURCE_CHECKOUT_NAME string = "source checkout"
+
+	WEBHOOK_EVENT_MERGED_ACTION_TYPE string = "merged"
+	WEBHOOK_EVENT_NON_MERGED_ACTION_TYPE string = "non-merged"
+)
 
 type PubSubClient struct {
 	Conn stan.Conn
@@ -246,7 +263,7 @@ func main() {
 
 	if ciCdRequest.Type == ciEvent {
 		ciRequest := ciCdRequest.CiRequest
-		artifactUploaded, err := run(ciCdRequest)
+		artifactUploaded, err := runCIStages(ciCdRequest)
 		log.Println(devtron, artifactUploaded, err)
 		var artifactUploadErr error
 		if !artifactUploaded {
@@ -342,7 +359,7 @@ func getScriptEnvVariables(cicdRequest *CiCdTriggerEvent) map[string]string {
 	return envs
 }
 
-func run(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err error) {
+func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err error) {
 	artifactUploaded = false
 	err = os.Chdir("/")
 	if err != nil {

@@ -50,7 +50,6 @@ type AppliesTo struct {
 }
 
 const BRANCH_FIXED = "BRANCH_FIXED"
-const TAG_PATTERN = "TAG_PATTERN"
 
 func GetBeforeDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task, error) {
 	if taskYaml == nil {
@@ -74,8 +73,7 @@ func GetBeforeDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Tas
 		}
 		for _, a := range p.AppliesTo {
 			triggerType := a.Type
-			switch triggerType {
-			case BRANCH_FIXED:
+			if triggerType == BRANCH_FIXED {
 				branches := a.Value
 				branchesMap := make(map[string]bool)
 				for _, b := range branches {
@@ -87,23 +85,8 @@ func GetBeforeDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Tas
 				}
 				tasks = append(tasks, p.BeforeTasks...)
 				filteredOut = true
-			case TAG_PATTERN:
-				isValidSourceType := true
-				for _, p := range ciRequest.CiProjectDetails {
-					if p.SourceType != SOURCE_TYPE_TAG_REGEX {
-						log.Println(devtron, "skipping invalid source type")
-						isValidSourceType = false
-						break
-					}
-				}
-				if isValidSourceType {
-					if !isValidTag(ciRequest, a) {
-						log.Println(devtron, "skipping current AppliesTo")
-						continue
-					}
-					tasks = append(tasks, p.BeforeTasks...)
-					filteredOut = true
-				}
+			}else{
+				log.Println(devtron, "unknown triggerType ", triggerType)
 			}
 		}
 
@@ -133,11 +116,11 @@ func GetAfterDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task
 		}
 		for _, a := range p.AppliesTo {
 			triggerType := a.Type
-			switch triggerType {
-			case BRANCH_FIXED:
+			if triggerType == BRANCH_FIXED {
 				isValidSourceType := true
 				for _, p := range ciRequest.CiProjectDetails {
-					if p.SourceType != SOURCE_TYPE_BRANCH_FIXED {
+					// SOURCE_TYPE_WEBHOOK is not yet supported for pre-ci-stages. so handling here to get rid of fatal
+					if p.SourceType != SOURCE_TYPE_BRANCH_FIXED &&  p.SourceType != SOURCE_TYPE_WEBHOOK {
 						log.Println(devtron, "skipping invalid source type")
 						isValidSourceType = false
 						break
@@ -151,26 +134,8 @@ func GetAfterDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task
 					tasks = append(tasks, p.AfterTasks...)
 					filteredOut = true
 				}
-			case TAG_PATTERN:
-				isValidSourceType := true
-				for _, p := range ciRequest.CiProjectDetails {
-					if p.SourceType != SOURCE_TYPE_TAG_REGEX {
-						log.Println(devtron, "skipping invalid source type")
-						isValidSourceType = false
-						break
-					}
-					if len(ciRequest.CiProjectDetails) > 1 {
-						isValidSourceType = false
-					}
-				}
-				if isValidSourceType {
-					if !isValidTag(ciRequest, a) {
-						log.Println(devtron, "skipping current AppliesTo")
-						continue
-					}
-					tasks = append(tasks, p.AfterTasks...)
-					filteredOut = true
-				}
+			}else{
+				log.Println(devtron, "unknown triggerType ", triggerType)
 			}
 		}
 	}
