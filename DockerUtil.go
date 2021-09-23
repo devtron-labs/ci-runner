@@ -22,10 +22,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecr"
 	"io"
 	"io/ioutil"
 	"log"
@@ -37,13 +33,34 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
 )
 
-func StartDockerDaemon() {
-	dockerdStart := "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
-	out, _ := exec.Command("/bin/sh", "-c", dockerdStart).Output()
-	log.Println(string(out))
-	waitForDockerDaemon(retryCount)
+func StartDockerDaemon(dockerCredentials *DockerCredentials) {
+	connection := dockerCredentials.DockerConnection
+	url := dockerCredentials.DockerRegistryURL
+
+	if connection == "secure" {
+		dockerdStart := "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
+		out, _ := exec.Command("/bin/sh", "-c", dockerdStart).Output()
+		log.Println(string(out))
+		waitForDockerDaemon(retryCount)
+	} else if connection == "insecure" {
+		dockerdstart := "dockerd --insecure-registry " + url
+		out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
+		log.Println(string(out))
+		waitForDockerDaemon(retryCount)
+	} else {
+		dockerdStart := "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
+		out, _ := exec.Command("/bin/sh", "-c", dockerdStart).Output()
+		log.Println(string(out))
+		waitForDockerDaemon(retryCount)
+	}
+
 }
 
 const DOCKER_REGISTRY_TYPE_ECR = "ecr"
@@ -51,7 +68,7 @@ const DOCKER_REGISTRY_TYPE_DOCKERHUB = "docker-hub"
 const DOCKER_REGISTRY_TYPE_OTHER = "other"
 
 type DockerCredentials struct {
-	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType string
+	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType, DockerConnection, DockerCert string
 }
 
 func DockerLogin(dockerCredentials *DockerCredentials) error {
@@ -98,6 +115,8 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		SecretKey:          ciRequest.SecretKey,
 		DockerRegistryURL:  ciRequest.DockerRegistryURL,
 		DockerRegistryType: ciRequest.DockerRegistryType,
+		DockerConnection:   ciRequest.DockerConnection,
+		DockerCert:         ciRequest.DockerCert,
 	})
 	if err != nil {
 		return "", err
@@ -140,7 +159,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			log.Println("not a valid docker repository url")
 			return "", err
 		}
-		u.Path = path.Join(u.Path, "/" ,ciRequest.DockerRepository)
+		u.Path = path.Join(u.Path, "/", ciRequest.DockerRepository)
 		dockerRegistryURL := u.Host + u.Path
 		dest = dockerRegistryURL + ":" + ciRequest.DockerImageTag
 	}
