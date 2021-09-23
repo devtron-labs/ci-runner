@@ -89,7 +89,7 @@ const DOCKER_REGISTRY_TYPE_DOCKERHUB = "docker-hub"
 const DOCKER_REGISTRY_TYPE_OTHER = "other"
 
 type DockerCredentials struct {
-	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType, DockerConnection, DockerCert string
+	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType string
 }
 
 func DockerLogin(dockerCredentials *DockerCredentials) error {
@@ -136,8 +136,6 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		SecretKey:          ciRequest.SecretKey,
 		DockerRegistryURL:  ciRequest.DockerRegistryURL,
 		DockerRegistryType: ciRequest.DockerRegistryType,
-		DockerConnection:   ciRequest.DockerConnection,
-		DockerCert:         ciRequest.DockerCert,
 	})
 	if err != nil {
 		return "", err

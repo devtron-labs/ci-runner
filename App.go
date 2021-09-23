@@ -512,8 +512,6 @@ func runCDStages(cicdRequest *CiCdTriggerEvent) error {
 		SecretKey:          cicdRequest.CdRequest.SecretKey,
 		DockerRegistryURL:  cicdRequest.CdRequest.DockerRegistryURL,
 		DockerRegistryType: cicdRequest.CdRequest.DockerRegistryType,
-		DockerConnection:   cicdRequest.CdRequest.DockerConnection,
-		DockerCert:         cicdRequest.CdRequest.DockerCert,
 	})
 	if err != nil {
 		return err
