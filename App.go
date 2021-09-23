@@ -395,7 +395,7 @@ func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err erro
 
 	// Start docker daemon
 	log.Println(devtron, " docker-build")
-	StartDockerDaemon()
+	StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert)
 	scriptEnvs := getScriptEnvVariables(ciCdRequest)
 
 	// Get devtron-ci yaml
@@ -502,7 +502,8 @@ func runCDStages(cicdRequest *CiCdTriggerEvent) error {
 
 	// Start docker daemon
 	log.Println(devtron, " docker-start")
-	StartDockerDaemon()
+	StartDockerDaemon(cicdRequest.CdRequest.DockerConnection, cicdRequest.CdRequest.DockerRegistryURL, cicdRequest.CdRequest.DockerCert)
+
 	err = DockerLogin(&DockerCredentials{
 		DockerUsername:     cicdRequest.CdRequest.DockerUsername,
 		DockerPassword:     cicdRequest.CdRequest.DockerPassword,

@@ -40,17 +40,33 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 )
 
-func StartDockerDaemon(dockerCredentials *DockerCredentials) {
-	connection := dockerCredentials.DockerConnection
-	url := dockerCredentials.DockerRegistryURL
+func StartDockerDaemon(dockerConection, dockerRegistryUrl, dockerCert string) {
+	connection := dockerConection
+	u, err := url.Parse(dockerRegistryUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if connection == "secure-with-cert" {
+		os.MkdirAll("/etc/docker/certs.d/"+u.Host, os.ModePerm)
+		f, err := os.Create("/etc/docker/certs.d/" + u.Host + "/ca.crt")
 
-	if connection == "secure" {
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		defer f.Close()
+
+		_, err2 := f.WriteString(dockerCert)
+
+		if err2 != nil {
+			log.Fatal(err2)
+		}
 		dockerdStart := "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
 		out, _ := exec.Command("/bin/sh", "-c", dockerdStart).Output()
 		log.Println(string(out))
 		waitForDockerDaemon(retryCount)
 	} else if connection == "insecure" {
-		dockerdstart := "dockerd --insecure-registry " + url
+		dockerdstart := "dockerd --insecure-registry " + dockerRegistryUrl
 		out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
 		log.Println(string(out))
 		waitForDockerDaemon(retryCount)
