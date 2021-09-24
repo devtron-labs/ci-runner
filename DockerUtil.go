@@ -63,20 +63,20 @@ func StartDockerDaemon(dockerConection, dockerRegistryUrl, dockerCert string) {
 		}
 		dockerdStart := "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
 		out, _ := exec.Command("/bin/sh", "-c", dockerdStart).Output()
-		logStage("docker push")
+		logStage("Secure with Cert")
 
 		log.Println(string(out))
 		waitForDockerDaemon(retryCount)
 	} else if connection == "insecure" {
 		dockerdstart := "dockerd --insecure-registry " + dockerRegistryUrl + " --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
 		out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
-		logStage("docker push")
+		logStage("Insecure Registry")
 		log.Println(string(out))
 		waitForDockerDaemon(retryCount)
 	} else {
 		dockerdStart := "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
 		out, _ := exec.Command("/bin/sh", "-c", dockerdStart).Output()
-		logStage("docker push")
+		logStage("Secure Registry")
 
 		log.Println(string(out))
 		waitForDockerDaemon(retryCount)
