@@ -42,6 +42,7 @@ import (
 
 func StartDockerDaemon(dockerConection, dockerRegistryUrl, dockerCert string) {
 	connection := dockerConection
+	fmt.Println(connection)
 	u, err := url.Parse(dockerRegistryUrl)
 	if err != nil {
 		log.Fatal(err)
