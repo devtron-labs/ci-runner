@@ -40,8 +40,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 )
 
-func StartDockerDaemon(dockerConection, dockerRegistryUrl, dockerCert string) {
-	connection := dockerConection
+func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert string) {
+	connection := dockerConnection
 	fmt.Println(connection)
 	u, err := url.Parse(dockerRegistryUrl)
 	if err != nil {

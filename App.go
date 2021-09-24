@@ -53,7 +53,7 @@ type CdRequest struct {
 	SecretKey                 string             `json:"secretKey"`
 	DockerRegistryURL         string             `json:"dockerRegistryUrl"`
 	DockerRegistryType        string             `json:"dockerRegistryType"`
-	DockerConnection          string             `json:"dockerConection"`
+	DockerConnection          string             `json:"dockerConnection"`
 	DockerCert                string             `json:"dockerCert"`
 	OrchestratorHost          string             `json:"orchestratorHost"`
 	OrchestratorToken         string             `json:"orchestratorToken"`
@@ -79,7 +79,7 @@ type CiRequest struct {
 	DockerImageTag              string                       `json:"dockerImageTag"`
 	DockerRegistryType          string                       `json:"dockerRegistryType"`
 	DockerRegistryURL           string                       `json:"dockerRegistryURL"`
-	DockerConnection            string                       `json:"dockerConection"`
+	DockerConnection            string                       `json:"dockerConnection"`
 	DockerCert                  string                       `json:"dockerCert"`
 	DockerRepository            string                       `json:"dockerRepository"`
 	DockerBuildArgs             string                       `json:"dockerBuildArgs"`
