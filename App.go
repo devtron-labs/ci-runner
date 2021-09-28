@@ -230,6 +230,8 @@ type PubSubConfig struct {
 	ImageScannerEndpoint string `env:"IMAGE_SCANNER_ENDPOINT" envDefault:"http://image-scanner-new-demo-devtroncd-service.devtroncd:80"`
 }
 
+const insecure = "insecure"
+const secureWithCert = "secure-with-cert"
 const retryCount = 10
 const workingDir = "/devtroncd"
 const devtron = "DEVTRON"
