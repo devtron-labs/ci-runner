@@ -42,6 +42,7 @@ import (
 
 func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert string) {
 	connection := dockerConnection
+<<<<<<< HEAD
 	u, err := url.Parse(dockerRegistryUrl)
 	fmt.Println(u)
 	if err != nil {
@@ -49,13 +50,25 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert string) {
 	}
 	if connection == "insecure" {
 		dockerdstart := "dockerd --insecure-registry " + u.Host + " --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
+=======
+	domain := strings.ReplaceAll(dockerRegistryUrl, "https://", "")
+	domain = strings.ReplaceAll(dockerRegistryUrl, "http://", "")
+	if connection == insecure {
+		dockerdstart := "dockerd --insecure-registry " + domain + " --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
+>>>>>>> bf03bad6d0e39fd08a3056dc22f3f72b16c7a2e4
 		out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
 		log.Println(string(out))
 		waitForDockerDaemon(retryCount)
 	} else {
+<<<<<<< HEAD
 		if connection == "secure-with-cert" {
 			os.MkdirAll("/etc/docker/certs.d/"+u.Host, os.ModePerm)
 			f, err := os.Create("/etc/docker/certs.d/" + u.Host + "/ca.crt")
+=======
+		if connection == secureWithCert {
+			os.MkdirAll("/etc/docker/certs.d/"+domain, os.ModePerm)
+			f, err := os.Create("/etc/docker/certs.d/" + domain + "/ca.crt")
+>>>>>>> bf03bad6d0e39fd08a3056dc22f3f72b16c7a2e4
 
 			if err != nil {
 				log.Fatal(err)
@@ -68,10 +81,18 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert string) {
 			if err2 != nil {
 				log.Fatal(err2)
 			}
+<<<<<<< HEAD
 
 		}
 		dockerdStart := "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
 		out, _ := exec.Command("/bin/sh", "-c", dockerdStart).Output()
+=======
+		}
+		dockerdStart := "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
+		out, _ := exec.Command("/bin/sh", "-c", dockerdStart).Output()
+		logStage("Secure with Cert")
+
+>>>>>>> bf03bad6d0e39fd08a3056dc22f3f72b16c7a2e4
 		log.Println(string(out))
 		waitForDockerDaemon(retryCount)
 	}
