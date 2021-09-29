@@ -47,15 +47,15 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert string) {
 		log.Fatal(err)
 	}
 	if connection == insecure {
-		dockerdstart := "dockerd --insecure-registry " + u.Host + " --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
+		dockerdstart := fmt.Sprintf("dockerd --insecure-registry %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", u.Host)
 		out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
 		logStage("Insecure Registry")
 		log.Println(string(out))
 		waitForDockerDaemon(retryCount)
 	} else {
 		if connection == secureWithCert {
-			os.MkdirAll("/etc/docker/certs.d/"+u.Host, os.ModePerm)
-			f, err := os.Create("/etc/docker/certs.d/" + u.Host + "/ca.crt")
+			os.MkdirAll(fmt.Sprintf("/etc/docker/certs.d/%s", u.Host), os.ModePerm)
+			f, err := os.Create(fmt.Sprintf("/etc/docker/certs.d/%s/ca.crt", u.Host))
 
 			if err != nil {
 				log.Fatal(err)
