@@ -46,12 +46,10 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	dockerdstart := ""
 	if connection == insecure {
-		dockerdstart := fmt.Sprintf("dockerd --insecure-registry %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", u.Host)
-		out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
+		dockerdstart = fmt.Sprintf("dockerd --insecure-registry %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", u.Host)
 		logStage("Insecure Registry")
-		log.Println(string(out))
-		waitForDockerDaemon(retryCount)
 	} else {
 		if connection == secureWithCert {
 			os.MkdirAll(fmt.Sprintf("/etc/docker/certs.d/%s", u.Host), os.ModePerm)
@@ -69,13 +67,12 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert string) {
 				log.Fatal(err2)
 			}
 		}
-		dockerdStart := "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
-		out, _ := exec.Command("/bin/sh", "-c", dockerdStart).Output()
+		dockerdstart = "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
 		logStage("Secure with Cert")
-
-		log.Println(string(out))
-		waitForDockerDaemon(retryCount)
 	}
+	out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
+	log.Println(string(out))
+	waitForDockerDaemon(retryCount)
 }
 
 const DOCKER_REGISTRY_TYPE_ECR = "ecr"
