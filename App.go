@@ -20,13 +20,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	_ "github.com/aws/aws-sdk-go/aws"
-	"github.com/nats-io/stan.go"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	_ "github.com/aws/aws-sdk-go/aws"
+	"github.com/nats-io/stan.go"
 )
 
 type CiCdTriggerEvent struct {
@@ -52,6 +53,8 @@ type CdRequest struct {
 	SecretKey                 string             `json:"secretKey"`
 	DockerRegistryURL         string             `json:"dockerRegistryUrl"`
 	DockerRegistryType        string             `json:"dockerRegistryType"`
+	DockerConnection          string             `json:"dockerConnection"`
+	DockerCert                string             `json:"dockerCert"`
 	OrchestratorHost          string             `json:"orchestratorHost"`
 	OrchestratorToken         string             `json:"orchestratorToken"`
 	IsExtRun                  bool               `json:"isExtRun"`
@@ -76,6 +79,8 @@ type CiRequest struct {
 	DockerImageTag              string                       `json:"dockerImageTag"`
 	DockerRegistryType          string                       `json:"dockerRegistryType"`
 	DockerRegistryURL           string                       `json:"dockerRegistryURL"`
+	DockerConnection            string                       `json:"dockerConnection"`
+	DockerCert                  string                       `json:"dockerCert"`
 	DockerRepository            string                       `json:"dockerRepository"`
 	DockerBuildArgs             string                       `json:"dockerBuildArgs"`
 	DockerFileLocation          string                       `json:"dockerfileLocation"`
@@ -158,19 +163,19 @@ type CdStageCompleteEvent struct {
 }
 
 type CiProjectDetails struct {
-	GitRepository string     `json:"gitRepository"`
-	MaterialName  string     `json:"materialName"`
-	CheckoutPath  string     `json:"checkoutPath"`
-	CommitHash    string     `json:"commitHash"`
-	GitTag        string     `json:"gitTag"`
-	CommitTime    time.Time  `json:"commitTime"`
-	SourceType    SourceType `json:"sourceType"`
-	SourceValue   string     `json:"sourceValue"`
-	Type          string     `json:"type"`
-	Message       string     `json:"message"`
-	Author        string     `json:"author"`
-	GitOptions    GitOptions `json:"gitOptions"`
-	WebhookData   WebhookData	 `json:"webhookData"`
+	GitRepository string      `json:"gitRepository"`
+	MaterialName  string      `json:"materialName"`
+	CheckoutPath  string      `json:"checkoutPath"`
+	CommitHash    string      `json:"commitHash"`
+	GitTag        string      `json:"gitTag"`
+	CommitTime    time.Time   `json:"commitTime"`
+	SourceType    SourceType  `json:"sourceType"`
+	SourceValue   string      `json:"sourceValue"`
+	Type          string      `json:"type"`
+	Message       string      `json:"message"`
+	Author        string      `json:"author"`
+	GitOptions    GitOptions  `json:"gitOptions"`
+	WebhookData   WebhookData `json:"webhookData"`
 }
 
 type GitOptions struct {
@@ -182,11 +187,10 @@ type GitOptions struct {
 }
 
 type WebhookData struct {
-	Id					int 				`json:"id"`
-	EventActionType		string 				`json:"eventActionType"`
-	Data        		map[string]string	`json:"data"`
+	Id              int               `json:"id"`
+	EventActionType string            `json:"eventActionType"`
+	Data            map[string]string `json:"data"`
 }
-
 
 type AuthMode string
 
@@ -201,19 +205,17 @@ type SourceType string
 
 const (
 	SOURCE_TYPE_BRANCH_FIXED SourceType = "SOURCE_TYPE_BRANCH_FIXED"
-	SOURCE_TYPE_WEBHOOK 	 SourceType = "WEBHOOK"
+	SOURCE_TYPE_WEBHOOK      SourceType = "WEBHOOK"
 )
-
 
 const CI_COMPLETE_TOPIC = "CI-RUNNER.CI-COMPLETE"
 const CD_COMPLETE_TOPIC = "CI-RUNNER.CD-STAGE-COMPLETE"
-
 
 const (
 	WEBHOOK_SELECTOR_TARGET_CHECKOUT_NAME string = "target checkout"
 	WEBHOOK_SELECTOR_SOURCE_CHECKOUT_NAME string = "source checkout"
 
-	WEBHOOK_EVENT_MERGED_ACTION_TYPE string = "merged"
+	WEBHOOK_EVENT_MERGED_ACTION_TYPE     string = "merged"
 	WEBHOOK_EVENT_NON_MERGED_ACTION_TYPE string = "non-merged"
 )
 
@@ -228,6 +230,8 @@ type PubSubConfig struct {
 	ImageScannerEndpoint string `env:"IMAGE_SCANNER_ENDPOINT" envDefault:"http://image-scanner-new-demo-devtroncd-service.devtroncd:80"`
 }
 
+const insecure = "insecure"
+const secureWithCert = "secure-with-cert"
 const retryCount = 10
 const workingDir = "/devtroncd"
 const devtron = "DEVTRON"
@@ -393,7 +397,7 @@ func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err erro
 
 	// Start docker daemon
 	log.Println(devtron, " docker-build")
-	StartDockerDaemon()
+	StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert)
 	scriptEnvs := getScriptEnvVariables(ciCdRequest)
 
 	// Get devtron-ci yaml
@@ -500,7 +504,8 @@ func runCDStages(cicdRequest *CiCdTriggerEvent) error {
 
 	// Start docker daemon
 	log.Println(devtron, " docker-start")
-	StartDockerDaemon()
+	StartDockerDaemon(cicdRequest.CdRequest.DockerConnection, cicdRequest.CdRequest.DockerRegistryURL, cicdRequest.CdRequest.DockerCert)
+
 	err = DockerLogin(&DockerCredentials{
 		DockerUsername:     cicdRequest.CdRequest.DockerUsername,
 		DockerPassword:     cicdRequest.CdRequest.DockerPassword,

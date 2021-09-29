@@ -22,10 +22,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecr"
 	"io"
 	"io/ioutil"
 	"log"
@@ -37,11 +33,44 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
 )
 
-func StartDockerDaemon() {
-	dockerdStart := "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
-	out, _ := exec.Command("/bin/sh", "-c", dockerdStart).Output()
+func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert string) {
+	connection := dockerConnection
+	u, err := url.Parse(dockerRegistryUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+	dockerdstart := ""
+	if connection == insecure {
+		dockerdstart = fmt.Sprintf("dockerd --insecure-registry %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", u.Host)
+		logStage("Insecure Registry")
+	} else {
+		if connection == secureWithCert {
+			os.MkdirAll(fmt.Sprintf("/etc/docker/certs.d/%s", u.Host), os.ModePerm)
+			f, err := os.Create(fmt.Sprintf("/etc/docker/certs.d/%s/ca.crt", u.Host))
+
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			defer f.Close()
+
+			_, err2 := f.WriteString(dockerCert)
+
+			if err2 != nil {
+				log.Fatal(err2)
+			}
+		}
+		dockerdstart = "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
+		logStage("Secure with Cert")
+	}
+	out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
 	log.Println(string(out))
 	waitForDockerDaemon(retryCount)
 }
@@ -140,7 +169,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			log.Println("not a valid docker repository url")
 			return "", err
 		}
-		u.Path = path.Join(u.Path, "/" ,ciRequest.DockerRepository)
+		u.Path = path.Join(u.Path, "/", ciRequest.DockerRepository)
 		dockerRegistryURL := u.Host + u.Path
 		dest = dockerRegistryURL + ":" + ciRequest.DockerImageTag
 	}
