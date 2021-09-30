@@ -22,11 +22,12 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 	gitCli := NewGitUtil()
-	for _, prj := range ciProjectDetails {
+	for index, prj := range ciProjectDetails {
 
 		// git clone
 		log.Println("-----> git cloning " + prj.GitRepository)
@@ -38,7 +39,8 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 		}
 		var cErr error
 		var auth *http.BasicAuth
-		switch prj.GitOptions.AuthMode {
+		authMode := prj.GitOptions.AuthMode
+		switch authMode {
 		case AUTH_MODE_USERNAME_PASSWORD:
 			auth = &http.BasicAuth{Password: prj.GitOptions.Password, Username: prj.GitOptions.UserName}
 		case AUTH_MODE_ACCESS_TOKEN:
@@ -47,7 +49,17 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			auth = &http.BasicAuth{}
 		}
 
-		_, msgMsg, cErr := gitCli.Clone(filepath.Join(workingDir, prj.CheckoutPath), prj.GitRepository, auth.Username, auth.Password)
+		// check ssh
+		var sshPrivateKeyPath string
+		if authMode == AUTH_MODE_SSH {
+			// create ssh private key on disk
+			sshPrivateKeyPath, cErr = CreateSshPrivateKeyOnDisk(index, prj.GitOptions.SshPrivateKey)
+			if cErr != nil {
+				log.Fatal("could not create ssh private key on disk ", " err ", cErr)
+			}
+		}
+
+		_, msgMsg, cErr := gitCli.Clone(filepath.Join(workingDir, prj.CheckoutPath), prj.GitRepository, auth.Username, auth.Password, authMode, sshPrivateKeyPath)
 		if cErr != nil {
 			log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
 		}
@@ -65,7 +77,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 				checkoutSource = prj.SourceValue
 			}
 			log.Println("checkout commit in branch fix : ", checkoutSource)
-			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), checkoutSource)
+			msgMsg, cErr = Checkout(gitCli, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, auth.Username, auth.Password, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 			}
@@ -83,7 +95,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			log.Println("checkout commit in webhook : ", targetCheckout)
 
 			// checkout target hash
-			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), targetCheckout)
+			msgMsg, cErr = Checkout(gitCli, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, auth.Username, auth.Password, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
 				return cErr
@@ -113,4 +125,45 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 
 	}
 	return nil
+}
+
+
+func Checkout(gitCli *GitUtil, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, username string, password string, gitRepository string) (errMsg string, error error) {
+
+	rootDir := filepath.Join(workingDir, checkoutPath)
+
+	// checkout target hash
+	_, eMsg, cErr := gitCli.Checkout(rootDir , targetCheckout)
+	if cErr != nil {
+		return eMsg, cErr
+	}
+
+	if fetchSubmodules {
+		if authMode == AUTH_MODE_USERNAME_PASSWORD || authMode == AUTH_MODE_ACCESS_TOKEN {
+			// first remove protocol
+			modifiedUrl := strings.ReplaceAll(gitRepository, "https://", "")
+			// for bitbucket - if git repo url is started with username, then we need to remove username
+			if strings.Contains(modifiedUrl, "bitbucket.org") && !strings.HasPrefix(modifiedUrl, "bitbucket.org") {
+				modifiedUrl = modifiedUrl[strings.Index(modifiedUrl, "bitbucket.org"):]
+			}
+			// build url
+			modifiedUrl = "https://" + username + ":" + password + "@" + modifiedUrl
+
+			_, errMsg, cErr = gitCli.UpdateCredentialHelper(rootDir)
+			if cErr != nil {
+				return errMsg, cErr
+			}
+
+			cErr = CreateGitCredentialFileAndPutData(modifiedUrl)
+			if cErr != nil {
+				return "Error in creating git credential file", cErr
+			}
+
+		}
+
+		gitCli.RecursiveFetchSubmodules(rootDir)
+	}
+
+	return "", nil
+
 }

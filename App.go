@@ -163,27 +163,28 @@ type CdStageCompleteEvent struct {
 }
 
 type CiProjectDetails struct {
-	GitRepository string      `json:"gitRepository"`
-	MaterialName  string      `json:"materialName"`
-	CheckoutPath  string      `json:"checkoutPath"`
-	CommitHash    string      `json:"commitHash"`
-	GitTag        string      `json:"gitTag"`
-	CommitTime    time.Time   `json:"commitTime"`
-	SourceType    SourceType  `json:"sourceType"`
-	SourceValue   string      `json:"sourceValue"`
-	Type          string      `json:"type"`
-	Message       string      `json:"message"`
-	Author        string      `json:"author"`
-	GitOptions    GitOptions  `json:"gitOptions"`
-	WebhookData   WebhookData `json:"webhookData"`
+	GitRepository   string      `json:"gitRepository"`
+	FetchSubmodules bool        `json:"fetchSubmodules"`
+	MaterialName    string      `json:"materialName"`
+	CheckoutPath    string      `json:"checkoutPath"`
+	CommitHash      string      `json:"commitHash"`
+	GitTag          string      `json:"gitTag"`
+	CommitTime      time.Time   `json:"commitTime"`
+	SourceType      SourceType  `json:"sourceType"`
+	SourceValue     string      `json:"sourceValue"`
+	Type            string      `json:"type"`
+	Message         string      `json:"message"`
+	Author          string      `json:"author"`
+	GitOptions      GitOptions  `json:"gitOptions"`
+	WebhookData     WebhookData `json:"webhookData"`
 }
 
 type GitOptions struct {
-	UserName    string   `json:"userName"`
-	Password    string   `json:"password"`
-	SSHKey      string   `json:"sshKey"`
-	AccessToken string   `json:"accessToken"`
-	AuthMode    AuthMode `json:"authMode"`
+	UserName      string   `json:"userName"`
+	Password      string   `json:"password"`
+	SshPrivateKey string   `json:"sshPrivateKey"`
+	AccessToken   string   `json:"accessToken"`
+	AuthMode      AuthMode `json:"authMode"`
 }
 
 type WebhookData struct {
