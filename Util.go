@@ -30,7 +30,7 @@ const (
 
 func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) (privateKeyPath string, err error) {
 	sshPrivateKeyFolderPath := path.Join(SSH_PRIVATE_KEY_DIR, strconv.Itoa(fileId))
-	sshPrivateKeyFilePath := path.Join(SSH_PRIVATE_KEY_DIR, SSH_PRIVATE_KEY_FILE_NAME)
+	sshPrivateKeyFilePath := path.Join(sshPrivateKeyFolderPath, SSH_PRIVATE_KEY_FILE_NAME)
 
 	// create dirs
 	err = os.MkdirAll(sshPrivateKeyFolderPath, os.ModeDir)
