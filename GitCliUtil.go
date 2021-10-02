@@ -111,8 +111,16 @@ func (impl *GitUtil) RecursiveFetchSubmodules(rootDir string) (response, errMsg 
 
 func (impl *GitUtil) UpdateCredentialHelper(rootDir string) (response, errMsg string, error error) {
 	log.Println(devtron, "git credential helper store ", "location", rootDir)
-	cmd := exec.Command("git", "-C", rootDir, "config", "credential.helper", "store")
+	cmd := exec.Command("git", "-C", rootDir, "config", "--global", "credential.helper", "store")
 	output, eMsg, err := impl.runCommand(cmd)
 	log.Println(devtron, "git credential helper store output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
+	return output, eMsg, err
+}
+
+func (impl *GitUtil) UnsetCredentialHelper(rootDir string) (response, errMsg string, error error) {
+	log.Println(devtron, "git credential helper unset ", "location", rootDir)
+	cmd := exec.Command("git", "-C", rootDir, "config", "--global", "--unset", "credential.helper")
+	output, eMsg, err := impl.runCommand(cmd)
+	log.Println(devtron, "git credential helper unset output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, eMsg, err
 }

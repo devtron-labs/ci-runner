@@ -49,9 +49,8 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			auth = &http.BasicAuth{}
 		}
 
-		// check ssh
+		// create ssh private key on disk
 		if authMode == AUTH_MODE_SSH {
-			// create ssh private key on disk
 			cErr = CreateSshPrivateKeyOnDisk(index, prj.GitOptions.SshPrivateKey)
 			if cErr != nil {
 				log.Fatal("could not create ssh private key on disk ", " err ", cErr)
@@ -140,7 +139,8 @@ func Checkout(gitCli *GitUtil, checkoutPath string, targetCheckout string, authM
 	log.Println(devtron, " fetchSubmodules ", fetchSubmodules, " authMode ", authMode)
 
 	if fetchSubmodules {
-		if authMode == AUTH_MODE_USERNAME_PASSWORD || authMode == AUTH_MODE_ACCESS_TOKEN {
+		httpsAuth := (authMode == AUTH_MODE_USERNAME_PASSWORD) || (authMode == AUTH_MODE_ACCESS_TOKEN)
+		if httpsAuth {
 			// first remove protocol
 			modifiedUrl := strings.ReplaceAll(gitRepository, "https://", "")
 			// for bitbucket - if git repo url is started with username, then we need to remove username
@@ -165,6 +165,21 @@ func Checkout(gitCli *GitUtil, checkoutPath string, targetCheckout string, authM
 		_, errMsg, cErr = gitCli.RecursiveFetchSubmodules(rootDir)
 		if cErr != nil {
 			return errMsg, cErr
+		}
+
+		// cleanup
+
+		if httpsAuth {
+			_, errMsg, cErr = gitCli.UnsetCredentialHelper(rootDir)
+			if cErr != nil {
+				return errMsg, cErr
+			}
+
+			// delete file (~/.git-credentials) (which was created above)
+			cErr = CleanupAfterFetchingHttpsSubmodules()
+			if cErr != nil {
+				return "", cErr
+			}
 		}
 	}
 

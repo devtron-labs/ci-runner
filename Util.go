@@ -73,3 +73,20 @@ func CreateGitCredentialFileAndPutData(data string) error {
 
 	return nil
 }
+
+
+func CleanupAfterFetchingHttpsSubmodules() error {
+
+	userHomeDirectory, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	// remove ~/.git-credentials
+	gitCredentialsFile := path.Join(userHomeDirectory, ".git-credentials")
+	if _, err := os.Stat(gitCredentialsFile); os.IsExist(err) {
+		os.Remove(gitCredentialsFile)
+	}
+
+	return nil
+}
