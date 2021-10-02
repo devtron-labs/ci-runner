@@ -35,6 +35,5 @@ COPY ./git-ask-pass.sh /git-ask-pass.sh
 RUN chmod +x /git-ask-pass.sh
 
 COPY --from=build-env /go/bin/cirunner .
+COPY ./ssh-config /root/.ssh/config
 ENTRYPOINT ["./cirunner"]
-
-

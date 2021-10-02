@@ -50,16 +50,15 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 		}
 
 		// check ssh
-		var sshPrivateKeyPath string
 		if authMode == AUTH_MODE_SSH {
 			// create ssh private key on disk
-			sshPrivateKeyPath, cErr = CreateSshPrivateKeyOnDisk(index, prj.GitOptions.SshPrivateKey)
+			cErr = CreateSshPrivateKeyOnDisk(index, prj.GitOptions.SshPrivateKey)
 			if cErr != nil {
 				log.Fatal("could not create ssh private key on disk ", " err ", cErr)
 			}
 		}
 
-		_, msgMsg, cErr := gitCli.Clone(filepath.Join(workingDir, prj.CheckoutPath), prj.GitRepository, auth.Username, auth.Password, authMode, sshPrivateKeyPath)
+		_, msgMsg, cErr := gitCli.Clone(filepath.Join(workingDir, prj.CheckoutPath), prj.GitRepository, auth.Username, auth.Password)
 		if cErr != nil {
 			log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
 		}
@@ -138,6 +137,8 @@ func Checkout(gitCli *GitUtil, checkoutPath string, targetCheckout string, authM
 		return eMsg, cErr
 	}
 
+	log.Println(devtron, " fetchSubmodules ", fetchSubmodules, " authMode ", authMode)
+
 	if fetchSubmodules {
 		if authMode == AUTH_MODE_USERNAME_PASSWORD || authMode == AUTH_MODE_ACCESS_TOKEN {
 			// first remove protocol
@@ -161,7 +162,10 @@ func Checkout(gitCli *GitUtil, checkoutPath string, targetCheckout string, authM
 
 		}
 
-		gitCli.RecursiveFetchSubmodules(rootDir)
+		_, errMsg, cErr = gitCli.RecursiveFetchSubmodules(rootDir)
+		if cErr != nil {
+			return errMsg, cErr
+		}
 	}
 
 	return "", nil

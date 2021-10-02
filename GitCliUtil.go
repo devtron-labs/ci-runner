@@ -81,19 +81,10 @@ func (impl *GitUtil) Init(rootDir string, remoteUrl string, isBare bool) error {
 	return err
 }
 
-func (impl *GitUtil) Clone(rootDir string, remoteUrl string, username string, password string, authMode AuthMode, sshPrivateKeyPath string) (response, errMsg string, err error) {
+func (impl *GitUtil) Clone(rootDir string, remoteUrl string, username string, password string) (response, errMsg string, err error) {
 	err = impl.Init(rootDir, remoteUrl, false)
 	if err != nil {
 		return "", "", err
-	}
-
-	// check ssh
-	if authMode == AUTH_MODE_SSH {
-		//git config core.sshCommand
-		_, errorMsg, err :=  impl.ConfigureSshCommand(rootDir, sshPrivateKeyPath)
-		if err != nil {
-			return "", errorMsg, err
-		}
 	}
 
 	response, errMsg, err = impl.Fetch(rootDir, username, password)
@@ -108,15 +99,6 @@ func (impl *GitUtil) Merge(rootDir string, commit string) (response, errMsg stri
 	output, errMsg, err := impl.runCommand(cmd)
 	log.Println(devtron, "merge output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, errMsg, err
-}
-
-func (impl *GitUtil) ConfigureSshCommand(rootDir string, sshPrivateKeyPath string) (response, errMsg string, error error) {
-	log.Println(devtron, "configuring ssh command on ", "location", rootDir)
-	coreSshCommand := fmt.Sprintf("ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no", sshPrivateKeyPath)
-	cmd := exec.Command("git", "-C", rootDir, "config", "core.sshCommand", coreSshCommand)
-	output, eMsg, err := impl.runCommand(cmd)
-	log.Println(devtron, "configure ssh command output ", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
-	return output, eMsg, err
 }
 
 func (impl *GitUtil) RecursiveFetchSubmodules(rootDir string) (response, errMsg string, error error) {

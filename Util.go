@@ -20,31 +20,34 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"strconv"
 )
 
 const (
-	SSH_PRIVATE_KEY_DIR = "/ssh-keys/"
-	SSH_PRIVATE_KEY_FILE_NAME = "ssh_pvt_key"
+	SSH_PRIVATE_KEY_DIR = ".ssh"
+	SSH_PRIVATE_KEY_FILE_NAME = "id_rsa"
 )
 
-func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) (privateKeyPath string, err error) {
-	sshPrivateKeyFolderPath := path.Join(SSH_PRIVATE_KEY_DIR, strconv.Itoa(fileId))
-	sshPrivateKeyFilePath := path.Join(sshPrivateKeyFolderPath, SSH_PRIVATE_KEY_FILE_NAME)
+func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) error {
 
-	// create dirs
-	err = os.MkdirAll(sshPrivateKeyFolderPath, os.ModeDir)
+	userHomeDirectory, err := os.UserHomeDir()
 	if err != nil {
-		return "", err
+		return err
+	}
+
+	sshPrivateKeyFilePath := path.Join(userHomeDirectory, SSH_PRIVATE_KEY_DIR, SSH_PRIVATE_KEY_FILE_NAME)
+
+	// if file exists then delete file
+	if _, err := os.Stat(sshPrivateKeyFilePath); os.IsExist(err) {
+		os.Remove(sshPrivateKeyFilePath)
 	}
 
 	// create file with content
 	err = ioutil.WriteFile(sshPrivateKeyFilePath, []byte(sshPrivateKeyContent), 0600)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return sshPrivateKeyFilePath, nil
+	return nil
 }
 
 
