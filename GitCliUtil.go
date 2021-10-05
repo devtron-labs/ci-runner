@@ -49,8 +49,8 @@ func (impl *GitUtil) runCommand(cmd *exec.Cmd) (response, errMsg string, err err
 	return impl.runCommandForSuppliedNullifiedEnv(cmd, true)
 }
 
-func (impl *GitUtil) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, isNullifiedHomeEnv bool) (response, errMsg string, err error) {
-	if isNullifiedHomeEnv {
+func (impl *GitUtil) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnvToNull bool) (response, errMsg string, err error) {
+	if setHomeEnvToNull {
 		cmd.Env = append(cmd.Env, "HOME=/dev/null")
 	}
 	outBytes, err := cmd.CombinedOutput()
