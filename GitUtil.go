@@ -22,11 +22,12 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 	gitCli := NewGitUtil()
-	for _, prj := range ciProjectDetails {
+	for index, prj := range ciProjectDetails {
 
 		// git clone
 		log.Println("-----> git cloning " + prj.GitRepository)
@@ -38,13 +39,22 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 		}
 		var cErr error
 		var auth *http.BasicAuth
-		switch prj.GitOptions.AuthMode {
+		authMode := prj.GitOptions.AuthMode
+		switch authMode {
 		case AUTH_MODE_USERNAME_PASSWORD:
 			auth = &http.BasicAuth{Password: prj.GitOptions.Password, Username: prj.GitOptions.UserName}
 		case AUTH_MODE_ACCESS_TOKEN:
 			auth = &http.BasicAuth{Password: prj.GitOptions.AccessToken, Username: prj.GitOptions.UserName}
 		default:
 			auth = &http.BasicAuth{}
+		}
+
+		// create ssh private key on disk
+		if authMode == AUTH_MODE_SSH {
+			cErr = CreateSshPrivateKeyOnDisk(index, prj.GitOptions.SshPrivateKey)
+			if cErr != nil {
+				log.Fatal("could not create ssh private key on disk ", " err ", cErr)
+			}
 		}
 
 		_, msgMsg, cErr := gitCli.Clone(filepath.Join(workingDir, prj.CheckoutPath), prj.GitRepository, auth.Username, auth.Password)
@@ -65,7 +75,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 				checkoutSource = prj.SourceValue
 			}
 			log.Println("checkout commit in branch fix : ", checkoutSource)
-			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), checkoutSource)
+			msgMsg, cErr = Checkout(gitCli, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, auth.Username, auth.Password, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 			}
@@ -83,7 +93,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			log.Println("checkout commit in webhook : ", targetCheckout)
 
 			// checkout target hash
-			_, msgMsg, cErr = gitCli.Checkout(filepath.Join(workingDir, prj.CheckoutPath), targetCheckout)
+			msgMsg, cErr = Checkout(gitCli, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, auth.Username, auth.Password, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
 				return cErr
@@ -113,4 +123,66 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 
 	}
 	return nil
+}
+
+
+func Checkout(gitCli *GitUtil, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, username string, password string, gitRepository string) (errMsg string, error error) {
+
+	rootDir := filepath.Join(workingDir, checkoutPath)
+
+	// checkout target hash
+	_, eMsg, cErr := gitCli.Checkout(rootDir , targetCheckout)
+	if cErr != nil {
+		return eMsg, cErr
+	}
+
+	log.Println(devtron, " fetchSubmodules ", fetchSubmodules, " authMode ", authMode)
+
+	if fetchSubmodules {
+		httpsAuth := (authMode == AUTH_MODE_USERNAME_PASSWORD) || (authMode == AUTH_MODE_ACCESS_TOKEN)
+		if httpsAuth {
+			// first remove protocol
+			modifiedUrl := strings.ReplaceAll(gitRepository, "https://", "")
+			// for bitbucket - if git repo url is started with username, then we need to remove username
+			if strings.Contains(modifiedUrl, "bitbucket.org") && !strings.HasPrefix(modifiedUrl, "bitbucket.org") {
+				modifiedUrl = modifiedUrl[strings.Index(modifiedUrl, "bitbucket.org"):]
+			}
+			// build url
+			modifiedUrl = "https://" + username + ":" + password + "@" + modifiedUrl
+
+			_, errMsg, cErr = gitCli.UpdateCredentialHelper(rootDir)
+			if cErr != nil {
+				return errMsg, cErr
+			}
+
+			cErr = CreateGitCredentialFileAndWriteData(modifiedUrl)
+			if cErr != nil {
+				return "Error in creating git credential file", cErr
+			}
+
+		}
+
+		_, errMsg, cErr = gitCli.RecursiveFetchSubmodules(rootDir)
+		if cErr != nil {
+			return errMsg, cErr
+		}
+
+		// cleanup
+
+		if httpsAuth {
+			_, errMsg, cErr = gitCli.UnsetCredentialHelper(rootDir)
+			if cErr != nil {
+				return errMsg, cErr
+			}
+
+			// delete file (~/.git-credentials) (which was created above)
+			cErr = CleanupAfterFetchingHttpsSubmodules()
+			if cErr != nil {
+				return "", cErr
+			}
+		}
+	}
+
+	return "", nil
+
 }

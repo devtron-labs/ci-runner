@@ -66,9 +66,9 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert string) {
 			if err2 != nil {
 				log.Fatal(err2)
 			}
+			logStage("Secure with Cert")
 		}
 		dockerdstart = "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
-		logStage("Secure with Cert")
 	}
 	out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
 	log.Println(string(out))
