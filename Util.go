@@ -25,6 +25,7 @@ import (
 const (
 	SSH_PRIVATE_KEY_DIR = ".ssh"
 	SSH_PRIVATE_KEY_FILE_NAME = "id_rsa"
+	GIT_CREDENTIAL_FILE_NAME = ".git-credentials"
 )
 
 func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) error {
@@ -51,14 +52,14 @@ func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) error {
 }
 
 
-func CreateGitCredentialFileAndPutData(data string) error {
+func CreateGitCredentialFileAndWriteData(data string) error {
 
 	userHomeDirectory, err := os.UserHomeDir()
 	if err != nil {
 		return err
 	}
 
-	fileName := path.Join(userHomeDirectory, ".git-credentials")
+	fileName := path.Join(userHomeDirectory, GIT_CREDENTIAL_FILE_NAME)
 
 	// if file exists then delete file
 	if _, err := os.Stat(fileName); os.IsExist(err) {
@@ -83,7 +84,7 @@ func CleanupAfterFetchingHttpsSubmodules() error {
 	}
 
 	// remove ~/.git-credentials
-	gitCredentialsFile := path.Join(userHomeDirectory, ".git-credentials")
+	gitCredentialsFile := path.Join(userHomeDirectory, GIT_CREDENTIAL_FILE_NAME)
 	if _, err := os.Stat(gitCredentialsFile); os.IsExist(err) {
 		os.Remove(gitCredentialsFile)
 	}

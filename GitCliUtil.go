@@ -28,9 +28,9 @@ func (impl *GitUtil) Fetch(rootDir string, username string, password string) (re
 	return output, "", nil
 }
 
-func (impl *GitUtil) Checkout(rootDir string, checkoutCommit string) (response, errMsg string, err error) {
+func (impl *GitUtil) Checkout(rootDir string, checkout string) (response, errMsg string, err error) {
 	log.Println(devtron, "git checkout ", "location", rootDir)
-	cmd := exec.Command("git", "-C", rootDir, "checkout", checkoutCommit, "--force")
+	cmd := exec.Command("git", "-C", rootDir, "checkout", checkout, "--force")
 	output, errMsg, err := impl.runCommand(cmd)
 	log.Println(devtron, "checkout output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, "", nil
@@ -49,8 +49,8 @@ func (impl *GitUtil) runCommand(cmd *exec.Cmd) (response, errMsg string, err err
 	return impl.runCommandForSuppliedNullifiedEnv(cmd, true)
 }
 
-func (impl *GitUtil) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, nullifiedHomeEnv bool) (response, errMsg string, err error) {
-	if nullifiedHomeEnv {
+func (impl *GitUtil) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, isNullifiedHomeEnv bool) (response, errMsg string, err error) {
+	if isNullifiedHomeEnv {
 		cmd.Env = append(cmd.Env, "HOME=/dev/null")
 	}
 	outBytes, err := cmd.CombinedOutput()

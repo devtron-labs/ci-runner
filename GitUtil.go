@@ -155,7 +155,7 @@ func Checkout(gitCli *GitUtil, checkoutPath string, targetCheckout string, authM
 				return errMsg, cErr
 			}
 
-			cErr = CreateGitCredentialFileAndPutData(modifiedUrl)
+			cErr = CreateGitCredentialFileAndWriteData(modifiedUrl)
 			if cErr != nil {
 				return "Error in creating git credential file", cErr
 			}
