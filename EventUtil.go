@@ -234,4 +234,5 @@ type ScanEvent struct {
 	SecretKey    string `json:"secretKey"`
 	Token        string `json:"token"`
 	AwsRegion    string `json:"awsRegion"`
+	DockerRegistryId string `json:"dockerRegistryId"`
 }
