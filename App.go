@@ -77,7 +77,7 @@ type CiArtifactDTO struct {
 type CiRequest struct {
 	CiProjectDetails            []CiProjectDetails           `json:"ciProjectDetails"`
 	DockerImageTag              string                       `json:"dockerImageTag"`
-	DockerRegistryId		  string			 			 `json:"dockerRegistryId"`
+	DockerRegistryId            string                       `json:"dockerRegistryId"`
 	DockerRegistryType          string                       `json:"dockerRegistryType"`
 	DockerRegistryURL           string                       `json:"dockerRegistryURL"`
 	DockerConnection            string                       `json:"dockerConnection"`
