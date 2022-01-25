@@ -77,6 +77,7 @@ type CiArtifactDTO struct {
 type CiRequest struct {
 	CiProjectDetails            []CiProjectDetails           `json:"ciProjectDetails"`
 	DockerImageTag              string                       `json:"dockerImageTag"`
+	DockerRegistryId            string                       `json:"dockerRegistryId"`
 	DockerRegistryType          string                       `json:"dockerRegistryType"`
 	DockerRegistryURL           string                       `json:"dockerRegistryURL"`
 	DockerConnection            string                       `json:"dockerConnection"`
@@ -454,9 +455,7 @@ func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err erro
 		logStage("IMAGE SCAN")
 		log.Println(devtron, " /image-scanner")
 		scanEvent := &ScanEvent{Image: dest, ImageDigest: digest, PipelineId: ciCdRequest.CiRequest.PipelineId, UserId: ciCdRequest.CiRequest.TriggeredBy}
-		scanEvent.AccessKey = ciCdRequest.CiRequest.AccessKey
-		scanEvent.SecretKey = ciCdRequest.CiRequest.SecretKey
-		scanEvent.AwsRegion = ciCdRequest.CiRequest.AwsRegion
+		scanEvent.DockerRegistryId = ciCdRequest.CiRequest.DockerRegistryId
 		err = SendEventToClairUtility(scanEvent)
 		if err != nil {
 			log.Println(err)
