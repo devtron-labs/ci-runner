@@ -28,7 +28,7 @@ RUN apk update && \
     apk add zip && \
     apk -Uuv add groff less python3 py-pip
 RUN ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
-RUN pip install awscli
+RUN pip install awscli && pip install six
 RUN apk --purge -v del py-pip
 RUN rm /var/cache/apk/*
 COPY --from=docker/compose:latest /usr/local/bin/docker-compose /usr/bin/docker-compose
