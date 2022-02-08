@@ -40,15 +40,19 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 )
 
-func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert string) {
+func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string) {
 	connection := dockerConnection
 	u, err := url.Parse(dockerRegistryUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
 	dockerdstart := ""
+	defaultAddressPoolFlag := ""
+	if len(defaultAddressPoolBaseCidr) > 0 {
+		defaultAddressPoolFlag = fmt.Sprintf("--default-address-pool base=%s,size=24", defaultAddressPoolBaseCidr)
+	}
 	if connection == insecure {
-		dockerdstart = fmt.Sprintf("dockerd --insecure-registry %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", u.Host)
+		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, u.Host)
 		logStage("Insecure Registry")
 	} else {
 		if connection == secureWithCert {
@@ -68,7 +72,7 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert string) {
 			}
 			logStage("Secure with Cert")
 		}
-		dockerdstart = "dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &"
+		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag)
 	}
 	out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
 	log.Println(string(out))
