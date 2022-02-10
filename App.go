@@ -37,31 +37,33 @@ type CiCdTriggerEvent struct {
 }
 
 type CdRequest struct {
-	WorkflowId                int                `json:"workflowId"`
-	WorkflowRunnerId          int                `json:"workflowRunnerId"`
-	CdPipelineId              int                `json:"cdPipelineId"`
-	TriggeredBy               int32              `json:"triggeredBy"`
-	StageYaml                 string             `json:"stageYaml"`
-	ArtifactLocation          string             `json:"artifactLocation"`
-	TaskYaml                  *TaskYaml          `json:"-"`
-	CiProjectDetails          []CiProjectDetails `json:"ciProjectDetails"`
-	CiArtifactDTO             CiArtifactDTO      `json:"ciArtifactDTO"`
-	DockerUsername            string             `json:"dockerUsername"`
-	DockerPassword            string             `json:"dockerPassword"`
-	AwsRegion                 string             `json:"awsRegion"`
-	AccessKey                 string             `json:"accessKey"`
-	SecretKey                 string             `json:"secretKey"`
-	DockerRegistryURL         string             `json:"dockerRegistryUrl"`
-	DockerRegistryType        string             `json:"dockerRegistryType"`
-	DockerConnection          string             `json:"dockerConnection"`
-	DockerCert                string             `json:"dockerCert"`
-	OrchestratorHost          string             `json:"orchestratorHost"`
-	OrchestratorToken         string             `json:"orchestratorToken"`
-	IsExtRun                  bool               `json:"isExtRun"`
-	ExtraEnvironmentVariables map[string]string  `json:"extraEnvironmentVariables"`
-	CloudProvider             string             `json:"cloudProvider"`
-	AzureBlobConfig           *AzureBlobConfig   `json:"azureBlobConfig"`
-	MinioEndpoint             string             `json:"minioEndpoint"`
+	WorkflowId                 int                `json:"workflowId"`
+	WorkflowRunnerId           int                `json:"workflowRunnerId"`
+	CdPipelineId               int                `json:"cdPipelineId"`
+	TriggeredBy                int32              `json:"triggeredBy"`
+	StageYaml                  string             `json:"stageYaml"`
+	ArtifactLocation           string             `json:"artifactLocation"`
+	TaskYaml                   *TaskYaml          `json:"-"`
+	CiProjectDetails           []CiProjectDetails `json:"ciProjectDetails"`
+	CiArtifactDTO              CiArtifactDTO      `json:"ciArtifactDTO"`
+	DockerUsername             string             `json:"dockerUsername"`
+	DockerPassword             string             `json:"dockerPassword"`
+	AwsRegion                  string             `json:"awsRegion"`
+	AccessKey                  string             `json:"accessKey"`
+	SecretKey                  string             `json:"secretKey"`
+	DockerRegistryURL          string             `json:"dockerRegistryUrl"`
+	DockerRegistryType         string             `json:"dockerRegistryType"`
+	DockerConnection           string             `json:"dockerConnection"`
+	DockerCert                 string             `json:"dockerCert"`
+	OrchestratorHost           string             `json:"orchestratorHost"`
+	OrchestratorToken          string             `json:"orchestratorToken"`
+	IsExtRun                   bool               `json:"isExtRun"`
+	ExtraEnvironmentVariables  map[string]string  `json:"extraEnvironmentVariables"`
+	CloudProvider              string             `json:"cloudProvider"`
+	AzureBlobConfig            *AzureBlobConfig   `json:"azureBlobConfig"`
+	MinioEndpoint              string             `json:"minioEndpoint"`
+	DefaultAddressPoolBaseCidr string             `json:"defaultAddressPoolBaseCidr"`
+	DefaultAddressPoolSize     int                `json:"defaultAddressPoolSize"`
 }
 
 type CiArtifactDTO struct {
@@ -109,6 +111,8 @@ type CiRequest struct {
 	CloudProvider               string                       `json:"cloudProvider"`
 	AzureBlobConfig             *AzureBlobConfig             `json:"azureBlobConfig"`
 	MinioEndpoint               string                       `json:"minioEndpoint"`
+	DefaultAddressPoolBaseCidr  string                       `json:"defaultAddressPoolBaseCidr"`
+	DefaultAddressPoolSize      int                          `json:"defaultAddressPoolSize"`
 }
 
 const BLOB_STORAGE_AZURE = "AZURE"
@@ -399,7 +403,7 @@ func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err erro
 
 	// Start docker daemon
 	log.Println(devtron, " docker-build")
-	StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert)
+	StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert, ciCdRequest.CiRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CiRequest.DefaultAddressPoolSize)
 	scriptEnvs := getScriptEnvVariables(ciCdRequest)
 
 	// Get devtron-ci yaml
@@ -504,7 +508,7 @@ func runCDStages(cicdRequest *CiCdTriggerEvent) error {
 
 	// Start docker daemon
 	log.Println(devtron, " docker-start")
-	StartDockerDaemon(cicdRequest.CdRequest.DockerConnection, cicdRequest.CdRequest.DockerRegistryURL, cicdRequest.CdRequest.DockerCert)
+	StartDockerDaemon(cicdRequest.CdRequest.DockerConnection, cicdRequest.CdRequest.DockerRegistryURL, cicdRequest.CdRequest.DockerCert, cicdRequest.CdRequest.DefaultAddressPoolBaseCidr, cicdRequest.CdRequest.DefaultAddressPoolSize)
 
 	err = DockerLogin(&DockerCredentials{
 		DockerUsername:     cicdRequest.CdRequest.DockerUsername,
