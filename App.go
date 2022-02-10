@@ -63,6 +63,7 @@ type CdRequest struct {
 	AzureBlobConfig            *AzureBlobConfig   `json:"azureBlobConfig"`
 	MinioEndpoint              string             `json:"minioEndpoint"`
 	DefaultAddressPoolBaseCidr string             `json:"defaultAddressPoolBaseCidr"`
+	DefaultAddressPoolSize     int                `json:"defaultAddressPoolSize"`
 }
 
 type CiArtifactDTO struct {
@@ -111,6 +112,7 @@ type CiRequest struct {
 	AzureBlobConfig             *AzureBlobConfig             `json:"azureBlobConfig"`
 	MinioEndpoint               string                       `json:"minioEndpoint"`
 	DefaultAddressPoolBaseCidr  string                       `json:"defaultAddressPoolBaseCidr"`
+	DefaultAddressPoolSize      int                          `json:"defaultAddressPoolSize"`
 }
 
 const BLOB_STORAGE_AZURE = "AZURE"
@@ -401,7 +403,7 @@ func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err erro
 
 	// Start docker daemon
 	log.Println(devtron, " docker-build")
-	StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert, ciCdRequest.CiRequest.DefaultAddressPoolBaseCidr)
+	StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert, ciCdRequest.CiRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CiRequest.DefaultAddressPoolSize)
 	scriptEnvs := getScriptEnvVariables(ciCdRequest)
 
 	// Get devtron-ci yaml
@@ -506,7 +508,7 @@ func runCDStages(cicdRequest *CiCdTriggerEvent) error {
 
 	// Start docker daemon
 	log.Println(devtron, " docker-start")
-	StartDockerDaemon(cicdRequest.CdRequest.DockerConnection, cicdRequest.CdRequest.DockerRegistryURL, cicdRequest.CdRequest.DockerCert, cicdRequest.CdRequest.DefaultAddressPoolBaseCidr)
+	StartDockerDaemon(cicdRequest.CdRequest.DockerConnection, cicdRequest.CdRequest.DockerRegistryURL, cicdRequest.CdRequest.DockerCert, cicdRequest.CdRequest.DefaultAddressPoolBaseCidr, cicdRequest.CdRequest.DefaultAddressPoolSize)
 
 	err = DockerLogin(&DockerCredentials{
 		DockerUsername:     cicdRequest.CdRequest.DockerUsername,

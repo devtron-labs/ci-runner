@@ -40,7 +40,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 )
 
-func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string) {
+func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int) {
 	connection := dockerConnection
 	u, err := url.Parse(dockerRegistryUrl)
 	if err != nil {
@@ -49,7 +49,10 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 	dockerdstart := ""
 	defaultAddressPoolFlag := ""
 	if len(defaultAddressPoolBaseCidr) > 0 {
-		defaultAddressPoolFlag = fmt.Sprintf("--default-address-pool base=%s,size=24", defaultAddressPoolBaseCidr)
+		if defaultAddressPoolSize <= 0 {
+			defaultAddressPoolSize = 24
+		}
+		defaultAddressPoolFlag = fmt.Sprintf("--default-address-pool base=%s,size=%d", defaultAddressPoolBaseCidr, defaultAddressPoolSize)
 	}
 	if connection == insecure {
 		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, u.Host)
