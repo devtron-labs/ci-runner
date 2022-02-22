@@ -15,7 +15,7 @@ RUN echo $GOPATH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o /go/bin/cirunner
 
 
-FROM docker:18.09.7-dind
+FROM docker:20.10.12-dind
 # All these steps will be cached
 #RUN apk add --no-cache ca-certificates
 RUN apk update
