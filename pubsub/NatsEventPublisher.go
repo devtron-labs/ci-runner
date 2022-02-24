@@ -56,16 +56,11 @@ func PublishEventsOnNats(jsonBody []byte, topic string) error {
 		client.Logger.Errorw("Error while publishing Request", "topic", topic, "body", string(reqBody), "err", err)
 	}
 
-	err = client.Conn.Publish(topic, reqBody)
-	if err != nil {
-		log.Println(util.DEVTRON, "publish err", "err", err)
-		return err
-	}
 	log.Println(util.DEVTRON, "ci complete event notification done")
 
 	err = client.Conn.Drain()
 	if err != nil {
-		log.Println(util.DEVTRON, " error in closing nats", "err", err)
+		log.Println(util.DEVTRON, " error in draining nats", "err", err)
 	}
 
 	log.Println(util.DEVTRON, " housekeeping done. exiting now")
