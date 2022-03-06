@@ -262,7 +262,7 @@ STAGE:  %s
 
 func main() {
 	//' {"workflowNamePrefix":"55-suraj-23-ci-suraj-test-pipeline-8","pipelineName":"suraj-23-ci-suraj-test-pipeline","pipelineId":8,"dockerImageTag":"a6b809c4be87c217feba4af15cf5ebc3cafe21e0","dockerRegistryURL":"686244538589.dkr.ecr.us-east-2.amazonaws.com","dockerRepository":"test/suraj-23","dockerfileLocation":"./notifier/Dockerfile","awsRegion":"us-east-2","ciCacheLocation":"ci-caching","ciCacheFileName":"suraj-23-ci-suraj-test-pipeline.tar.gz","ciProjectDetails":[{"gitRepository":"https://gitlab.com/devtron/notifier.git","materialName":"1-notifier","checkoutPath":"./notifier","commitHash":"d4df38bcd065004014d255c2203d592a91585955","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"test-commit","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":"USERNAME_PASSWORD"}},{"gitRepository":"https://gitlab.com/devtron/orchestrator.git","materialName":"2-orchestrator","checkoutPath":"./orch","commitHash":"","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":""}}],"ciImage":"686244538589.dkr.ecr.us-east-2.amazonaws.com/cirunner:latest","namespace":"default"}'
-	args := os.Args[1]
+	args := "{\"type\":\"CI\",\"ciRequest\":{\"workflowNamePrefix\":\"925-ci-690-tnf3-306\",\"pipelineName\":\"ci-690-tnf3\",\"pipelineId\":306,\"dockerImageTag\":\"46dce0b5-306-925\",\"dockerRegistryId\":\"shubhamraj2022\",\"dockerRegistryType\":\"docker-hub\",\"dockerRegistryURL\":\"\",\"dockerConnection\":\"\",\"dockerCert\":\"\",\"dockerBuildArgs\":\"{}\",\"dockerRepository\":\"shubhamraj2022/shubhamtest\",\"dockerfileLocation\":\"Dockerfile\",\"dockerUsername\":\"shubhamraj2022\",\"dockerPassword\":\"#devtron1\",\"awsRegion\":\"\",\"accessKey\":\"\",\"secretKey\":\"\",\"ciCacheLocation\":\"devtron-demo1-ci-caching-us-east-2\",\"ciCacheRegion\":\"us-east-2\",\"ciCacheFileName\":\"ci-690-tnf3-306.tar.gz\",\"ciProjectDetails\":[{\"gitRepository\":\"https://github.com/Shubhamraj-devtron/Nodejs-app\",\"materialName\":\"1-Nodejs-app\",\"checkoutPath\":\"./\",\"fetchSubmodules\":false,\"commitHash\":\"46dce0b541e49144d7b47d16a6b22dc770f966fe\",\"gitTag\":\"\",\"commitTime\":\"2022-02-09T13:25:18+05:30\",\"type\":\"SOURCE_TYPE_BRANCH_FIXED\",\"message\":\"Update Readme.md\",\"author\":\"Shubhamraj-devtron \u003c99316901+Shubhamraj-devtron@users.noreply.github.com\u003e\",\"gitOptions\":{\"userName\":\"\",\"password\":\"\",\"sshPrivateKey\":\"\",\"accessToken\":\"\",\"authMode\":\"ANONYMOUS\"},\"sourceType\":\"SOURCE_TYPE_BRANCH_FIXED\",\"sourceValue\":\"main\",\"WebhookData\":{\"Id\":0,\"EventActionType\":\"\",\"Data\":null}}],\"containerResources\":{\"minCpu\":\"\",\"maxCpu\":\"\",\"minStorage\":\"\",\"maxStorage\":\"\",\"minEphStorage\":\"\",\"maxEphStorage\":\"\",\"minMem\":\"\",\"maxMem\":\"\"},\"activeDeadlineSeconds\":3600,\"ciImage\":\"quay.io/devtron/ci-runner:33c47417-182-6793\",\"namespace\":\"devtron-ci\",\"workflowId\":925,\"triggeredBy\":2,\"cacheLimit\":5000000000,\"beforeDockerBuildScripts\":null,\"afterDockerBuildScripts\":null,\"ciArtifactLocation\":\"s3://devtron-demo1-ci-logs-us-east-2/arsenal-v1/ci-artifacts/925/925.zip\",\"invalidateCache\":false,\"scanEnabled\":true,\"cloudProvider\":\"S3\",\"azureBlobConfig\":null,\"minioEndpoint\":\"\",\"defaultAddressPoolBaseCidr\":\"10.20.0.0/18\",\"defaultAddressPoolSize\":0},\"cdRequest\":null}"
 	ciCdRequest := &CiCdTriggerEvent{}
 	err := json.Unmarshal([]byte(args), ciCdRequest)
 	if err != nil {
@@ -287,7 +287,7 @@ func main() {
 
 		// sync cache
 		log.Println(devtron, " cache-push")
-		err = SyncCache(ciRequest)
+		//err = SyncCache(ciRequest)
 		if err != nil {
 			log.Println(err)
 			os.Exit(1)
@@ -382,7 +382,7 @@ func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err erro
 
 	// Get ci cache
 	log.Println(devtron, " cache-pull")
-	err = GetCache(ciCdRequest.CiRequest)
+	//err = GetCache(ciCdRequest.CiRequest)
 	if err != nil {
 		return artifactUploaded, err
 	}
