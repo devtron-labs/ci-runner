@@ -58,24 +58,14 @@ var serverForbiddenKexAlgos = map[string]struct{}{
 	kexAlgoDHGEXSHA256: {}, // server half implementation is only minimal to satisfy the automated tests
 }
 
-// preferredKexAlgos specifies the default preference for key-exchange algorithms
-// in preference order.
-var preferredKexAlgos = []string{
-	kexAlgoCurve25519SHA256,
-	kexAlgoECDH256, kexAlgoECDH384, kexAlgoECDH521,
-	kexAlgoDH14SHA1,
-}
-
 // supportedHostKeyAlgos specifies the supported host-key algorithms (i.e. methods
 // of authenticating servers) in preference order.
 var supportedHostKeyAlgos = []string{
-	CertSigAlgoRSASHA2512v01, CertSigAlgoRSASHA2256v01,
-	CertSigAlgoRSAv01, CertAlgoDSAv01, CertAlgoECDSA256v01,
+	CertAlgoRSAv01, CertAlgoDSAv01, CertAlgoECDSA256v01,
 	CertAlgoECDSA384v01, CertAlgoECDSA521v01, CertAlgoED25519v01,
 
 	KeyAlgoECDSA256, KeyAlgoECDSA384, KeyAlgoECDSA521,
-	SigAlgoRSASHA2512, SigAlgoRSASHA2256,
-	SigAlgoRSA, KeyAlgoDSA,
+	KeyAlgoRSA, KeyAlgoDSA,
 
 	KeyAlgoED25519,
 }
@@ -92,20 +82,16 @@ var supportedCompressions = []string{compressionNone}
 // hashFuncs keeps the mapping of supported algorithms to their respective
 // hashes needed for signature verification.
 var hashFuncs = map[string]crypto.Hash{
-	SigAlgoRSA:               crypto.SHA1,
-	SigAlgoRSASHA2256:        crypto.SHA256,
-	SigAlgoRSASHA2512:        crypto.SHA512,
-	KeyAlgoDSA:               crypto.SHA1,
-	KeyAlgoECDSA256:          crypto.SHA256,
-	KeyAlgoECDSA384:          crypto.SHA384,
-	KeyAlgoECDSA521:          crypto.SHA512,
-	CertSigAlgoRSAv01:        crypto.SHA1,
-	CertSigAlgoRSASHA2256v01: crypto.SHA256,
-	CertSigAlgoRSASHA2512v01: crypto.SHA512,
-	CertAlgoDSAv01:           crypto.SHA1,
-	CertAlgoECDSA256v01:      crypto.SHA256,
-	CertAlgoECDSA384v01:      crypto.SHA384,
-	CertAlgoECDSA521v01:      crypto.SHA512,
+	KeyAlgoRSA:          crypto.SHA1,
+	KeyAlgoDSA:          crypto.SHA1,
+	KeyAlgoECDSA256:     crypto.SHA256,
+	KeyAlgoECDSA384:     crypto.SHA384,
+	KeyAlgoECDSA521:     crypto.SHA512,
+	CertAlgoRSAv01:      crypto.SHA1,
+	CertAlgoDSAv01:      crypto.SHA1,
+	CertAlgoECDSA256v01: crypto.SHA256,
+	CertAlgoECDSA384v01: crypto.SHA384,
+	CertAlgoECDSA521v01: crypto.SHA512,
 }
 
 // unexpectedMessageError results when the SSH message that we received didn't
@@ -260,7 +246,7 @@ func (c *Config) SetDefaults() {
 	c.Ciphers = ciphers
 
 	if c.KeyExchanges == nil {
-		c.KeyExchanges = preferredKexAlgos
+		c.KeyExchanges = supportedKexAlgos
 	}
 
 	if c.MACs == nil {
