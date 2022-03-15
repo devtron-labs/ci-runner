@@ -25,6 +25,8 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+const CI_RUNNER_STREAM = "CI-RUNNER"
+
 func PublishEventsOnNats(jsonBody []byte, topic string) error {
 	client, err := NewPubSubClient()
 	if err != nil {
@@ -34,18 +36,18 @@ func PublishEventsOnNats(jsonBody []byte, topic string) error {
 
 	var reqBody = []byte(jsonBody)
 
-	streamInfo, err := client.JetStrCtxt.StreamInfo(topic)
+	streamInfo, err := client.JetStrCtxt.StreamInfo(CI_RUNNER_STREAM)
 	if err != nil {
-		client.Logger.Errorw("Error while getting stream info", "topic", topic, "error", err)
+		client.Logger.Errorw("Error while getting stream info", "stream name", CI_RUNNER_STREAM, "error", err)
 	}
 	if streamInfo == nil {
 		//Stream doesn't already exist. Create a new stream from jetStreamContext
 		_, error := client.JetStrCtxt.AddStream(&nats.StreamConfig{
-			Name:     topic,
-			Subjects: []string{topic + ".*"},
+			Name:     CI_RUNNER_STREAM,
+			Subjects: []string{CI_RUNNER_STREAM + ".*"},
 		})
 		if error != nil {
-			client.Logger.Errorw("Error while creating stream", "topic", topic, "error", error)
+			client.Logger.Errorw("Error while creating stream", "stream name", CI_RUNNER_STREAM, "error", error)
 		}
 	}
 
