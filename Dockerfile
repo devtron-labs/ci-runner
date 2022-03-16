@@ -1,6 +1,6 @@
 
 ####--------------
-FROM golang:1.14.13-alpine3.12  AS build-env
+FROM golang:1.17.8-alpine3.15  AS build-env
 RUN echo $GOPATH
 
 RUN apk add --no-cache git gcc musl-dev
