@@ -15,7 +15,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o /go/
 FROM docker:20.10.12-dind
 # All these steps will be cached
 #RUN apk add --no-cache ca-certificates
-RUN apk update && add --no-cache --virtual .build-deps && add bash && add make && apk add curl && apk add openssh && add git && add zip
+RUN apk update && apk add --no-cache --virtual .build-deps && apk add bash && apk add make && apk add curl && apk add openssh && apk add git && apk add zip
 RUN ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
 RUN apk -Uuv add groff less python3 py3-pip
 RUN pip3 install awscli
