@@ -20,14 +20,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/nats-io/stan.go"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
-
-	_ "github.com/aws/aws-sdk-go/aws"
-	"github.com/nats-io/stan.go"
 )
 
 type CiCdTriggerEvent struct {
