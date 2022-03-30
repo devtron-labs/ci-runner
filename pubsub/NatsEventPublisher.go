@@ -18,39 +18,26 @@
 package pubsub
 
 import (
-	"log"
 	"os"
 
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/nats-io/nats.go"
 )
 
-const CI_RUNNER_STREAM = "CI-RUNNER"
-
 func PublishEventsOnNats(jsonBody []byte, topic string) error {
 	client, err := NewPubSubClient()
 	if err != nil {
-		log.Println(util.DEVTRON, "err", err)
+		client.Logger.Errorw(util.DEVTRON, "err", err)
 		os.Exit(1)
 	}
 
 	var reqBody = []byte(jsonBody)
 
-	streamInfo, err := client.JetStrCtxt.StreamInfo(CI_RUNNER_STREAM)
-	if err != nil {
-		client.Logger.Errorw("Error while getting stream info", "stream name", CI_RUNNER_STREAM, "error", err)
-	}
-	if streamInfo == nil {
-		//Stream doesn't already exist. Create a new stream from jetStreamContext
-		_, error := client.JetStrCtxt.AddStream(&nats.StreamConfig{
-			Name:     CI_RUNNER_STREAM,
-			Subjects: []string{CI_RUNNER_STREAM + ".*"},
-		})
-		if error != nil {
-			client.Logger.Errorw("Error while creating stream", "stream name", CI_RUNNER_STREAM, "error", error)
-		}
-	}
+	err = AddStream(client.JetStrCtxt, CI_RUNNER_STREAM)
 
+	if err != nil {
+		client.Logger.Errorw("Error while adding stream", "error", err)
+	}
 	//Generate random string for passing as Header Id in message
 	randString := "MsgHeaderId-" + util.Generate(10)
 	_, err = client.JetStrCtxt.Publish(topic, reqBody, nats.MsgId(randString))
@@ -58,13 +45,15 @@ func PublishEventsOnNats(jsonBody []byte, topic string) error {
 		client.Logger.Errorw("Error while publishing Request", "topic", topic, "body", string(reqBody), "err", err)
 	}
 
-	log.Println(util.DEVTRON, "ci complete event notification done")
+	client.Logger.Info(util.DEVTRON, "ci complete event notification done")
 
+	//Drain the connection
 	err = client.Conn.Drain()
+
 	if err != nil {
-		log.Println(util.DEVTRON, " error in draining nats", "err", err)
+		client.Logger.Errorw("Error while draining the connection", "error", err)
 	}
 
-	log.Println(util.DEVTRON, " housekeeping done. exiting now")
+	client.Logger.Info(util.DEVTRON, " housekeeping done. exiting now")
 	return nil
 }

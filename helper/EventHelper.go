@@ -30,9 +30,6 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-const CI_COMPLETE_TOPIC = "CI-RUNNER.CI-COMPLETE"
-const CD_COMPLETE_TOPIC = "CI-RUNNER.CD-STAGE-COMPLETE"
-
 type TestExecutorImageProperties struct {
 	ImageName string `json:"imageName,omitempty"`
 	Arg       string `json:"arg,omitempty"`
@@ -216,7 +213,7 @@ func SendCiCompleteEvent(event CiCompleteEvent) error {
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	err = PublishEvent(jsonBody, CI_COMPLETE_TOPIC)
+	err = PublishEvent(jsonBody, pubsub.CI_COMPLETE_TOPIC)
 	log.Println(util.DEVTRON, "ci complete event notification done")
 	return err
 }
@@ -227,7 +224,7 @@ func SendCdCompleteEvent(cdRequest *CdRequest, event CdStageCompleteEvent) error
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	err = PublishCDEvent(jsonBody, CD_COMPLETE_TOPIC, cdRequest)
+	err = PublishCDEvent(jsonBody, pubsub.CD_STAGE_COMPLETE_TOPIC, cdRequest)
 	log.Println(util.DEVTRON, "cd stage complete event notification done")
 	return err
 }
@@ -270,13 +267,6 @@ func SendEventToClairUtility(event *ScanEvent) error {
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	/*
-		err = PublishEventsOnNats(jsonBody, TOPIC_CI_SCAN)
-		if err != nil {
-			log.Println(devtron, "err", err)
-			return err
-		}
-	*/
 
 	cfg := &pubsub.PubSubConfig{}
 	err = env.Parse(cfg)
@@ -286,7 +276,6 @@ func SendEventToClairUtility(event *ScanEvent) error {
 
 	client := resty.New()
 	client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
-	//client.SetDebug(true)
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(jsonBody).
