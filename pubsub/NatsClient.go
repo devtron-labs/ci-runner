@@ -24,13 +24,11 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/nats-io/nats.go"
-	"go.uber.org/zap"
 )
 
 const ImageScannerEndpoint string = "http://image-scanner-new-demo-devtroncd-service.devtroncd:80"
 
 type PubSubClient struct {
-	Logger     *zap.SugaredLogger
 	JetStrCtxt nats.JetStreamContext
 	Conn       *nats.Conn
 }

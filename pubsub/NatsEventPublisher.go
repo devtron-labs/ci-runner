@@ -18,42 +18,86 @@
 package pubsub
 
 import (
-	"os"
-
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/nats-io/nats.go"
+
+	//"go.uber.org/zap"
+	"log"
+	"os"
 )
+
+// type NatsEventPublisher interface {
+// 	PublishEventsOnNats(jsonBody []byte, topic string) error
+// }
+
+// func NewNatsEventPublisherImpl(logger *zap.SugaredLogger, pubSubClient *PubSubClient) *NatsEventPublisherImpl {
+// 	return &NatsEventPublisherImpl{
+// 		logger:       logger,
+// 		pubSubClient: pubSubClient,
+// 	}
+// }
+
+// type NatsEventPublisherImpl struct {
+// 	logger       *zap.SugaredLogger
+// 	pubSubClient *PubSubClient
+// }
+
+// func (impl *NatsEventPublisherImpl) PublishEventsOnNats(jsonBody []byte, topic string) error {
+
+// 	err := AddStream(impl.pubSubClient.JetStrCtxt, CI_RUNNER_STREAM)
+
+// 	if err != nil {
+// 		impl.logger.Errorw("Error while adding stream", "error", err)
+// 	}
+// 	//Generate random string for passing as Header Id in message
+// 	randString := "MsgHeaderId-" + util.Generate(10)
+// 	_, err = impl.pubSubClient.JetStrCtxt.Publish(topic, jsonBody, nats.MsgId(randString))
+// 	if err != nil {
+// 		impl.logger.Errorw("Error while publishing Request", "topic", topic, "body", string(jsonBody), "err", err)
+// 	}
+
+// 	impl.logger.Info(util.DEVTRON, "ci complete event notification done")
+
+// 	//Drain the connection
+// 	err = impl.pubSubClient.Conn.Drain()
+
+// 	if err != nil {
+// 		impl.logger.Errorw("Error while draining the connection", "error", err)
+// 	}
+
+// 	impl.logger.Info(util.DEVTRON, " housekeeping done. exiting now")
+// 	return nil
+// }
 
 func PublishEventsOnNats(jsonBody []byte, topic string) error {
 	client, err := NewPubSubClient()
 	if err != nil {
-		client.Logger.Errorw(util.DEVTRON, "err", err)
+		log.Fatal(util.DEVTRON, "err", err)
 		os.Exit(1)
 	}
-
-	var reqBody = []byte(jsonBody)
 
 	err = AddStream(client.JetStrCtxt, CI_RUNNER_STREAM)
 
 	if err != nil {
-		client.Logger.Errorw("Error while adding stream", "error", err)
+		log.Fatal("Error while adding stream", "error", err)
 	}
 	//Generate random string for passing as Header Id in message
 	randString := "MsgHeaderId-" + util.Generate(10)
-	_, err = client.JetStrCtxt.Publish(topic, reqBody, nats.MsgId(randString))
+	_, err = client.JetStrCtxt.Publish(topic, jsonBody, nats.MsgId(randString))
 	if err != nil {
-		client.Logger.Errorw("Error while publishing Request", "topic", topic, "body", string(reqBody), "err", err)
+		log.Fatal("Error while publishing Request", "topic", topic, "body", string(jsonBody), "err", err)
 	}
 
-	client.Logger.Info(util.DEVTRON, "ci complete event notification done")
+	log.Print(util.DEVTRON, "ci complete event notification done")
 
 	//Drain the connection
 	err = client.Conn.Drain()
 
 	if err != nil {
-		client.Logger.Errorw("Error while draining the connection", "error", err)
+		log.Fatal("Error while draining the connection", "error", err)
 	}
 
-	client.Logger.Info(util.DEVTRON, " housekeeping done. exiting now")
+	log.Print(util.DEVTRON, " housekeeping done. exiting now")
 	return nil
+
 }
