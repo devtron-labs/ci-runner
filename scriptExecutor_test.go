@@ -67,3 +67,89 @@ func TestRunScripts(t *testing.T) {
 		})
 	}
 }
+
+func Test_buildDockerRunCommand(t *testing.T) {
+	type args struct {
+		executionConf *executionConf
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{name: "dev",
+			args: args{executionConf: &executionConf{
+				DockerImage:             "alpine:latest",
+				EnvInputFileName:        "/tmp/ci-test/abc.env",
+				MountCode:               true,
+				SourceCodeLocation:      "/tmp/code-location",
+				SourceCodeMountLocation: "/tmp/code-mount-location",
+				ScriptLocation:          "/tmp/custom-script-location",
+				ScriptMountLocation:     "/tmp/script-mount-location",
+				EntryScriptFileName:     "/tmp/code-location/_entry.sh",
+				ExposedPorts:            map[int]int{80: 8080, 90: 9090},
+			}},
+			wantErr: false,
+			want:    "docker run -it \\\n--env-file /tmp/ci-test/abc.env \\\n-v /tmp/code-location/_entry.sh:/devtron_script/_entry.sh \\\n-v /tmp/code-location:/tmp/code-mount-location \\\n-v /tmp/custom-script-location:/tmp/script-mount-location \\\n-p 80:8080 \\\n-p 90:9090 \\\nalpine:latest \\\n/bin/sh /devtron_script/_entry.sh\n",
+		},
+
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := buildDockerRunCommand(tt.args.executionConf)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("buildDockerRunCommand() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("buildDockerRunCommand() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_buildDockerEntryScript(t *testing.T) {
+	type args struct {
+		command        string
+		args           []string
+		outputVars     []string
+		envOutFileName string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{{name: "hello",
+		args:    args{command: "ls", envOutFileName: "out.env"},
+		wantErr: false,
+		want:    "#!/bin/sh\nset -e\nset -o pipefail\nls \n> out.env\n"},
+		{name: "ls_dir",
+			args:    args{command: "ls", envOutFileName: "out.env", args: []string{"\\tmp"}},
+			wantErr: false,
+			want:    "#!/bin/sh\nset -e\nset -o pipefail\nls \\tmp\n> out.env\n"},
+		{name: "ls_dir_with_out",
+			args:    args{command: "ls", envOutFileName: "out.env", args: []string{"\\tmp"}, outputVars: []string{"HOME"}},
+			wantErr: false,
+			want:    "#!/bin/sh\nset -e\nset -o pipefail\nls \\tmp\n> out.env\nprintf \"\\nHOME=%s\" \"$HOME\" >> out.env\n"},
+		{name: "ls_dir_with_out_multi",
+			args:    args{command: "ls", envOutFileName: "out.env", args: []string{"\\tmp"}, outputVars: []string{"HOME", "USER"}},
+			wantErr: false,
+			want:    "#!/bin/sh\nset -e\nset -o pipefail\nls \\tmp\n> out.env\nprintf \"\\nHOME=%s\" \"$HOME\" >> out.env\nprintf \"\\nUSER=%s\" \"$USER\" >> out.env\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := buildDockerEntryScript(tt.args.command, tt.args.args, tt.args.outputVars, tt.args.envOutFileName)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("buildDockerEntryScript() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("buildDockerEntryScript() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

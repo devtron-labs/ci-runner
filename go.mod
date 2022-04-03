@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go v1.43.27
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/go-resty/resty/v2 v2.7.0
+	github.com/joho/godotenv v1.4.0
 	github.com/nats-io/nats.go v1.13.1-0.20220308171302-2f2f6968e98d
 	github.com/nats-io/stan.go v0.10.2
 	github.com/otiai10/copy v1.7.0

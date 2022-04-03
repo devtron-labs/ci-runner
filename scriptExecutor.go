@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
+	"github.com/joho/godotenv"
 	"log"
 	"os"
 	"os/exec"
@@ -52,7 +52,7 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 		log.Println(err)
 		return nil, err
 	}
-	envMap, err := readEnvironmentFile(envOutFileName)
+	envMap, err := godotenv.Read(envOutFileName)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -84,38 +84,84 @@ set -o pipefail
 	return finalScript, nil
 }
 
-//read content of .env file
-func readEnvironmentFile(filename string) (envMap map[string]string, err error) {
-	file, err := os.Open(filename)
+type executionConf struct {
+	Script                  string
+	ScriptLocation          string
+	ScriptMountLocation     string
+	EnvInputVars            map[string]string
+	ExposedPorts            map[int]int
+	OutputVars              []string
+	DockerImage             string
+	MountCode               bool
+	SourceCodeLocation      string
+	SourceCodeMountLocation string
+	command                 string
+	args                    []string
+	// system generate values
+	EnvInputFileName    string // system generated
+	EntryScriptFileName string // system generated
+}
+
+func RunScriptsInDocker(workDirectory string, scriptFileName string, executionConf *executionConf) (map[string]string, error) {
+	envInputFileName := filepath.Join(workDirectory, fmt.Sprintf("%s_in.env", scriptFileName))
+	entryScriptFileName := filepath.Join(workDirectory, fmt.Sprintf("%s_entry.sh", scriptFileName))
+	envOutFileName := filepath.Join(workDirectory, fmt.Sprintf("%s_in.env", scriptFileName))
+
+	fmt.Println(entryScriptFileName, envOutFileName)
+	err := godotenv.Write(executionConf.EnvInputVars, envInputFileName)
 	if err != nil {
+		log.Println(devtron, err)
 		return nil, err
 	}
-	defer file.Close()
-	var lines []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	if err = scanner.Err(); err != nil {
-		return nil, err
-	}
-	envMap = parseEnvironmentFileLines(lines)
-	return envMap, nil
+
+	// docker run -it -v   -environment file  -p
+
+	return nil, nil
 }
-func parseEnvironmentFileLines(lines []string) map[string]string {
-	envMap := make(map[string]string)
-	for _, fullLine := range lines {
-		if !isIgnoredLine(fullLine) {
-			parts := strings.SplitN(fullLine, "=", 2)
-			if len(parts) != 2 {
-				continue
-			}
-			envMap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
-		}
+
+func buildDockerEntryScript(command string, args []string, outputVars []string, envOutFileName string) (string, error) {
+	entryTemplate := `#!/bin/sh
+set -e
+set -o pipefail
+{{.command}} {{.args}}
+> {{.envOutFileName}}
+{{$envOutFileName := .envOutFileName}}
+{{- range .outputVars -}} 
+  printf "\n{{.}}=%s" "${{.}}" >> {{$envOutFileName}}
+{{end -}}`
+
+	templateData := make(map[string]interface{})
+	templateData["args"] = strings.Join(args, " ")
+	templateData["command"] = command
+	templateData["envOutFileName"] = envOutFileName
+	templateData["outputVars"] = outputVars
+	finalScript, err := Tprintf(entryTemplate, templateData)
+	if err != nil {
+		return "", err
 	}
-	return envMap
+	return finalScript, nil
 }
-func isIgnoredLine(line string) bool {
-	trimmedLine := strings.TrimSpace(line)
-	return len(trimmedLine) == 0 || strings.HasPrefix(trimmedLine, "#")
+
+func buildDockerRunCommand(executionConf *executionConf) (string, error) {
+	cmdTemplate := `docker run -it \
+--env-file {{.EnvInputFileName}} \
+-v {{.EntryScriptFileName}}:/devtron_script/_entry.sh \
+{{- if .MountCode }}
+-v {{.SourceCodeLocation}}:{{.SourceCodeMountLocation}} \
+{{- end }}
+{{ if .ScriptLocation -}}
+-v {{ .ScriptLocation}}:{{.ScriptMountLocation}} \
+{{- end}}
+{{ range $hostPort, $ContainerPort := .ExposedPorts -}}
+-p {{$hostPort}}:{{$ContainerPort}} \
+{{ end }}
+{{- .DockerImage}} \
+/bin/sh /devtron_script/_entry.sh
+`
+	finalScript, err := Tprintf(cmdTemplate, executionConf)
+	if err != nil {
+		return "", err
+	}
+	return finalScript, nil
+
 }
