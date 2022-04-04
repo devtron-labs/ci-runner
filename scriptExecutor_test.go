@@ -153,3 +153,49 @@ func Test_buildDockerEntryScript(t *testing.T) {
 		})
 	}
 }
+
+func TestRunScriptsInDocker(t *testing.T) {
+	type args struct {
+		executionConf *executionConf
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    map[string]string
+		wantErr bool
+	}{
+		{name: "hello",
+			args: args{
+				executionConf: &executionConf{
+					Script:                  "ls",
+					ScriptLocation:          "/tmp/custom-script-location",
+					ScriptMountLocation:     "/tmp/script-mount-location",
+					EnvInputVars:            nil,
+					ExposedPorts:            map[int]int{80: 8080, 90: 9090},
+					OutputVars:              []string{"HOME", "PWD", "NAME"},
+					DockerImage:             "alpine:latest",
+					MountCode:               true,
+					SourceCodeLocation:      "/tmp/code-location",
+					SourceCodeMountLocation: "/tmp/code-mount-location",
+					command:                 "/bin/sh",
+					args:                    []string{"-c", "ls;sleep 1;export NAME=nishant;echo done;"},
+					scriptFileName:          "",
+					workDirectory:           "/tmp/ci-test",
+				},
+			},
+			want:    nil,
+			wantErr: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := RunScriptsInDocker(tt.args.executionConf)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RunScriptsInDocker() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("RunScriptsInDocker() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

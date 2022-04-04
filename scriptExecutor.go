@@ -97,15 +97,24 @@ type executionConf struct {
 	SourceCodeMountLocation string
 	command                 string
 	args                    []string
+	scriptFileName          string
 	// system generate values
+	workDirectory       string
 	EnvInputFileName    string // system generated
+	EnvOutFileName      string // system generated
 	EntryScriptFileName string // system generated
+	RunCommandFileName  string // system generated
 }
 
-func RunScriptsInDocker(workDirectory string, scriptFileName string, executionConf *executionConf) (map[string]string, error) {
-	envInputFileName := filepath.Join(workDirectory, fmt.Sprintf("%s_in.env", scriptFileName))
-	entryScriptFileName := filepath.Join(workDirectory, fmt.Sprintf("%s_entry.sh", scriptFileName))
-	envOutFileName := filepath.Join(workDirectory, fmt.Sprintf("%s_in.env", scriptFileName))
+func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error) {
+	envInputFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_in.env", executionConf.scriptFileName))
+	entryScriptFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_entry.sh", executionConf.scriptFileName))
+	envOutFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_out.env", executionConf.scriptFileName))
+	executionConf.RunCommandFileName = filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_run.sh", executionConf.scriptFileName))
+
+	executionConf.EnvInputFileName = envInputFileName
+	executionConf.EntryScriptFileName = entryScriptFileName
+	executionConf.EnvOutFileName = envOutFileName
 
 	fmt.Println(entryScriptFileName, envOutFileName)
 	err := godotenv.Write(executionConf.EnvInputVars, envInputFileName)
@@ -113,9 +122,41 @@ func RunScriptsInDocker(workDirectory string, scriptFileName string, executionCo
 		log.Println(devtron, err)
 		return nil, err
 	}
-
+	entryScript, err := buildDockerEntryScript(executionConf.command, executionConf.args, executionConf.OutputVars, executionConf.EnvOutFileName)
+	if err != nil {
+		log.Println(devtron, err)
+		return nil, err
+	}
+	err = os.WriteFile(executionConf.EntryScriptFileName, []byte(entryScript), 0644) //TODO check mode with entry script
+	if err != nil {
+		log.Println(devtron, err)
+		return nil, err
+	}
+	err = os.WriteFile(executionConf.EnvOutFileName, []byte(""), 0644) //TODO check mode with entry script
+	if err != nil {
+		log.Println(devtron, err)
+		return nil, err
+	}
+	dockerRunCommand, err := buildDockerRunCommand(executionConf)
+	if err != nil {
+		log.Println(devtron, err)
+		return nil, err
+	}
+	fmt.Println(dockerRunCommand)
+	//dockerRunCommand = "echo hello------;sleep 10; echo done------"
+	err = os.WriteFile(executionConf.RunCommandFileName, []byte(dockerRunCommand), 0644)
+	if err != nil {
+		log.Println(devtron, err)
+		return nil, err
+	}
 	// docker run -it -v   -environment file  -p
-
+	runScriptCMD := exec.Command("/bin/sh", executionConf.RunCommandFileName)
+	//runScriptCMD.Env = inputEnvironmentVariable
+	err = RunCommand(runScriptCMD)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
 	return nil, nil
 }
 
@@ -133,7 +174,7 @@ set -o pipefail
 	templateData := make(map[string]interface{})
 	templateData["args"] = strings.Join(args, " ")
 	templateData["command"] = command
-	templateData["envOutFileName"] = envOutFileName
+	templateData["envOutFileName"] = "/devtron_script/_out.env"
 	templateData["outputVars"] = outputVars
 	finalScript, err := Tprintf(entryTemplate, templateData)
 	if err != nil {
@@ -143,9 +184,10 @@ set -o pipefail
 }
 
 func buildDockerRunCommand(executionConf *executionConf) (string, error) {
-	cmdTemplate := `docker run -it \
+	cmdTemplate := `docker run \
 --env-file {{.EnvInputFileName}} \
 -v {{.EntryScriptFileName}}:/devtron_script/_entry.sh \
+-v {{.EnvOutFileName}}:/devtron_script/_out.env \
 {{- if .MountCode }}
 -v {{.SourceCodeLocation}}:{{.SourceCodeMountLocation}} \
 {{- end }}
