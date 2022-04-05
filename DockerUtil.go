@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"io"
 	"io/ioutil"
 	"log"
@@ -94,10 +95,30 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 	username := dockerCredentials.DockerUsername
 	pwd := dockerCredentials.DockerPassword
 	if dockerCredentials.DockerRegistryType == DOCKER_REGISTRY_TYPE_ECR {
-		svc := ecr.New(session.New(&aws.Config{
+		accessKey, secretKey := dockerCredentials.AccessKey, dockerCredentials.SecretKey
+		if len(dockerCredentials.AccessKey) == 0 || len(dockerCredentials.SecretKey) == 0 {
+			sess, err := session.NewSession()
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+			appsCreds := ec2rolecreds.NewCredentials(sess)
+			val, err := appsCreds.Get()
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+			accessKey, secretKey = val.AccessKeyID, val.SecretAccessKey
+		}
+		sess, err := session.NewSession(&aws.Config{
 			Region:      &dockerCredentials.AwsRegion,
-			Credentials: credentials.NewStaticCredentials(dockerCredentials.AccessKey, dockerCredentials.SecretKey, ""),
-		}))
+			Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
+		})
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		svc := ecr.New(sess)
 		input := &ecr.GetAuthorizationTokenInput{}
 		authData, err := svc.GetAuthorizationToken(input)
 		if err != nil {
@@ -114,6 +135,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 		credsSlice := strings.Split(string(decodedToken), ":")
 		username = credsSlice[0]
 		pwd = credsSlice[1]
+
 	}
 	dockerLogin := "docker login -u " + username + " -p " + pwd + " " + dockerCredentials.DockerRegistryURL
 	log.Println(devtron, " -----> "+dockerLogin)
