@@ -157,7 +157,12 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		log.Println(err)
 		return nil, err
 	}
-	return nil, nil
+	envMap, err := godotenv.Read(executionConf.EnvOutFileName)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	return envMap, nil
 }
 
 func buildDockerEntryScript(command string, args []string, outputVars []string, envOutFileName string) (string, error) {
