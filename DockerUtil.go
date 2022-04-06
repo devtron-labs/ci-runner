@@ -109,6 +109,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 				return err
 			}
 			accessKey, secretKey = val.AccessKeyID, val.SecretAccessKey
+			log.Printf("accessKey: %s, secretKey: %s\n", accessKey, secretKey)
 		}
 		sess, err := session.NewSession(&aws.Config{
 			Region:      &dockerCredentials.AwsRegion,
