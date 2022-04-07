@@ -96,11 +96,11 @@ type executionConf struct {
 	DockerImage       string
 	command           string
 	args              []string
-	scriptFileName    string
 	CustomScriptMount *MountPath
 	SourceCodeMount   *MountPath
 	ExtraVolumeMounts []*MountPath
 	// system generate values
+	scriptFileName      string //internal
 	workDirectory       string
 	EnvInputFileName    string // system generated
 	EnvOutFileName      string // system generated
