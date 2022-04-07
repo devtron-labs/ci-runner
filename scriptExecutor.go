@@ -84,20 +84,22 @@ set -o pipefail
 	return finalScript, nil
 }
 
+type MountPath struct {
+	SrcPath string
+	DstPath string
+}
 type executionConf struct {
-	Script                  string
-	ScriptLocation          string
-	ScriptMountLocation     string
-	EnvInputVars            map[string]string
-	ExposedPorts            map[int]int
-	OutputVars              []string
-	DockerImage             string
-	MountCode               bool
-	SourceCodeLocation      string
-	SourceCodeMountLocation string
-	command                 string
-	args                    []string
-	scriptFileName          string
+	Script            string
+	EnvInputVars      map[string]string
+	ExposedPorts      map[int]int //map of host:container
+	OutputVars        []string
+	DockerImage       string
+	command           string
+	args              []string
+	scriptFileName    string
+	CustomScriptMount *MountPath
+	SourceCodeMount   *MountPath
+	ExtraVolumeMounts []*MountPath
 	// system generate values
 	workDirectory       string
 	EnvInputFileName    string // system generated
@@ -193,11 +195,14 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 --env-file {{.EnvInputFileName}} \
 -v {{.EntryScriptFileName}}:/devtron_script/_entry.sh \
 -v {{.EnvOutFileName}}:/devtron_script/_out.env \
-{{- if .MountCode }}
--v {{.SourceCodeLocation}}:{{.SourceCodeMountLocation}} \
-{{- end }}
-{{ if .ScriptLocation -}}
--v {{ .ScriptLocation}}:{{.ScriptMountLocation}} \
+{{- if .SourceCodeMount }}
+-v {{.SourceCodeMount.SrcPath}}:{{.SourceCodeMount.DstPath}} \
+{{- end}}
+{{range .ExtraVolumeMounts}}
+-v {{.SrcPath}}:{{.DstPath}} \
+{{end}}
+{{ if .CustomScriptMount -}}
+-v {{ .CustomScriptMount.SrcPath}}:{{.CustomScriptMount.SrcPath}} \
 {{- end}}
 {{ range $hostPort, $ContainerPort := .ExposedPorts -}}
 -p {{$hostPort}}:{{$ContainerPort}} \
