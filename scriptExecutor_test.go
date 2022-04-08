@@ -78,20 +78,34 @@ func Test_buildDockerRunCommand(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		{name: "dev",
+		{name: "all_single",
 			args: args{executionConf: &executionConf{
 				DockerImage:         "alpine:latest",
 				EnvInputFileName:    "/tmp/ci-test/abc.env",
+				EntryScriptFileName: "/tmp/code-location/_entry.sh",
+				EnvOutFileName:      "/tmp/ci-test/_env.out",
+				ExtraVolumeMounts:   []*MountPath{{SrcPath: "/src", DstPath: "/des"}},
 				SourceCodeMount:     &MountPath{SrcPath: "/tmp/code-location", DstPath: "/tmp/code-mount-location"},
 				CustomScriptMount:   &MountPath{SrcPath: "/tmp/custom-script-location", DstPath: "/tmp/script-mount-location"},
+				ExposedPorts:        map[int]int{80: 8080},
+			}},
+			wantErr: false,
+			want:    "docker run \\\n--env-file /tmp/ci-test/abc.env \\\n-v /tmp/code-location/_entry.sh:/devtron_script/_entry.sh \\\n-v /tmp/ci-test/_env.out:/devtron_script/_out.env \\\n-v /tmp/code-location:/tmp/code-mount-location \\\n-v /src:/des \\\n-v /tmp/custom-script-location:/tmp/custom-script-location \\\n-p 80:8080 \\\nalpine:latest \\\n/bin/sh /devtron_script/_entry.sh\n",
+		},
+		{name: "all_multi",
+			args: args{executionConf: &executionConf{
+				DockerImage:         "alpine:latest",
+				EnvInputFileName:    "/tmp/ci-test/abc.env",
 				EntryScriptFileName: "/tmp/code-location/_entry.sh",
+				EnvOutFileName:      "/tmp/ci-test/_env.out",
+				ExtraVolumeMounts:   []*MountPath{{SrcPath: "/src", DstPath: "/des"}, {SrcPath: "/src2", DstPath: "/des2"}},
+				SourceCodeMount:     &MountPath{SrcPath: "/tmp/code-location", DstPath: "/tmp/code-mount-location"},
+				CustomScriptMount:   &MountPath{SrcPath: "/tmp/custom-script-location", DstPath: "/tmp/script-mount-location"},
 				ExposedPorts:        map[int]int{80: 8080, 90: 9090},
 			}},
 			wantErr: false,
-			want:    "docker run -it \\\n--env-file /tmp/ci-test/abc.env \\\n-v /tmp/code-location/_entry.sh:/devtron_script/_entry.sh \\\n-v /tmp/code-location:/tmp/code-mount-location \\\n-v /tmp/custom-script-location:/tmp/script-mount-location \\\n-p 80:8080 \\\n-p 90:9090 \\\nalpine:latest \\\n/bin/sh /devtron_script/_entry.sh\n",
+			want:    "docker run \\\n--env-file /tmp/ci-test/abc.env \\\n-v /tmp/code-location/_entry.sh:/devtron_script/_entry.sh \\\n-v /tmp/ci-test/_env.out:/devtron_script/_out.env \\\n-v /tmp/code-location:/tmp/code-mount-location \\\n-v /src:/des \\\n-v /src2:/des2 \\\n-v /tmp/custom-script-location:/tmp/custom-script-location \\\n-p 80:8080 \\\n-p 90:9090 \\\nalpine:latest \\\n/bin/sh /devtron_script/_entry.sh\n",
 		},
-
-		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -109,10 +123,9 @@ func Test_buildDockerRunCommand(t *testing.T) {
 
 func Test_buildDockerEntryScript(t *testing.T) {
 	type args struct {
-		command        string
-		args           []string
-		outputVars     []string
-		envOutFileName string
+		command    string
+		args       []string
+		outputVars []string
 	}
 	tests := []struct {
 		name    string
@@ -120,26 +133,26 @@ func Test_buildDockerEntryScript(t *testing.T) {
 		want    string
 		wantErr bool
 	}{{name: "hello",
-		args:    args{command: "ls", envOutFileName: "out.env"},
+		args:    args{command: "ls"},
 		wantErr: false,
-		want:    "#!/bin/sh\nset -e\nset -o pipefail\nls \n> out.env\n"},
+		want:    "#!/bin/sh\nset -e\nset -o pipefail\nls \n> /devtron_script/_out.env\n"},
 		{name: "ls_dir",
-			args:    args{command: "ls", envOutFileName: "out.env", args: []string{"\\tmp"}},
+			args:    args{command: "ls", args: []string{"\\tmp"}},
 			wantErr: false,
-			want:    "#!/bin/sh\nset -e\nset -o pipefail\nls \\tmp\n> out.env\n"},
+			want:    "#!/bin/sh\nset -e\nset -o pipefail\nls \\tmp\n> /devtron_script/_out.env\n"},
 		{name: "ls_dir_with_out",
-			args:    args{command: "ls", envOutFileName: "out.env", args: []string{"\\tmp"}, outputVars: []string{"HOME"}},
+			args:    args{command: "ls", args: []string{"\\tmp"}, outputVars: []string{"HOME"}},
 			wantErr: false,
-			want:    "#!/bin/sh\nset -e\nset -o pipefail\nls \\tmp\n> out.env\nprintf \"\\nHOME=%s\" \"$HOME\" >> out.env\n"},
+			want:    "#!/bin/sh\nset -e\nset -o pipefail\nls \\tmp\n> /devtron_script/_out.env\nprintf \"\\nHOME=%s\" \"$HOME\" >> /devtron_script/_out.env\n"},
 		{name: "ls_dir_with_out_multi",
-			args:    args{command: "ls", envOutFileName: "out.env", args: []string{"\\tmp"}, outputVars: []string{"HOME", "USER"}},
+			args:    args{command: "ls", args: []string{"\\tmp"}, outputVars: []string{"HOME", "USER"}},
 			wantErr: false,
-			want:    "#!/bin/sh\nset -e\nset -o pipefail\nls \\tmp\n> out.env\nprintf \"\\nHOME=%s\" \"$HOME\" >> out.env\nprintf \"\\nUSER=%s\" \"$USER\" >> out.env\n"},
+			want:    "#!/bin/sh\nset -e\nset -o pipefail\nls \\tmp\n> /devtron_script/_out.env\nprintf \"\\nHOME=%s\" \"$HOME\" >> /devtron_script/_out.env\nprintf \"\\nUSER=%s\" \"$USER\" >> /devtron_script/_out.env\n"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := buildDockerEntryScript(tt.args.command, tt.args.args, tt.args.outputVars, tt.args.envOutFileName)
+			got, err := buildDockerEntryScript(tt.args.command, tt.args.args, tt.args.outputVars)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildDockerEntryScript() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -165,19 +178,19 @@ func TestRunScriptsInDocker(t *testing.T) {
 			args: args{
 				executionConf: &executionConf{
 					Script:            "ls",
-					EnvInputVars:      nil,
+					EnvInputVars:      map[string]string{"KIND": "TEST"},
 					ExposedPorts:      map[int]int{80: 8080, 90: 9090},
-					OutputVars:        []string{"HOME", "PWD", "NAME"},
+					OutputVars:        []string{"HOME", "PWD", "NAME", "KIND"},
 					DockerImage:       "alpine:latest",
 					SourceCodeMount:   &MountPath{SrcPath: "/tmp/code-location", DstPath: "/tmp/code-mount-location"},
 					CustomScriptMount: &MountPath{SrcPath: "/tmp/custom-script-location", DstPath: "/tmp/script-mount-location"},
 					command:           "/bin/sh",
-					args:              []string{"-c", "ls;sleep 1;export NAME=nishant;echo done;"},
+					args:              []string{"-c", "ls;sleep 1;export NAME=from-script;echo done;"},
 					scriptFileName:    "",
 					workDirectory:     "/tmp/ci-test",
 				},
 			},
-			want:    nil,
+			want:    map[string]string{"HOME": "/root", "PWD": "/", "NAME": "from-script", "KIND": "TEST"},
 			wantErr: false},
 	}
 	for _, tt := range tests {

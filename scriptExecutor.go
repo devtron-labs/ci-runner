@@ -124,7 +124,7 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		log.Println(devtron, err)
 		return nil, err
 	}
-	entryScript, err := buildDockerEntryScript(executionConf.command, executionConf.args, executionConf.OutputVars, executionConf.EnvOutFileName)
+	entryScript, err := buildDockerEntryScript(executionConf.command, executionConf.args, executionConf.OutputVars)
 	if err != nil {
 		log.Println(devtron, err)
 		return nil, err
@@ -167,7 +167,7 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	return envMap, nil
 }
 
-func buildDockerEntryScript(command string, args []string, outputVars []string, envOutFileName string) (string, error) {
+func buildDockerEntryScript(command string, args []string, outputVars []string) (string, error) {
 	entryTemplate := `#!/bin/sh
 set -e
 set -o pipefail
@@ -198,10 +198,10 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 {{- if .SourceCodeMount }}
 -v {{.SourceCodeMount.SrcPath}}:{{.SourceCodeMount.DstPath}} \
 {{- end}}
-{{range .ExtraVolumeMounts}}
+{{range .ExtraVolumeMounts -}}
 -v {{.SrcPath}}:{{.DstPath}} \
 {{end}}
-{{ if .CustomScriptMount -}}
+{{- if .CustomScriptMount -}}
 -v {{ .CustomScriptMount.SrcPath}}:{{.CustomScriptMount.SrcPath}} \
 {{- end}}
 {{ range $hostPort, $ContainerPort := .ExposedPorts -}}
