@@ -96,24 +96,27 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 	pwd := dockerCredentials.DockerPassword
 	if dockerCredentials.DockerRegistryType == DOCKER_REGISTRY_TYPE_ECR {
 		accessKey, secretKey := dockerCredentials.AccessKey, dockerCredentials.SecretKey
+		credentials := credentials.NewStaticCredentials(accessKey, secretKey, "")
 		if len(dockerCredentials.AccessKey) == 0 || len(dockerCredentials.SecretKey) == 0 {
-			sess, err := session.NewSession()
+			sess, err := session.NewSession(&aws.Config{
+				Region: &dockerCredentials.AwsRegion,
+			})
 			if err != nil {
 				log.Println(err)
 				return err
 			}
-			appsCreds := ec2rolecreds.NewCredentials(sess)
-			val, err := appsCreds.Get()
-			if err != nil {
-				log.Println(err)
-				return err
-			}
-			accessKey, secretKey = val.AccessKeyID, val.SecretAccessKey
-			log.Printf("accessKey: %s, secretKey: %s\n", accessKey, secretKey)
+			credentials = ec2rolecreds.NewCredentials(sess)
+			//val, err := appsCreds.Get()
+			//if err != nil {
+			//	log.Println(err)
+			//	return err
+			//}
+			//accessKey, secretKey = val.AccessKeyID, val.SecretAccessKey
+			//log.Printf("accessKey: %s, secretKey: %s\n", accessKey, secretKey)
 		}
 		sess, err := session.NewSession(&aws.Config{
 			Region:      &dockerCredentials.AwsRegion,
-			Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
+			Credentials: credentials,
 		})
 		if err != nil {
 			log.Println(err)
