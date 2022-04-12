@@ -35,8 +35,9 @@ type VariableObject struct {
 	Format Format `json:"format"`
 
 	//only for input type
-	Value                      string `json:"value"`
-	GlobalVarName              string `json:"globalVarName"`
-	ReferenceVariableName      string `json:"referenceVariableName"`
-	ReferenceVariableStepIndex int    `json:"referenceVariableStepIndex"`
+	Value                      string      `json:"value"`
+	GlobalVarName              string      `json:"globalVarName"`
+	ReferenceVariableName      string      `json:"referenceVariableName"`
+	ReferenceVariableStepIndex int         `json:"referenceVariableStepIndex"`
+	DeducedValue               interface{} `json:"-"` //typeCased and deduced
 }

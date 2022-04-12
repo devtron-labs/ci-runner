@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/Knetic/govaluate"
-	"reflect"
 	"strconv"
 )
 
@@ -15,20 +14,35 @@ type ConditionObject struct {
 	typecastConditionalValue interface{}
 }
 
-func evaluateExpression(condition ConditionObject, variables map[string]interface{}) (status bool, err error) {
-
+func evaluateExpression(condition ConditionObject, variables []*VariableObject) (status bool, err error) {
+	variableMap := make(map[string]*VariableObject)
+	for _, variable := range variables {
+		variableMap[variable.Name] = variable
+	}
+	variableOperand := variableMap[condition.ConditionOnVariable]
+	if variableOperand.DeducedValue == nil {
+		converted, err := typeConverter(variableOperand.Value, variableOperand.Format)
+		if err != nil {
+			return false, err
+		}
+		variableOperand.DeducedValue = converted
+	}
+	refOperand, err := typeConverter(condition.ConditionalValue, variableOperand.Format)
+	if err != nil {
+		return false, err
+	}
 	expression, err := govaluate.NewEvaluableExpression(fmt.Sprintf("variableOperand %s refOperand", condition.ConditionalOperator))
 	if err != nil {
 		return false, err
 	}
 	parameters := make(map[string]interface{}, 8)
-	parameters["variableOperand"] = variables[condition.ConditionOnVariable]
-	parameters["refOperand"] = condition.ConditionalValue
+	parameters["variableOperand"] = variableOperand.DeducedValue
+	parameters["refOperand"] = refOperand
 	result, err := expression.Evaluate(parameters)
 	if err != nil {
 		return false, err
 	}
-	status = reflect.ValueOf(result).Bool()
+	status = result.(bool)
 	return status, nil
 }
 
@@ -47,7 +61,6 @@ func typeConverter(value string, format Format) (interface{}, error) {
 	}
 }
 
-//number, bool, string, date
 type Format int
 
 const (
