@@ -1,11 +1,5 @@
 package main
 
-type WorkFlowRequest struct {
-	PreCiSteps  []*StepObject      `json:"preCiSteps"`
-	PostCiSteps []*StepObject      `json:"postCiSteps"`
-	RefPlugins  []*RefPluginObject `json:"refPlugins"`
-}
-
 type RefPluginObject struct {
 	Id    int           `json:"id"`
 	Steps []*StepObject `json:"steps"`

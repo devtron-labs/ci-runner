@@ -111,7 +111,9 @@ type CiRequest struct {
 	MinioEndpoint               string                       `json:"minioEndpoint"`
 	DefaultAddressPoolBaseCidr  string                       `json:"defaultAddressPoolBaseCidr"`
 	DefaultAddressPoolSize      int                          `json:"defaultAddressPoolSize"`
-	CiWorkflowRequest           *WorkFlowRequest             `json:"ciWorkflowRequest"`
+	PreCiSteps                  []*StepObject                `json:"preCiSteps"`
+	PostCiSteps                 []*StepObject                `json:"postCiSteps"`
+	RefPlugins                  []*RefPluginObject           `json:"refPlugins"`
 }
 
 const BLOB_STORAGE_AZURE = "AZURE"
