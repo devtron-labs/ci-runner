@@ -99,8 +99,8 @@ type CiRequest struct {
 	WorkflowId                  int                          `json:"workflowId"`
 	TriggeredBy                 int                          `json:"triggeredBy"`
 	CacheLimit                  int64                        `json:"cacheLimit"`
-	BeforeDockerBuild           []*Task                      `json:"beforeDockerBuildScripts"`
-	AfterDockerBuild            []*Task                      `json:"afterDockerBuildScripts"`
+	BeforeDockerBuild           []*Task                      `json:"-"`
+	AfterDockerBuild            []*Task                      `json:"-"`
 	CiYamlLocation              string                       `json:"CiYamlLocations"`
 	TaskYaml                    *TaskYaml                    `json:"-"`
 	TestExecutorImageProperties *TestExecutorImageProperties `json:"testExecutorImageProperties"`
@@ -111,6 +111,7 @@ type CiRequest struct {
 	MinioEndpoint               string                       `json:"minioEndpoint"`
 	DefaultAddressPoolBaseCidr  string                       `json:"defaultAddressPoolBaseCidr"`
 	DefaultAddressPoolSize      int                          `json:"defaultAddressPoolSize"`
+	CiWorkflowRequest           *WorkFlowRequest             `json:"ciWorkflowRequest"`
 }
 
 const BLOB_STORAGE_AZURE = "AZURE"
