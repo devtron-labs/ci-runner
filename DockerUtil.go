@@ -96,8 +96,11 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 	pwd := dockerCredentials.DockerPassword
 	if dockerCredentials.DockerRegistryType == DOCKER_REGISTRY_TYPE_ECR {
 		accessKey, secretKey := dockerCredentials.AccessKey, dockerCredentials.SecretKey
+		fmt.Printf("accessKey %s, secretKey %s\n", accessKey, secretKey)
+
 		credentials := credentials.NewStaticCredentials(accessKey, secretKey, "")
 		if len(dockerCredentials.AccessKey) == 0 || len(dockerCredentials.SecretKey) == 0 {
+			fmt.Println("empty accessKey or secretKey")
 			sess, err := session.NewSession(&aws.Config{
 				Region: &dockerCredentials.AwsRegion,
 			})
