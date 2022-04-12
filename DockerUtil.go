@@ -117,7 +117,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 			Region:      &dockerCredentials.AwsRegion,
 			Credentials: creds,
 		})
-		if err != nil
+		if err != nil {
 			log.Println(err)
 			return err
 		}
