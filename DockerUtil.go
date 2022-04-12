@@ -98,7 +98,8 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 		accessKey, secretKey := dockerCredentials.AccessKey, dockerCredentials.SecretKey
 		fmt.Printf("accessKey %s, secretKey %s\n", accessKey, secretKey)
 
-		credentials := credentials.NewStaticCredentials(accessKey, secretKey, "")
+		var creds *credentials.Credentials
+
 		if len(dockerCredentials.AccessKey) == 0 || len(dockerCredentials.SecretKey) == 0 {
 			fmt.Println("empty accessKey or secretKey")
 			sess, err := session.NewSession(&aws.Config{
@@ -108,7 +109,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 				log.Println(err)
 				return err
 			}
-			credentials = ec2rolecreds.NewCredentials(sess)
+			creds = ec2rolecreds.NewCredentials(sess)
 			//val, err := appsCreds.Get()
 			//if err != nil {
 			//	log.Println(err)
@@ -116,10 +117,12 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 			//}
 			//accessKey, secretKey = val.AccessKeyID, val.SecretAccessKey
 			//log.Printf("accessKey: %s, secretKey: %s\n", accessKey, secretKey)
+		} else {
+			creds = credentials.NewStaticCredentials(accessKey, secretKey, "")
 		}
 		sess, err := session.NewSession(&aws.Config{
 			Region:      &dockerCredentials.AwsRegion,
-			Credentials: credentials,
+			Credentials: creds,
 		})
 		if err != nil {
 			log.Println(err)
