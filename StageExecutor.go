@@ -22,6 +22,29 @@ import (
 	"log"
 )
 
+func RunPreCiSteps(req *CiCdTriggerEvent, scriptEnvs map[string]string) (interface{}, error) {
+	globalEnvironmentVariables := getGlobalEnvVariables(req)
+	refStageMap := make(map[int][]*StepObject)
+	for _, ref := range req.CiRequest.RefPlugins {
+		refStageMap[ref.Id] = ref.Steps
+	}
+	for _, preciStage := range req.CiRequest.PreCiSteps {
+		if preciStage.StepType == STEP_TYPE_INLINE {
+
+		} else if preciStage.StepType == STEP_TYPE_REF_PLUGIN {
+
+		} else {
+			return nil, fmt.Errorf("step Type :%s not supported", preciStage.StepType)
+		}
+	}
+	fmt.Println(globalEnvironmentVariables)
+	return nil, nil
+}
+
+func deDuceVaribales(desired VariableObject, globalVars map[string]string, preeCiStageVaribales map[string][]*VariableObject) {
+
+}
+
 func RunPreDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, taskYaml *TaskYaml) error {
 	//before task
 	beforeTaskMap := make(map[string]*Task)

@@ -60,29 +60,3 @@ func typeConverter(value string, format Format) (interface{}, error) {
 		return nil, fmt.Errorf("unsupported datatype")
 	}
 }
-
-type Format int
-
-const (
-	STRING Format = iota
-	NUMBER
-	BOOL
-	DATE
-)
-
-func (d Format) ValuesOf(format string) Format {
-	if format == "NUMBER" {
-		return NUMBER
-	} else if format == "BOOL" {
-		return BOOL
-	} else if format == "STRING" {
-		return STRING
-	} else if format == "DATE" {
-		return DATE
-	}
-	return STRING
-}
-
-func (d Format) String() string {
-	return [...]string{"NUMBER", "BOOL", "STRING", "DATE"}[d]
-}

@@ -354,7 +354,7 @@ func collectAndUploadArtifact(ciRequest *CiRequest) error {
 	return UploadArtifact(artifactFiles, ciRequest.CiArtifactLocation, ciRequest.CloudProvider, ciRequest.MinioEndpoint, ciRequest.AzureBlobConfig)
 }
 
-func getScriptEnvVariables(cicdRequest *CiCdTriggerEvent) map[string]string {
+func getGlobalEnvVariables(cicdRequest *CiCdTriggerEvent) map[string]string {
 	envs := make(map[string]string)
 	//TODO ADD MORE env variable
 	if cicdRequest.Type == ciEvent {
@@ -405,7 +405,7 @@ func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err erro
 	// Start docker daemon
 	log.Println(devtron, " docker-build")
 	StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert, ciCdRequest.CiRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CiRequest.DefaultAddressPoolSize)
-	scriptEnvs := getScriptEnvVariables(ciCdRequest)
+	scriptEnvs := getGlobalEnvVariables(ciCdRequest)
 
 	// Get devtron-ci yaml
 	yamlLocation := ciCdRequest.CiRequest.DockerFileLocation[:strings.LastIndex(ciCdRequest.CiRequest.DockerFileLocation, "/")+1]
@@ -539,7 +539,7 @@ func runCDStages(cicdRequest *CiCdTriggerEvent) error {
 		tasks = append(tasks, t.AfterTasks...)
 	}
 
-	scriptEnvs := getScriptEnvVariables(cicdRequest)
+	scriptEnvs := getGlobalEnvVariables(cicdRequest)
 	err = RunCdStageTasks(tasks, scriptEnvs)
 	if err != nil {
 		return err
