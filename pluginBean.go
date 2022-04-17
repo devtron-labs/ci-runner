@@ -89,6 +89,7 @@ const (
 	REF_PRE_CI
 	REF_POST_CI
 	REF_GLOBAL
+	REF_PLUGIN
 )
 
 func (d VariableType) ValueOf(variableType string) VariableType {
@@ -100,11 +101,13 @@ func (d VariableType) ValueOf(variableType string) VariableType {
 		return REF_POST_CI
 	} else if variableType == "REF_GLOBAL" {
 		return REF_GLOBAL
+	} else if variableType == "REF_PLUGIN" {
+		return REF_PLUGIN
 	}
 	return VALUE
 }
 func (d VariableType) String() string {
-	return [...]string{"VALUE", "REF_PRE_CI", "REF_POST_CI", "REF_GLOBAL"}[d]
+	return [...]string{"VALUE", "REF_PRE_CI", "REF_POST_CI", "REF_GLOBAL", "REF_PLUGIN"}[d]
 }
 
 type VariableObject struct {
