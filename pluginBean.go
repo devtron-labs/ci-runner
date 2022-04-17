@@ -1,5 +1,7 @@
 package main
 
+import "encoding/json"
+
 type RefPluginObject struct {
 	Id    int           `json:"id"`
 	Steps []*StepObject `json:"steps"`
@@ -63,6 +65,21 @@ func (d Format) String() string {
 	return [...]string{"NUMBER", "BOOL", "STRING", "DATE"}[d]
 }
 
+func (t Format) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.String())
+}
+
+func (t *Format) UnmarshalJSON(b []byte) error {
+	var s string
+	err := json.Unmarshal(b, &s)
+	if err != nil {
+		return err
+	}
+	*t = t.ValuesOf(s)
+	return nil
+}
+
+//---------------
 type ExecutorType int
 
 const (
@@ -81,7 +98,21 @@ func (d ExecutorType) ValueOf(executorType string) ExecutorType {
 func (d ExecutorType) String() string {
 	return [...]string{"CONTAINER_IMAGE", "SHELL"}[d]
 }
+func (t ExecutorType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.String())
+}
 
+func (t *ExecutorType) UnmarshalJSON(b []byte) error {
+	var s string
+	err := json.Unmarshal(b, &s)
+	if err != nil {
+		return err
+	}
+	*t = t.ValueOf(s)
+	return nil
+}
+
+// -----
 type VariableType int
 
 const (
@@ -109,7 +140,21 @@ func (d VariableType) ValueOf(variableType string) VariableType {
 func (d VariableType) String() string {
 	return [...]string{"VALUE", "REF_PRE_CI", "REF_POST_CI", "REF_GLOBAL", "REF_PLUGIN"}[d]
 }
+func (t VariableType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.String())
+}
 
+func (t *VariableType) UnmarshalJSON(b []byte) error {
+	var s string
+	err := json.Unmarshal(b, &s)
+	if err != nil {
+		return err
+	}
+	*t = t.ValueOf(s)
+	return nil
+}
+
+//---------------
 type VariableObject struct {
 	Name   string `json:"name"`
 	Format Format `json:"format"`
@@ -131,6 +176,7 @@ func (v *VariableObject) TypeCheck() error {
 	return nil
 }
 
+//----------
 type ConditionType int
 
 const (
@@ -155,3 +201,19 @@ func (d ConditionType) ValueOf(executorType string) ConditionType {
 func (d ConditionType) String() string {
 	return [...]string{"TRIGGER", "SKIP", "SUCCESS", "FAILURE"}[d]
 }
+
+func (t ConditionType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.String())
+}
+
+func (t *ConditionType) UnmarshalJSON(b []byte) error {
+	var s string
+	err := json.Unmarshal(b, &s)
+	if err != nil {
+		return err
+	}
+	*t = t.ValueOf(s)
+	return nil
+}
+
+//------
