@@ -86,7 +86,7 @@ type VariableType int
 
 const (
 	VALUE VariableType = iota
-	REF_PREE_CI
+	REF_PRE_CI
 	REF_POST_CI
 	REF_GLOBAL
 )
@@ -94,8 +94,8 @@ const (
 func (d VariableType) ValueOf(variableType string) VariableType {
 	if variableType == "VALUE" {
 		return VALUE
-	} else if variableType == "REF_PREE_CI" {
-		return REF_PREE_CI
+	} else if variableType == "REF_PRE_CI" {
+		return REF_PRE_CI
 	} else if variableType == "REF_POST_CI" {
 		return REF_POST_CI
 	} else if variableType == "REF_GLOBAL" {
@@ -104,7 +104,7 @@ func (d VariableType) ValueOf(variableType string) VariableType {
 	return VALUE
 }
 func (d VariableType) String() string {
-	return [...]string{"VALUE", "REF_PREE_CI", "REF_POST_CI", "REF_GLOBAL"}[d]
+	return [...]string{"VALUE", "REF_PRE_CI", "REF_POST_CI", "REF_GLOBAL"}[d]
 }
 
 type VariableObject struct {

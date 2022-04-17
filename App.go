@@ -418,7 +418,7 @@ func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err erro
 
 	// run pre artifact processing
 	preeCiStageVariable := make(map[int]map[string]*VariableObject)
-	preeCiStageVariable, _, err = RunCiSteps(STEP_TYPE_PREE, ciCdRequest.CiRequest, scriptEnvs, preeCiStageVariable)
+	preeCiStageVariable, _, err = RunCiSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest, scriptEnvs, preeCiStageVariable)
 	if err != nil {
 		log.Println(err)
 		return artifactUploaded, err
@@ -433,7 +433,7 @@ func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err erro
 	log.Println(devtron, " /docker-build")
 
 	// run post artifact processing
-	preeCiStageVariable, _, err = RunCiSteps(STEP_TYPE_PREE, ciCdRequest.CiRequest, scriptEnvs, preeCiStageVariable)
+	preeCiStageVariable, _, err = RunCiSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest, scriptEnvs, preeCiStageVariable)
 	if err != nil {
 		return artifactUploaded, err
 	}

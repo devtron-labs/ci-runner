@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	STEP_TYPE_PREE = "PREE"
+	STEP_TYPE_PRE  = "PRE"
 	STEP_TYPE_POST = "POST"
 )
 
@@ -101,7 +101,7 @@ func RunCiSteps(stageType string, req *CiRequest, globalEnvironmentVariables map
 		for _, out := range preciStage.OutputVars {
 			finalOutVarMap[out.Name] = out
 		}
-		if stageType == STEP_TYPE_PREE {
+		if stageType == STEP_TYPE_PRE {
 			preeCiStageVariable[preciStage.Index] = finalOutVarMap
 		} else {
 			postCiStageVariable[preciStage.Index] = finalOutVarMap
@@ -136,7 +136,7 @@ func deduceVariables(desiredVars []*VariableObject, globalVars map[string]string
 		switch desired.VariableType {
 		case VALUE:
 			inputVars = append(inputVars, desired)
-		case REF_PREE_CI:
+		case REF_PRE_CI:
 			if v, found := preeCiStageVariable[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value
