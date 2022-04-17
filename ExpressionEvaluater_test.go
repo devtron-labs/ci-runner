@@ -4,7 +4,7 @@ import "testing"
 
 func Test_evaluateExpression(t *testing.T) {
 	type args struct {
-		condition ConditionObject
+		condition *ConditionObject
 		variables []*VariableObject
 	}
 	tests := []struct {
@@ -14,7 +14,7 @@ func Test_evaluateExpression(t *testing.T) {
 		wantErr    bool
 	}{
 		{name: "Eval_false",
-			args: args{condition: ConditionObject{
+			args: args{condition: &ConditionObject{
 				ConditionOnVariable: "age",
 				ConditionalOperator: ">",
 				ConditionalValue:    "10",
@@ -22,7 +22,7 @@ func Test_evaluateExpression(t *testing.T) {
 			wantErr:    false,
 			wantStatus: false},
 		{name: "eval_true",
-			args: args{condition: ConditionObject{
+			args: args{condition: &ConditionObject{
 				//ConditionType:       "",
 				ConditionOnVariable: "age",
 				ConditionalOperator: ">",
@@ -31,7 +31,7 @@ func Test_evaluateExpression(t *testing.T) {
 			wantErr:    false,
 			wantStatus: true},
 		{name: "Eval_true_date",
-			args: args{condition: ConditionObject{
+			args: args{condition: &ConditionObject{
 				ConditionOnVariable: "today",
 				ConditionalOperator: ">",
 				ConditionalValue:    "Tue Apr 10 13:55:21 IST 2022",
@@ -39,12 +39,12 @@ func Test_evaluateExpression(t *testing.T) {
 			wantErr:    false,
 			wantStatus: true},
 		{name: "Eval_false_date",
-			args: args{condition: ConditionObject{
+			args: args{condition: &ConditionObject{
 				//ConditionType:       "",
 				ConditionOnVariable: "today",
-				ConditionalOperator: ">",
+				ConditionalOperator: "<",
 				ConditionalValue:    "'Tue Apr 10 13:55:21 IST 2022'",
-			}, variables: []*VariableObject{{Name: "today", Value: "Tue Apr 8 13:55:21 IST 2022", Format: DATE}}},
+			}, variables: []*VariableObject{{Name: "today", Value: "'Tue Apr 8 13:55:21 IST 2022'", Format: DATE}}},
 			wantErr:    false,
 			wantStatus: false},
 	}

@@ -7,25 +7,59 @@ import (
 )
 
 type ConditionObject struct {
-	ConditionType            string `json:"conditionType"`       //TRIGGER, SKIP, SUCCESS, FAILURE
-	ConditionOnVariable      string `json:"conditionOnVariable"` //name of variable
-	ConditionalOperator      string `json:"conditionalOperator"`
-	ConditionalValue         string `json:"conditionalValue"`
+	ConditionType            ConditionType `json:"conditionType"`       //TRIGGER, SKIP, SUCCESS, FAILURE
+	ConditionOnVariable      string        `json:"conditionOnVariable"` //name of variable
+	ConditionalOperator      string        `json:"conditionalOperator"`
+	ConditionalValue         string        `json:"conditionalValue"`
 	typecastConditionalValue interface{}
 }
 
-func evaluateExpression(condition ConditionObject, variables []*VariableObject) (status bool, err error) {
+func shouldTriggerStage(conditions []*ConditionObject, variables []*VariableObject) (bool, error) {
+	conditionType := conditions[0].ConditionType //assuming list has min 1
+	var status bool
+	for _, condition := range conditions {
+		result, err := evaluateExpression(condition, variables)
+		if err != nil {
+			return false, err
+		}
+		status = status && result
+	}
+	if conditionType == TRIGGER {
+		return status, nil // trigger if all success
+	} else {
+		return !status, nil //skip if all ture
+	}
+}
+
+func stageIsSuccess(conditions []*ConditionObject, variables []*VariableObject) (bool, error) {
+	conditionType := conditions[0].ConditionType //assuming list has min 1
+	var status bool
+	for _, condition := range conditions {
+		result, err := evaluateExpression(condition, variables)
+		if err != nil {
+			return false, err
+		}
+		status = status && result
+	}
+	if conditionType == SUCCESS {
+		return status, nil // success if all success
+	} else {
+		return !status, nil //fail if all success
+	}
+}
+
+func evaluateExpression(condition *ConditionObject, variables []*VariableObject) (status bool, err error) {
 	variableMap := make(map[string]*VariableObject)
 	for _, variable := range variables {
 		variableMap[variable.Name] = variable
 	}
 	variableOperand := variableMap[condition.ConditionOnVariable]
-	if variableOperand.DeducedValue == nil {
+	if variableOperand.TypedValue == nil {
 		converted, err := typeConverter(variableOperand.Value, variableOperand.Format)
 		if err != nil {
 			return false, err
 		}
-		variableOperand.DeducedValue = converted
+		variableOperand.TypedValue = converted
 	}
 	refOperand, err := typeConverter(condition.ConditionalValue, variableOperand.Format)
 	if err != nil {
@@ -36,7 +70,7 @@ func evaluateExpression(condition ConditionObject, variables []*VariableObject) 
 		return false, err
 	}
 	parameters := make(map[string]interface{}, 8)
-	parameters["variableOperand"] = variableOperand.DeducedValue
+	parameters["variableOperand"] = variableOperand.TypedValue
 	parameters["refOperand"] = refOperand
 	result, err := expression.Evaluate(parameters)
 	if err != nil {

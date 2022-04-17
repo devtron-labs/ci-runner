@@ -82,30 +82,73 @@ func (d ExecutorType) String() string {
 	return [...]string{"CONTAINER_IMAGE", "SHELL"}[d]
 }
 
-type ReferenceVariableStage int
+type VariableType int
 
 const (
-	PREE_CI ReferenceVariableStage = iota
-	POST_CI
+	VALUE VariableType = iota
+	REF_PREE_CI
+	REF_POST_CI
+	REF_GLOBAL
 )
 
-func (d ReferenceVariableStage) ValueOf(referenceVariableStage string) ReferenceVariableStage {
-	if referenceVariableStage == "PREE_CI" {
-		return PREE_CI
-	} else if referenceVariableStage == "POST_CI" {
-		return POST_CI
+func (d VariableType) ValueOf(variableType string) VariableType {
+	if variableType == "VALUE" {
+		return VALUE
+	} else if variableType == "REF_PREE_CI" {
+		return REF_PREE_CI
+	} else if variableType == "REF_POST_CI" {
+		return REF_POST_CI
+	} else if variableType == "REF_GLOBAL" {
+		return REF_GLOBAL
 	}
-	return PREE_CI
+	return VALUE
+}
+func (d VariableType) String() string {
+	return [...]string{"VALUE", "REF_PREE_CI", "REF_POST_CI", "REF_GLOBAL"}[d]
 }
 
 type VariableObject struct {
 	Name   string `json:"name"`
 	Format Format `json:"format"`
 	//only for input type
-	Value                      string                 `json:"value"`
-	GlobalVarName              string                 `json:"globalVarName"`
-	ReferenceVariableName      string                 `json:"referenceVariableName"`
-	ReferenceVariableStage     ReferenceVariableStage `json:"referenceVariableStage"`
-	ReferenceVariableStepIndex int                    `json:"referenceVariableStepIndex"`
-	DeducedValue               interface{}            `json:"-"` //typeCased and deduced
+	Value string `json:"value"`
+	//	GlobalVarName              string       `json:"globalVarName"`
+	ReferenceVariableName      string       `json:"referenceVariableName"`
+	VariableType               VariableType `json:"variableType"`
+	ReferenceVariableStepIndex int          `json:"referenceVariableStepIndex"`
+	TypedValue                 interface{}  `json:"-"` //typeCased and deduced
+}
+
+func (v *VariableObject) TypeCheck() error {
+	typedValue, err := typeConverter(v.Value, v.Format)
+	if err != nil {
+		return err
+	}
+	v.TypedValue = typedValue
+	return nil
+}
+
+type ConditionType int
+
+const (
+	TRIGGER = iota
+	SKIP
+	SUCCESS
+	FAILURE
+)
+
+func (d ConditionType) ValueOf(executorType string) ConditionType {
+	if executorType == "TRIGGER" {
+		return TRIGGER
+	} else if executorType == "SKIP" {
+		return SKIP
+	} else if executorType == "SUCCESS" {
+		return SUCCESS
+	} else if executorType == "FAILURE" {
+		return FAILURE
+	}
+	return SUCCESS
+}
+func (d ConditionType) String() string {
+	return [...]string{"TRIGGER", "SKIP", "SUCCESS", "FAILURE"}[d]
 }
