@@ -90,7 +90,7 @@ func Test_buildDockerRunCommand(t *testing.T) {
 				ExposedPorts:        map[int]int{80: 8080},
 			}},
 			wantErr: false,
-			want:    "docker run \\\n--env-file /tmp/ci-test/abc.env \\\n-v /tmp/code-location/_entry.sh:/devtron_script/_entry.sh \\\n-v /tmp/ci-test/_env.out:/devtron_script/_out.env \\\n-v /tmp/code-location:/tmp/code-mount-location \\\n-v /src:/des \\\n-v /tmp/custom-script-location:/tmp/custom-script-location \\\n-p 80:8080 \\\nalpine:latest \\\n/bin/sh /devtron_script/_entry.sh\n",
+			want:    "docker run \\\n--env-file /tmp/ci-test/abc.env \\\n-v /tmp/code-location/_entry.sh:/devtron_script/_entry.sh \\\n-v /tmp/ci-test/_env.out:/devtron_script/_out.env \\\n-v /tmp/code-location:/tmp/code-mount-location \\\n-v /src:/des \\\n-v /tmp/custom-script-location:/tmp/script-mount-location \\\n-p 80:8080 \\\nalpine:latest \\\n/bin/sh /devtron_script/_entry.sh\n",
 		},
 		{name: "all_multi",
 			args: args{executionConf: &executionConf{
@@ -104,7 +104,7 @@ func Test_buildDockerRunCommand(t *testing.T) {
 				ExposedPorts:        map[int]int{80: 8080, 90: 9090},
 			}},
 			wantErr: false,
-			want:    "docker run \\\n--env-file /tmp/ci-test/abc.env \\\n-v /tmp/code-location/_entry.sh:/devtron_script/_entry.sh \\\n-v /tmp/ci-test/_env.out:/devtron_script/_out.env \\\n-v /tmp/code-location:/tmp/code-mount-location \\\n-v /src:/des \\\n-v /src2:/des2 \\\n-v /tmp/custom-script-location:/tmp/custom-script-location \\\n-p 80:8080 \\\n-p 90:9090 \\\nalpine:latest \\\n/bin/sh /devtron_script/_entry.sh\n",
+			want:    "docker run \\\n--env-file /tmp/ci-test/abc.env \\\n-v /tmp/code-location/_entry.sh:/devtron_script/_entry.sh \\\n-v /tmp/ci-test/_env.out:/devtron_script/_out.env \\\n-v /tmp/code-location:/tmp/code-mount-location \\\n-v /src:/des \\\n-v /src2:/des2 \\\n-v /tmp/custom-script-location:/tmp/script-mount-location \\\n-p 80:8080 \\\n-p 90:9090 \\\nalpine:latest \\\n/bin/sh /devtron_script/_entry.sh\n",
 		},
 	}
 	for _, tt := range tests {

@@ -75,7 +75,26 @@ func RunCiSteps(stageType string, req *CiRequest, globalEnvironmentVariables map
 				}
 				stageOutputVarsFinal = stageOutputVars
 			} else {
+				executionConf := &executionConf{
+					Script:            preciStage.Script, //TODO write script to a file
+					EnvInputVars:      scriptEnvs,
+					ExposedPorts:      preciStage.ExposedPorts,
+					OutputVars:        outVars,
+					DockerImage:       preciStage.DockerImage,
+					command:           preciStage.Command,
+					args:              preciStage.Args,
+					CustomScriptMount: preciStage.CustomScriptMount,
+					SourceCodeMount:   preciStage.SourceCodeMount, //TODO add code disk location
+					ExtraVolumeMounts: preciStage.ExtraVolumeMounts,
 
+					scriptFileName: fmt.Sprintf("%s-%d", stageType, i),
+					workDirectory:  output_path,
+				}
+				stageOutputVars, err := RunScriptsInDocker(executionConf)
+				if err != nil {
+					return nil, nil, err
+				}
+				stageOutputVarsFinal = stageOutputVars
 			}
 		} else if preciStage.StepType == STEP_TYPE_REF_PLUGIN {
 

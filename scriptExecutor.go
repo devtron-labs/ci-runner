@@ -202,7 +202,7 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 -v {{.SrcPath}}:{{.DstPath}} \
 {{end}}
 {{- if .CustomScriptMount -}}
--v {{ .CustomScriptMount.SrcPath}}:{{.CustomScriptMount.SrcPath}} \
+-v {{ .CustomScriptMount.SrcPath}}:{{.CustomScriptMount.DstPath}} \
 {{- end}}
 {{ range $hostPort, $ContainerPort := .ExposedPorts -}}
 -p {{$hostPort}}:{{$ContainerPort}} \
