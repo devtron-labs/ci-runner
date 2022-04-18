@@ -27,19 +27,15 @@ const (
 	STEP_TYPE_POST = "POST"
 )
 
-func RunCiSteps(stageType string, req *CiRequest, globalEnvironmentVariables map[string]string, preeCiStageVariable map[int]map[string]*VariableObject) (preeCiStageVariableOut map[int]map[string]*VariableObject, postCiStageVariable map[int]map[string]*VariableObject, err error) {
-	var ciSteps []*StepObject
+func RunCiSteps(stageType string, steps []*StepObject, refPlugins []*RefPluginObject, globalEnvironmentVariables map[string]string, preeCiStageVariable map[int]map[string]*VariableObject) (preeCiStageVariableOut map[int]map[string]*VariableObject, postCiStageVariable map[int]map[string]*VariableObject, err error) {
 	if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
-		ciSteps = req.PostCiSteps
-	} else {
-		ciSteps = req.PreCiSteps
 	}
 	refStageMap := make(map[int][]*StepObject)
-	for _, ref := range req.RefPlugins {
+	for _, ref := range refPlugins {
 		refStageMap[ref.Id] = ref.Steps
 	}
-	for i, preciStage := range ciSteps {
+	for i, preciStage := range steps {
 		vars, err := deduceVariables(preciStage.InputVars, globalEnvironmentVariables, preeCiStageVariable, postCiStageVariable)
 		if err != nil {
 			return nil, nil, err
@@ -97,7 +93,12 @@ func RunCiSteps(stageType string, req *CiRequest, globalEnvironmentVariables map
 				stageOutputVarsFinal = stageOutputVars
 			}
 		} else if preciStage.StepType == STEP_TYPE_REF_PLUGIN {
-
+			steps := refStageMap[preciStage.RefPluginId]
+			//FIXME: sdcsdc
+			RunCiSteps(stageType, steps, refPlugins, globalEnvironmentVariables, nil)
+			//manupulate pree and post variables
+			// artifact path
+			//
 		} else {
 			return nil, nil, fmt.Errorf("step Type :%s not supported", preciStage.StepType)
 		}
