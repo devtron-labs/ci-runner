@@ -52,13 +52,13 @@ const (
 )
 
 func (d Format) ValuesOf(format string) (Format, error) {
-	if format == "NUMBER" {
+	if format == "NUMBER" || format == "number" {
 		return NUMBER, nil
-	} else if format == "BOOL" {
+	} else if format == "BOOL" || format == "bool" {
 		return BOOL, nil
-	} else if format == "STRING" {
+	} else if format == "STRING" || format == "string" {
 		return STRING, nil
-	} else if format == "DATE" {
+	} else if format == "DATE" || format == "date" {
 		return DATE, nil
 	}
 	return STRING, fmt.Errorf("invalid Format: %s", format)
