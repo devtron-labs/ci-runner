@@ -92,8 +92,8 @@ set -o pipefail
 }
 
 type MountPath struct {
-	SrcPath string
-	DstPath string
+	SrcPath string `json:"sourcePath"`
+	DstPath string `json:"destinationPath"`
 }
 type executionConf struct {
 	Script            string
