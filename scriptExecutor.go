@@ -42,7 +42,10 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 	}
 	//add sysytem env variable
 	for k, v := range getSystemEnvVariables() {
-		envInputVars[k] = v
+		//add only when not overriden by user
+		if _, ok := envInputVars[k]; !ok {
+			envInputVars[k] = v
+		}
 	}
 	var inputEnvironmentVariable []string
 	for k, v := range envInputVars {
