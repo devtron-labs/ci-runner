@@ -125,7 +125,6 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	executionConf.EntryScriptFileName = entryScriptFileName
 	executionConf.EnvOutFileName = envOutFileName
 
-	fmt.Println(entryScriptFileName, envOutFileName)
 	err := godotenv.Write(executionConf.EnvInputVars, envInputFileName)
 	if err != nil {
 		log.Println(devtron, err)
@@ -205,7 +204,7 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 {{- if .SourceCodeMount }}
 -v {{.SourceCodeMount.SrcPath}}:{{.SourceCodeMount.DstPath}} \
 {{- end}}
-{{range .ExtraVolumeMounts -}}
+{{- range .ExtraVolumeMounts -}}
 -v {{.SrcPath}}:{{.DstPath}} \
 {{end}}
 {{- if .CustomScriptMount -}}
