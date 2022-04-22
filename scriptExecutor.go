@@ -21,11 +21,6 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 		return nil, err
 	}
 	//--------------
-	err = os.MkdirAll(workDirectory, os.ModePerm|os.ModeDir)
-	if err != nil {
-		log.Println(devtron, err)
-		return nil, err
-	}
 	scriptPath := filepath.Join(workDirectory, scriptFileName)
 	file, err := os.Create(scriptPath)
 	if err != nil {

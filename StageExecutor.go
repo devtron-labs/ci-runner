@@ -20,6 +20,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 )
 
 const (
@@ -61,6 +62,12 @@ func RunCiSteps(stageType string, steps []*StepObject, refPlugins []*RefPluginOb
 		for _, outVar := range preciStage.OutputVars {
 			outVars = append(outVars, outVar.Name)
 		}
+		err = os.MkdirAll(output_path, os.ModePerm|os.ModeDir)
+		if err != nil {
+			log.Println(devtron, err)
+			return nil, nil, err
+		}
+
 		var stageOutputVarsFinal map[string]string
 		//---------------------------------------------------------------------------------------------------
 		if preciStage.StepType == STEP_TYPE_INLINE {
