@@ -371,6 +371,15 @@ func getGlobalEnvVariables(cicdRequest *CiCdTriggerEvent) map[string]string {
 	return envs
 }
 
+func getSystemEnvVariables() map[string]string {
+	envKeys := []string{"PATH", "DOCKER_VERSION", "DOCKER_TLS_CERTDIR", "HOSTNAME", "KUBERNETES_PORT", "KUBERNETES_SERVICE_PORT"}
+	envs := make(map[string]string)
+	for _, key := range envKeys {
+		envs[key] = os.Getenv(key)
+	}
+	return envs
+}
+
 func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err error) {
 	artifactUploaded = false
 	err = os.Chdir("/")

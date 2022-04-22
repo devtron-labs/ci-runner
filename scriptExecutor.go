@@ -40,6 +40,10 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 		log.Println(devtron, err)
 		return nil, err
 	}
+	//add sysytem env variable
+	for k, v := range getSystemEnvVariables() {
+		envInputVars[k] = v
+	}
 	var inputEnvironmentVariable []string
 	for k, v := range envInputVars {
 		inputEnvironmentVariable = append(inputEnvironmentVariable, fmt.Sprintf("%s=%s", k, v))
