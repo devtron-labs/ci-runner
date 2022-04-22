@@ -249,7 +249,7 @@ const cdStage = "CD"
 const ImageScannerEndpoint string = "http://image-scanner-new-demo-devtroncd-service.devtroncd:80"
 
 var (
-	output_path = filepath.Join("./process")
+	output_path = filepath.Join("/devtroncd/process")
 	bash_script = filepath.Join("_script.sh")
 )
 
