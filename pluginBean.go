@@ -1,6 +1,9 @@
 package main
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type RefPluginObject struct {
 	Id    int           `json:"id"`
@@ -48,17 +51,17 @@ const (
 	DATE
 )
 
-func (d Format) ValuesOf(format string) Format {
+func (d Format) ValuesOf(format string) (Format, error) {
 	if format == "NUMBER" {
-		return NUMBER
+		return NUMBER, nil
 	} else if format == "BOOL" {
-		return BOOL
+		return BOOL, nil
 	} else if format == "STRING" {
-		return STRING
+		return STRING, nil
 	} else if format == "DATE" {
-		return DATE
+		return DATE, nil
 	}
-	return STRING
+	return STRING, fmt.Errorf("invalid Format: %s", format)
 }
 
 func (d Format) String() string {
@@ -75,7 +78,11 @@ func (t *Format) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	*t = t.ValuesOf(s)
+	format, err := t.ValuesOf(s)
+	if err != nil {
+		return err
+	}
+	*t = format
 	return nil
 }
 
@@ -87,13 +94,13 @@ const (
 	SHELL
 )
 
-func (d ExecutorType) ValueOf(executorType string) ExecutorType {
+func (d ExecutorType) ValueOf(executorType string) (ExecutorType, error) {
 	if executorType == "CONTAINER_IMAGE" {
-		return CONTAINER_IMAGE
+		return CONTAINER_IMAGE, nil
 	} else if executorType == "SHELL" {
-		return SHELL
+		return SHELL, nil
 	}
-	return SHELL
+	return SHELL, fmt.Errorf("invalid executorType:  %s", executorType)
 }
 func (d ExecutorType) String() string {
 	return [...]string{"CONTAINER_IMAGE", "SHELL"}[d]
@@ -108,7 +115,11 @@ func (t *ExecutorType) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	*t = t.ValueOf(s)
+	execType, err := t.ValueOf(s)
+	if err != nil {
+		return err
+	}
+	*t = execType
 	return nil
 }
 
@@ -123,19 +134,19 @@ const (
 	REF_PLUGIN
 )
 
-func (d VariableType) ValueOf(variableType string) VariableType {
+func (d VariableType) ValueOf(variableType string) (VariableType, error) {
 	if variableType == "VALUE" {
-		return VALUE
+		return VALUE, nil
 	} else if variableType == "REF_PRE_CI" {
-		return REF_PRE_CI
+		return REF_PRE_CI, nil
 	} else if variableType == "REF_POST_CI" {
-		return REF_POST_CI
+		return REF_POST_CI, nil
 	} else if variableType == "REF_GLOBAL" {
-		return REF_GLOBAL
+		return REF_GLOBAL, nil
 	} else if variableType == "REF_PLUGIN" {
-		return REF_PLUGIN
+		return REF_PLUGIN, nil
 	}
-	return VALUE
+	return VALUE, fmt.Errorf("invalid variableType %s", variableType)
 }
 func (d VariableType) String() string {
 	return [...]string{"VALUE", "REF_PRE_CI", "REF_POST_CI", "REF_GLOBAL", "REF_PLUGIN"}[d]
@@ -150,7 +161,11 @@ func (t *VariableType) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	*t = t.ValueOf(s)
+	variableType, err := t.ValueOf(s)
+	if err != nil {
+		return err
+	}
+	*t = variableType
 	return nil
 }
 
@@ -186,17 +201,17 @@ const (
 	FAILURE
 )
 
-func (d ConditionType) ValueOf(executorType string) ConditionType {
+func (d ConditionType) ValueOf(executorType string) (ConditionType, error) {
 	if executorType == "TRIGGER" {
-		return TRIGGER
+		return TRIGGER, nil
 	} else if executorType == "SKIP" {
-		return SKIP
+		return SKIP, nil
 	} else if executorType == "SUCCESS" {
-		return SUCCESS
+		return SUCCESS, nil
 	} else if executorType == "FAILURE" {
-		return FAILURE
+		return FAILURE, nil
 	}
-	return SUCCESS
+	return SUCCESS, fmt.Errorf("invalid executorType: %s", executorType)
 }
 func (d ConditionType) String() string {
 	return [...]string{"TRIGGER", "SKIP", "SUCCESS", "FAILURE"}[d]
@@ -212,7 +227,11 @@ func (t *ConditionType) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	*t = t.ValueOf(s)
+	executorType, err := t.ValueOf(s)
+	if err != nil {
+		return err
+	}
+	*t = executorType
 	return nil
 }
 
