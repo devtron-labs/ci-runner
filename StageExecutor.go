@@ -79,7 +79,7 @@ func RunCiSteps(stageType string, steps []*StepObject, refPlugins []*RefPluginOb
 				stageOutputVarsFinal = stageOutputVars
 			} else {
 				executionConf := &executionConf{
-					Script:            preciStage.Script, //TODO write script to a file
+					Script:            preciStage.Script,
 					EnvInputVars:      scriptEnvs,
 					ExposedPorts:      preciStage.ExposedPorts,
 					OutputVars:        outVars,
@@ -87,11 +87,14 @@ func RunCiSteps(stageType string, steps []*StepObject, refPlugins []*RefPluginOb
 					command:           preciStage.Command,
 					args:              preciStage.Args,
 					CustomScriptMount: preciStage.CustomScriptMount,
-					SourceCodeMount:   preciStage.SourceCodeMount, //TODO add code disk location
+					SourceCodeMount:   preciStage.SourceCodeMount,
 					ExtraVolumeMounts: preciStage.ExtraVolumeMounts,
 
 					scriptFileName: fmt.Sprintf("%s-%d", stageType, i),
 					workDirectory:  output_path,
+				}
+				if executionConf.SourceCodeMount != nil {
+					executionConf.SourceCodeMount.SrcPath = workingDir
 				}
 				stageOutputVars, err := RunScriptsInDocker(executionConf)
 				if err != nil {
