@@ -114,6 +114,8 @@ type CiRequest struct {
 	PreCiSteps                  []*StepObject                `json:"preCiSteps"`
 	PostCiSteps                 []*StepObject                `json:"postCiSteps"`
 	RefPlugins                  []*RefPluginObject           `json:"refPlugins"`
+	AppName                     string                       `json:"appName"`
+	TriggerByAuthor             string                       `json:"triggerByAuthor"`
 }
 
 const BLOB_STORAGE_AZURE = "AZURE"
@@ -357,11 +359,13 @@ func collectAndUploadArtifact(ciRequest *CiRequest) error {
 
 func getGlobalEnvVariables(cicdRequest *CiCdTriggerEvent) map[string]string {
 	envs := make(map[string]string)
-	//TODO ADD MORE env variable
+	envs["WORKING_DIRECTORY"] = workingDir
 	if cicdRequest.Type == ciEvent {
 		envs["DOCKER_IMAGE_TAG"] = cicdRequest.CiRequest.DockerImageTag
 		envs["DOCKER_REPOSITORY"] = cicdRequest.CiRequest.DockerRepository
 		envs["DOCKER_REGISTRY_URL"] = cicdRequest.CiRequest.DockerRegistryURL
+		envs["APP_NAME"] = cicdRequest.CiRequest.AppName
+		envs["TRIGGER_BY_AUTHOR"] = cicdRequest.CiRequest.TriggerByAuthor
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
 		for k, v := range cicdRequest.CdRequest.ExtraEnvironmentVariables {
