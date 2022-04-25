@@ -166,7 +166,22 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		log.Println(err)
 		return "", err
 	}
+	dest, err := buildDockerImagePath(ciRequest)
+	if err != nil {
+		return "", err
+	}
+	dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
+	log.Println(" -----> " + dockerTag)
+	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
+	err = RunCommand(dockerTagCMD)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	return dest, nil
+}
 
+func buildDockerImagePath(ciRequest *CiRequest) (string, error) {
 	dest := ""
 	if DOCKER_REGISTRY_TYPE_DOCKERHUB == ciRequest.DockerRegistryType {
 		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
@@ -179,15 +194,6 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		u.Path = path.Join(u.Path, "/", ciRequest.DockerRepository)
 		dockerRegistryURL := u.Host + u.Path
 		dest = dockerRegistryURL + ":" + ciRequest.DockerImageTag
-	}
-
-	dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
-	log.Println(" -----> " + dockerTag)
-	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
-	err = RunCommand(dockerTagCMD)
-	if err != nil {
-		log.Println(err)
-		return "", err
 	}
 	return dest, nil
 }

@@ -357,22 +357,27 @@ func collectAndUploadArtifact(ciRequest *CiRequest) error {
 	return UploadArtifact(artifactFiles, ciRequest.CiArtifactLocation, ciRequest.CloudProvider, ciRequest.MinioEndpoint, ciRequest.AzureBlobConfig)
 }
 
-func getGlobalEnvVariables(cicdRequest *CiCdTriggerEvent) map[string]string {
+func getGlobalEnvVariables(cicdRequest *CiCdTriggerEvent) (map[string]string, error) {
 	envs := make(map[string]string)
 	envs["WORKING_DIRECTORY"] = workingDir
 	if cicdRequest.Type == ciEvent {
+		image, err := buildDockerImagePath(cicdRequest.CiRequest)
+		if err != nil {
+			return nil, err
+		}
 		envs["DOCKER_IMAGE_TAG"] = cicdRequest.CiRequest.DockerImageTag
 		envs["DOCKER_REPOSITORY"] = cicdRequest.CiRequest.DockerRepository
 		envs["DOCKER_REGISTRY_URL"] = cicdRequest.CiRequest.DockerRegistryURL
 		envs["APP_NAME"] = cicdRequest.CiRequest.AppName
 		envs["TRIGGER_BY_AUTHOR"] = cicdRequest.CiRequest.TriggerByAuthor
+		envs["DOCKER_IMAGE"] = image
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
 		for k, v := range cicdRequest.CdRequest.ExtraEnvironmentVariables {
 			envs[k] = v
 		}
 	}
-	return envs
+	return envs, nil
 }
 
 func getSystemEnvVariables() map[string]string {
@@ -419,8 +424,10 @@ func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err erro
 	// Start docker daemon
 	log.Println(devtron, " docker-build")
 	StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert, ciCdRequest.CiRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CiRequest.DefaultAddressPoolSize)
-	scriptEnvs := getGlobalEnvVariables(ciCdRequest)
-
+	scriptEnvs, err := getGlobalEnvVariables(ciCdRequest)
+	if err != nil {
+		return artifactUploaded, err
+	}
 	// Get devtron-ci yaml
 	yamlLocation := ciCdRequest.CiRequest.DockerFileLocation[:strings.LastIndex(ciCdRequest.CiRequest.DockerFileLocation, "/")+1]
 	log.Println(devtron, "devtron-ci yaml location ", yamlLocation)
@@ -554,7 +561,10 @@ func runCDStages(cicdRequest *CiCdTriggerEvent) error {
 		tasks = append(tasks, t.AfterTasks...)
 	}
 
-	scriptEnvs := getGlobalEnvVariables(cicdRequest)
+	scriptEnvs, err := getGlobalEnvVariables(cicdRequest)
+	if err != nil {
+		return err
+	}
 	err = RunCdStageTasks(tasks, scriptEnvs)
 	if err != nil {
 		return err
