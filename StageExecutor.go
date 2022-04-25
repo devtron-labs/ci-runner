@@ -20,6 +20,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 )
 
 const (
@@ -61,6 +62,12 @@ func RunCiSteps(stageType string, steps []*StepObject, refPlugins []*RefPluginOb
 		for _, outVar := range preciStage.OutputVars {
 			outVars = append(outVars, outVar.Name)
 		}
+		err = os.MkdirAll(output_path, os.ModePerm|os.ModeDir)
+		if err != nil {
+			log.Println(devtron, err)
+			return nil, nil, err
+		}
+
 		var stageOutputVarsFinal map[string]string
 		//---------------------------------------------------------------------------------------------------
 		if preciStage.StepType == STEP_TYPE_INLINE {
@@ -72,7 +79,7 @@ func RunCiSteps(stageType string, steps []*StepObject, refPlugins []*RefPluginOb
 				stageOutputVarsFinal = stageOutputVars
 			} else {
 				executionConf := &executionConf{
-					Script:            preciStage.Script, //TODO write script to a file
+					Script:            preciStage.Script,
 					EnvInputVars:      scriptEnvs,
 					ExposedPorts:      preciStage.ExposedPorts,
 					OutputVars:        outVars,
@@ -80,11 +87,14 @@ func RunCiSteps(stageType string, steps []*StepObject, refPlugins []*RefPluginOb
 					command:           preciStage.Command,
 					args:              preciStage.Args,
 					CustomScriptMount: preciStage.CustomScriptMount,
-					SourceCodeMount:   preciStage.SourceCodeMount, //TODO add code disk location
+					SourceCodeMount:   preciStage.SourceCodeMount,
 					ExtraVolumeMounts: preciStage.ExtraVolumeMounts,
 
 					scriptFileName: fmt.Sprintf("%s-%d", stageType, i),
 					workDirectory:  output_path,
+				}
+				if executionConf.SourceCodeMount != nil {
+					executionConf.SourceCodeMount.SrcPath = workingDir
 				}
 				stageOutputVars, err := RunScriptsInDocker(executionConf)
 				if err != nil {

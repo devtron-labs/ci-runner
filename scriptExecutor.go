@@ -21,11 +21,6 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 		return nil, err
 	}
 	//--------------
-	err = os.MkdirAll(workDirectory, os.ModePerm|os.ModeDir)
-	if err != nil {
-		log.Println(devtron, err)
-		return nil, err
-	}
 	scriptPath := filepath.Join(workDirectory, scriptFileName)
 	file, err := os.Create(scriptPath)
 	if err != nil {
@@ -92,8 +87,8 @@ set -o pipefail
 }
 
 type MountPath struct {
-	SrcPath string
-	DstPath string
+	SrcPath string `json:"sourcePath"`
+	DstPath string `json:"destinationPath"`
 }
 type executionConf struct {
 	Script            string
@@ -120,12 +115,20 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	entryScriptFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_entry.sh", executionConf.scriptFileName))
 	envOutFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_out.env", executionConf.scriptFileName))
 	executionConf.RunCommandFileName = filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_run.sh", executionConf.scriptFileName))
+	if executionConf.CustomScriptMount != nil && len(executionConf.Script) > 0 {
+		customScriptMountFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_user_custom_script.sh", executionConf.scriptFileName))
+		err := os.WriteFile(customScriptMountFileName, []byte(executionConf.Script), 0644) //TODO check mode with entry script
+		if err != nil {
+			log.Println(devtron, err)
+			return nil, err
+		}
+		executionConf.CustomScriptMount.SrcPath = customScriptMountFileName
+	}
 
 	executionConf.EnvInputFileName = envInputFileName
 	executionConf.EntryScriptFileName = entryScriptFileName
 	executionConf.EnvOutFileName = envOutFileName
 
-	fmt.Println(entryScriptFileName, envOutFileName)
 	err := godotenv.Write(executionConf.EnvInputVars, envInputFileName)
 	if err != nil {
 		log.Println(devtron, err)
@@ -141,6 +144,7 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		log.Println(devtron, err)
 		return nil, err
 	}
+
 	err = os.WriteFile(executionConf.EnvOutFileName, []byte(""), 0644) //TODO check mode with entry script
 	if err != nil {
 		log.Println(devtron, err)
@@ -205,7 +209,7 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 {{- if .SourceCodeMount }}
 -v {{.SourceCodeMount.SrcPath}}:{{.SourceCodeMount.DstPath}} \
 {{- end}}
-{{range .ExtraVolumeMounts -}}
+{{- range .ExtraVolumeMounts -}}
 -v {{.SrcPath}}:{{.DstPath}} \
 {{end}}
 {{- if .CustomScriptMount -}}
