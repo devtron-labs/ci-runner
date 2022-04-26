@@ -148,7 +148,7 @@ func populateOutVars(outData map[string]string, desired []*VariableObject) ([]*V
 			log.Printf("%s not present\n", d.Name)
 			continue
 		}
-		typedVal, err := typeConverter(d.Value, d.Format)
+		typedVal, err := typeConverter(value, d.Format)
 		if err != nil {
 			log.Println(err)
 			return nil, err

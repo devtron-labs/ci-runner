@@ -16,7 +16,7 @@ type ConditionObject struct {
 
 func shouldTriggerStage(conditions []*ConditionObject, variables []*VariableObject) (bool, error) {
 	conditionType := conditions[0].ConditionType //assuming list has min 1
-	var status bool
+	status := true
 	for _, condition := range conditions {
 		result, err := evaluateExpression(condition, variables)
 		if err != nil {
@@ -33,7 +33,7 @@ func shouldTriggerStage(conditions []*ConditionObject, variables []*VariableObje
 
 func stageIsSuccess(conditions []*ConditionObject, variables []*VariableObject) (bool, error) {
 	conditionType := conditions[0].ConditionType //assuming list has min 1
-	var status bool
+	status := true
 	for _, condition := range conditions {
 		result, err := evaluateExpression(condition, variables)
 		if err != nil {
