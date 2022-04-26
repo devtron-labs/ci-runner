@@ -54,7 +54,7 @@ const (
 func (d Format) ValuesOf(format string) (Format, error) {
 	if format == "NUMBER" || format == "number" {
 		return NUMBER, nil
-	} else if format == "BOOL" || format == "bool" {
+	} else if format == "BOOL" || format == "bool" || format == "boolean" {
 		return BOOL, nil
 	} else if format == "STRING" || format == "string" {
 		return STRING, nil
