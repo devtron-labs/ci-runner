@@ -108,6 +108,7 @@ func RunCiSteps(stageType string, steps []*StepObject, refPlugins []*RefPluginOb
 			preCiStageVariablePlugin := make(map[int]map[string]*VariableObject)
 			_, _, err := RunCiSteps(stageType, steps, refPlugins, globalEnvironmentVariables, preCiStageVariablePlugin)
 			if err != nil {
+				fmt.Println(err)
 				return nil, nil, err
 			}
 			//manupulate pree and post variables
