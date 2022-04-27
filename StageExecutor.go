@@ -105,7 +105,8 @@ func RunCiSteps(stageType string, steps []*StepObject, refPlugins []*RefPluginOb
 		} else if preciStage.StepType == STEP_TYPE_REF_PLUGIN {
 			steps := refStageMap[preciStage.RefPluginId]
 			//FIXME: sdcsdc
-			RunCiSteps(stageType, steps, refPlugins, globalEnvironmentVariables, nil)
+			preCiStageVariablePlugin := make(map[int]map[string]*VariableObject)
+			RunCiSteps(stageType, steps, refPlugins, globalEnvironmentVariables, preCiStageVariablePlugin)
 			//manupulate pree and post variables
 			// artifact path
 			//
