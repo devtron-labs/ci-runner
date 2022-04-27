@@ -209,15 +209,15 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 {{- if .SourceCodeMount }}
 -v {{.SourceCodeMount.SrcPath}}:{{.SourceCodeMount.DstPath}} \
 {{- end}}
-{{- range .ExtraVolumeMounts -}}
+{{- range .ExtraVolumeMounts }}
 -v {{.SrcPath}}:{{.DstPath}} \
-{{end}}
+{{- end}}
 {{- if .CustomScriptMount }}
 -v {{ .CustomScriptMount.SrcPath}}:{{.CustomScriptMount.DstPath}} \
 {{- end}}
-{{ range $hostPort, $ContainerPort := .ExposedPorts -}}
+{{- range $hostPort, $ContainerPort := .ExposedPorts }}
 -p {{$hostPort}}:{{$ContainerPort}} \
-{{ end }}
+{{- end }}
 {{- .DockerImage}} \
 /bin/sh /devtron_script/_entry.sh
 `
