@@ -242,7 +242,7 @@ type PubSubConfig struct {
 const insecure = "insecure"
 const secureWithCert = "secure-with-cert"
 const retryCount = 10
-const workingDir = "/devtroncd"
+const workingDir = "/tmp"
 const devtron = "DEVTRON"
 
 const ciEvent = "CI"
@@ -424,6 +424,7 @@ func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err erro
 	// Start docker daemon
 	log.Println(devtron, " docker-build")
 	StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert, ciCdRequest.CiRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CiRequest.DefaultAddressPoolSize)
+
 	scriptEnvs, err := getGlobalEnvVariables(ciCdRequest)
 	if err != nil {
 		return artifactUploaded, err
@@ -439,7 +440,7 @@ func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err erro
 
 	// run pre artifact processing
 	preeCiStageVariable := make(map[int]map[string]*VariableObject)
-	preeCiStageVariable, _, err = RunCiSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest.PreCiSteps, ciCdRequest.CiRequest.RefPlugins, scriptEnvs, preeCiStageVariable)
+	preeCiStageVariable, err = RunCiSteps(ciCdRequest.CiRequest.PreCiSteps, ciCdRequest.CiRequest.RefPlugins, scriptEnvs, preeCiStageVariable)
 	if err != nil {
 		log.Println(err)
 		return artifactUploaded, err
@@ -454,7 +455,7 @@ func runCIStages(ciCdRequest *CiCdTriggerEvent) (artifactUploaded bool, err erro
 	log.Println(devtron, " /docker-build")
 
 	// run post artifact processing
-	preeCiStageVariable, _, err = RunCiSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest.PostCiSteps, ciCdRequest.CiRequest.RefPlugins, scriptEnvs, preeCiStageVariable)
+	preeCiStageVariable, err = RunCiSteps(ciCdRequest.CiRequest.PostCiSteps, ciCdRequest.CiRequest.RefPlugins, scriptEnvs, preeCiStageVariable)
 	if err != nil {
 		return artifactUploaded, err
 	}
