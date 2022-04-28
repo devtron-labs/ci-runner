@@ -1,3 +1,5 @@
 .idea
 ci-runner
 cirunner
+.vscode
+.env

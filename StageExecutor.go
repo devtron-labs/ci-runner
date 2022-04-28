@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/devtron-labs/ci-runner/helper"
+	"github.com/devtron-labs/ci-runner/util"
 )
 
 const (
@@ -219,22 +222,22 @@ func deduceVariables(desiredVars []*VariableObject, globalVars map[string]string
 
 }
 
-func RunPreDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, taskYaml *TaskYaml) error {
+func RunPreDockerBuildTasks(ciRequest *helper.CiRequest, scriptEnvs map[string]string, taskYaml *helper.TaskYaml) error {
 	//before task
-	beforeTaskMap := make(map[string]*Task)
+	beforeTaskMap := make(map[string]*helper.Task)
 	for i, task := range ciRequest.BeforeDockerBuild {
-		task.runStatus = true
+		task.RunStatus = true
 		beforeTaskMap[task.Name] = task
-		log.Println(devtron, "pre", task)
+		log.Println(util.DEVTRON, "pre", task)
 		//log running cmd
-		logStage(task.Name)
-		_, err := RunScripts(output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs, nil)
+		util.LogStage(task.Name)
+		_, err := RunScripts(util.Output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
 	}
 
-	beforeYamlTasks, err := GetBeforeDockerBuildTasks(ciRequest, taskYaml)
+	beforeYamlTasks, err := helper.GetBeforeDockerBuildTasks(ciRequest, taskYaml)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -247,11 +250,11 @@ func RunPreDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, 
 			continue
 		}
 		beforeTaskMap[task.Name] = task
-		task.runStatus = true
-		log.Println(devtron, "pre - yaml", task)
+		task.RunStatus = true
+		log.Println(util.DEVTRON, "pre - yaml", task)
 		//log running cmd
-		logStage(task.Name)
-		_, err = RunScripts(output_path, fmt.Sprintf("before-yaml-%d", i), task.Script, scriptEnvs, nil)
+		util.LogStage(task.Name)
+		_, err = RunScripts(util.Output_path, fmt.Sprintf("before-yaml-%d", i), task.Script, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
@@ -259,21 +262,21 @@ func RunPreDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, 
 	return nil
 }
 
-func RunPostDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, taskYaml *TaskYaml) error {
-	log.Println(devtron, " docker-build-post-processing")
-	afterTaskMap := make(map[string]*Task)
+func RunPostDockerBuildTasks(ciRequest *helper.CiRequest, scriptEnvs map[string]string, taskYaml *helper.TaskYaml) error {
+	log.Println(util.DEVTRON, " docker-build-post-processing")
+	afterTaskMap := make(map[string]*helper.Task)
 	for i, task := range ciRequest.AfterDockerBuild {
-		task.runStatus = true
+		task.RunStatus = true
 		afterTaskMap[task.Name] = task
-		log.Println(devtron, "post", task)
-		logStage(task.Name)
-		_, err := RunScripts(output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs, nil)
+		log.Println(util.DEVTRON, "post", task)
+		util.LogStage(task.Name)
+		_, err := RunScripts(util.Output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
 	}
 
-	afterYamlTasks, err := GetAfterDockerBuildTasks(ciRequest, taskYaml)
+	afterYamlTasks, err := helper.GetAfterDockerBuildTasks(ciRequest, taskYaml)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -285,11 +288,11 @@ func RunPostDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string,
 			continue
 		}
 		afterTaskMap[task.Name] = task
-		task.runStatus = true
-		log.Println(devtron, "post - yaml", task)
+		task.RunStatus = true
+		log.Println(util.DEVTRON, "post - yaml", task)
 		//log running cmd
-		logStage(task.Name)
-		_, err = RunScripts(output_path, fmt.Sprintf("after-yaml-%d", i), task.Script, scriptEnvs, nil)
+		util.LogStage(task.Name)
+		_, err = RunScripts(util.Output_path, fmt.Sprintf("after-yaml-%d", i), task.Script, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
@@ -297,19 +300,19 @@ func RunPostDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string,
 	return nil
 }
 
-func RunCdStageTasks(tasks []*Task, scriptEnvs map[string]string) error {
-	log.Println(devtron, " cd-stage-processing")
-	taskMap := make(map[string]*Task)
+func RunCdStageTasks(tasks []*helper.Task, scriptEnvs map[string]string) error {
+	log.Println(util.DEVTRON, " cd-stage-processing")
+	taskMap := make(map[string]*helper.Task)
 	for i, task := range tasks {
 		if _, ok := taskMap[task.Name]; ok {
 			log.Println("duplicate task found in yaml, already run so ignoring")
 			continue
 		}
-		task.runStatus = true
+		task.RunStatus = true
 		taskMap[task.Name] = task
-		log.Println(devtron, "stage", task)
-		logStage(task.Name)
-		_, err := RunScripts(output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs, nil)
+		log.Println(util.DEVTRON, "stage", task)
+		util.LogStage(task.Name)
+		_, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
