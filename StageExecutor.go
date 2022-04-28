@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/devtron-labs/ci-runner/helper"
+	"github.com/devtron-labs/ci-runner/util"
 )
 
 const (
@@ -28,12 +31,12 @@ const (
 	STEP_TYPE_POST = "POST"
 )
 
-func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnvironmentVariables map[string]string, preeCiStageVariable map[int]map[string]*VariableObject) (outVars map[int]map[string]*VariableObject, err error) {
+func RunCiSteps(steps []*helper.StepObject, refPlugins []*helper.RefPluginObject, globalEnvironmentVariables map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, err error) {
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
-	stageVariable := make(map[int]map[string]*VariableObject)
-	refStageMap := make(map[int][]*StepObject)
+	stageVariable := make(map[int]map[string]*helper.VariableObject)
+	refStageMap := make(map[int][]*helper.StepObject)
 	for _, ref := range refPlugins {
 		refStageMap[ref.Id] = ref.Steps
 	}
@@ -48,7 +51,7 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 			scriptEnvs[v.Name] = v.Value
 		}
 		if len(preciStage.TriggerSkipConditions) > 0 {
-			shouldTrigger, err := shouldTriggerStage(preciStage.TriggerSkipConditions, preciStage.InputVars)
+			shouldTrigger, err := helper.ShouldTriggerStage(preciStage.TriggerSkipConditions, preciStage.InputVars)
 			if err != nil {
 				log.Println(err)
 				return nil, err
@@ -64,22 +67,22 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 			outVars = append(outVars, outVar.Name)
 		}
 		//cleaning the directory
-		err = os.RemoveAll(output_path)
+		err = os.RemoveAll(util.Output_path)
 		if err != nil {
-			log.Println(devtron, err)
+			log.Println(util.DEVTRON, err)
 			return nil, err
 		}
-		err = os.MkdirAll(output_path, os.ModePerm|os.ModeDir)
+		err = os.MkdirAll(util.Output_path, os.ModePerm|os.ModeDir)
 		if err != nil {
-			log.Println(devtron, err)
+			log.Println(util.DEVTRON, err)
 			return nil, err
 		}
 
 		var stageOutputVarsFinal map[string]string
 		//---------------------------------------------------------------------------------------------------
-		if preciStage.StepType == STEP_TYPE_INLINE {
-			if preciStage.ExecutorType == SHELL {
-				stageOutputVars, err := RunScripts(output_path, fmt.Sprintf("stage-%d", i), preciStage.Script, scriptEnvs, outVars)
+		if preciStage.StepType == helper.STEP_TYPE_INLINE {
+			if preciStage.ExecutorType == helper.SHELL {
+				stageOutputVars, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", i), preciStage.Script, scriptEnvs, outVars)
 				if err != nil {
 					return nil, err
 				}
@@ -98,10 +101,10 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 					ExtraVolumeMounts: preciStage.ExtraVolumeMounts,
 
 					scriptFileName: fmt.Sprintf("stage-%d", i),
-					workDirectory:  output_path,
+					workDirectory:  util.Output_path,
 				}
 				if executionConf.SourceCodeMount != nil {
-					executionConf.SourceCodeMount.SrcPath = workingDir
+					executionConf.SourceCodeMount.SrcPath = util.WORKINGDIR
 				}
 				stageOutputVars, err := RunScriptsInDocker(executionConf)
 				if err != nil {
@@ -109,10 +112,10 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 				}
 				stageOutputVarsFinal = stageOutputVars
 			}
-		} else if preciStage.StepType == STEP_TYPE_REF_PLUGIN {
+		} else if preciStage.StepType == helper.STEP_TYPE_REF_PLUGIN {
 			steps := refStageMap[preciStage.RefPluginId]
 			//FIXME: sdcsdc
-			preCiStageVariablePlugin := make(map[int]map[string]*VariableObject)
+			preCiStageVariablePlugin := make(map[int]map[string]*helper.VariableObject)
 			opt, err := RunCiSteps(steps, refPlugins, globalEnvironmentVariables, preCiStageVariablePlugin)
 			if err != nil {
 				fmt.Println(err)
@@ -133,7 +136,7 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 		}
 		preciStage.OutputVars = finalOutVars
 		if len(preciStage.SuccessFailureConditions) > 0 {
-			success, err := stageIsSuccess(preciStage.SuccessFailureConditions, finalOutVars)
+			success, err := helper.StageIsSuccess(preciStage.SuccessFailureConditions, finalOutVars)
 			if err != nil {
 				return nil, err
 			}
@@ -141,7 +144,7 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 				return nil, fmt.Errorf("stage not success")
 			}
 		}
-		finalOutVarMap := make(map[string]*VariableObject)
+		finalOutVarMap := make(map[string]*helper.VariableObject)
 		for _, out := range preciStage.OutputVars {
 			finalOutVarMap[out.Name] = out
 		}
@@ -150,15 +153,15 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 	return preeCiStageVariable, nil
 }
 
-func populateOutVars(outData map[string]string, desired []*VariableObject) ([]*VariableObject, error) {
-	var finalOutVars []*VariableObject
+func populateOutVars(outData map[string]string, desired []*helper.VariableObject) ([]*helper.VariableObject, error) {
+	var finalOutVars []*helper.VariableObject
 	for _, d := range desired {
 		value := outData[d.Name]
 		if len(value) == 0 {
 			log.Printf("%s not present\n", d.Name)
 			continue
 		}
-		typedVal, err := typeConverter(value, d.Format)
+		typedVal, err := helper.TypeConverter(value, d.Format)
 		if err != nil {
 			log.Println(err)
 			return nil, err
@@ -170,13 +173,13 @@ func populateOutVars(outData map[string]string, desired []*VariableObject) ([]*V
 	return finalOutVars, nil
 }
 
-func deduceVariables(desiredVars []*VariableObject, globalVars map[string]string, preeCiStageVariable map[int]map[string]*VariableObject, postCiStageVariables map[int]map[string]*VariableObject) ([]*VariableObject, error) {
-	var inputVars []*VariableObject
+func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject, postCiStageVariables map[int]map[string]*helper.VariableObject) ([]*helper.VariableObject, error) {
+	var inputVars []*helper.VariableObject
 	for _, desired := range desiredVars {
 		switch desired.VariableType {
-		case VALUE:
+		case helper.VALUE:
 			inputVars = append(inputVars, desired)
-		case REF_PRE_CI:
+		case helper.REF_PRE_CI:
 			if v, found := preeCiStageVariable[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value
@@ -191,7 +194,7 @@ func deduceVariables(desiredVars []*VariableObject, globalVars map[string]string
 			} else {
 				return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
 			}
-		case REF_POST_CI:
+		case helper.REF_POST_CI:
 			if v, found := postCiStageVariables[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value
@@ -206,7 +209,7 @@ func deduceVariables(desiredVars []*VariableObject, globalVars map[string]string
 			} else {
 				return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
 			}
-		case REF_GLOBAL:
+		case helper.REF_GLOBAL:
 			desired.Value = globalVars[desired.ReferenceVariableName]
 			err := desired.TypeCheck()
 			if err != nil {
@@ -219,22 +222,22 @@ func deduceVariables(desiredVars []*VariableObject, globalVars map[string]string
 
 }
 
-func RunPreDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, taskYaml *TaskYaml) error {
+func RunPreDockerBuildTasks(ciRequest *helper.CiRequest, scriptEnvs map[string]string, taskYaml *helper.TaskYaml) error {
 	//before task
-	beforeTaskMap := make(map[string]*Task)
+	beforeTaskMap := make(map[string]*helper.Task)
 	for i, task := range ciRequest.BeforeDockerBuild {
-		task.runStatus = true
+		task.RunStatus = true
 		beforeTaskMap[task.Name] = task
-		log.Println(devtron, "pre", task)
+		log.Println(util.DEVTRON, "pre", task)
 		//log running cmd
-		logStage(task.Name)
-		_, err := RunScripts(output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs, nil)
+		util.LogStage(task.Name)
+		_, err := RunScripts(util.Output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
 	}
 
-	beforeYamlTasks, err := GetBeforeDockerBuildTasks(ciRequest, taskYaml)
+	beforeYamlTasks, err := helper.GetBeforeDockerBuildTasks(ciRequest, taskYaml)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -247,11 +250,11 @@ func RunPreDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, 
 			continue
 		}
 		beforeTaskMap[task.Name] = task
-		task.runStatus = true
-		log.Println(devtron, "pre - yaml", task)
+		task.RunStatus = true
+		log.Println(util.DEVTRON, "pre - yaml", task)
 		//log running cmd
-		logStage(task.Name)
-		_, err = RunScripts(output_path, fmt.Sprintf("before-yaml-%d", i), task.Script, scriptEnvs, nil)
+		util.LogStage(task.Name)
+		_, err = RunScripts(util.Output_path, fmt.Sprintf("before-yaml-%d", i), task.Script, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
@@ -259,21 +262,21 @@ func RunPreDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, 
 	return nil
 }
 
-func RunPostDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string, taskYaml *TaskYaml) error {
-	log.Println(devtron, " docker-build-post-processing")
-	afterTaskMap := make(map[string]*Task)
+func RunPostDockerBuildTasks(ciRequest *helper.CiRequest, scriptEnvs map[string]string, taskYaml *helper.TaskYaml) error {
+	log.Println(util.DEVTRON, " docker-build-post-processing")
+	afterTaskMap := make(map[string]*helper.Task)
 	for i, task := range ciRequest.AfterDockerBuild {
-		task.runStatus = true
+		task.RunStatus = true
 		afterTaskMap[task.Name] = task
-		log.Println(devtron, "post", task)
-		logStage(task.Name)
-		_, err := RunScripts(output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs, nil)
+		log.Println(util.DEVTRON, "post", task)
+		util.LogStage(task.Name)
+		_, err := RunScripts(util.Output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
 	}
 
-	afterYamlTasks, err := GetAfterDockerBuildTasks(ciRequest, taskYaml)
+	afterYamlTasks, err := helper.GetAfterDockerBuildTasks(ciRequest, taskYaml)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -285,11 +288,11 @@ func RunPostDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string,
 			continue
 		}
 		afterTaskMap[task.Name] = task
-		task.runStatus = true
-		log.Println(devtron, "post - yaml", task)
+		task.RunStatus = true
+		log.Println(util.DEVTRON, "post - yaml", task)
 		//log running cmd
-		logStage(task.Name)
-		_, err = RunScripts(output_path, fmt.Sprintf("after-yaml-%d", i), task.Script, scriptEnvs, nil)
+		util.LogStage(task.Name)
+		_, err = RunScripts(util.Output_path, fmt.Sprintf("after-yaml-%d", i), task.Script, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
@@ -297,19 +300,19 @@ func RunPostDockerBuildTasks(ciRequest *CiRequest, scriptEnvs map[string]string,
 	return nil
 }
 
-func RunCdStageTasks(tasks []*Task, scriptEnvs map[string]string) error {
-	log.Println(devtron, " cd-stage-processing")
-	taskMap := make(map[string]*Task)
+func RunCdStageTasks(tasks []*helper.Task, scriptEnvs map[string]string) error {
+	log.Println(util.DEVTRON, " cd-stage-processing")
+	taskMap := make(map[string]*helper.Task)
 	for i, task := range tasks {
 		if _, ok := taskMap[task.Name]; ok {
 			log.Println("duplicate task found in yaml, already run so ignoring")
 			continue
 		}
-		task.runStatus = true
+		task.RunStatus = true
 		taskMap[task.Name] = task
-		log.Println(devtron, "stage", task)
-		logStage(task.Name)
-		_, err := RunScripts(output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs, nil)
+		log.Println(util.DEVTRON, "stage", task)
+		util.LogStage(task.Name)
+		_, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
