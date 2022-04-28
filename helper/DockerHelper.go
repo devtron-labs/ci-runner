@@ -22,7 +22,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/devtron-labs/ci-runner/util"
 	"io"
 	"io/ioutil"
 	"log"
@@ -34,12 +39,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/devtron-labs/ci-runner/util"
 )
 
 func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int) {
@@ -192,14 +191,14 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		log.Println(err)
 		return "", err
 	}
-	dest, err := buildDockerImagePath(ciRequest)
+	dest, err := BuildDockerImagePath(ciRequest)
 	if err != nil {
 		return "", err
 	}
 	dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
 	log.Println(" -----> " + dockerTag)
 	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
-	err = RunCommand(dockerTagCMD)
+	err = util.RunCommand(dockerTagCMD)
 	if err != nil {
 		log.Println(err)
 		return "", err
@@ -207,7 +206,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	return dest, nil
 }
 
-func buildDockerImagePath(ciRequest *CiRequest) (string, error) {
+func BuildDockerImagePath(ciRequest *CiRequest) (string, error) {
 	dest := ""
 	if DOCKER_REGISTRY_TYPE_DOCKERHUB == ciRequest.DockerRegistryType {
 		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag

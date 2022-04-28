@@ -1,6 +1,8 @@
-package main
+package helper
 
-import "testing"
+import (
+	"testing"
+)
 
 func Test_evaluateExpression(t *testing.T) {
 	type args struct {

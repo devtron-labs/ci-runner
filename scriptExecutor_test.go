@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/devtron-labs/ci-runner/helper"
 	"reflect"
 	"testing"
 )
@@ -84,9 +85,9 @@ func Test_buildDockerRunCommand(t *testing.T) {
 				EnvInputFileName:    "/tmp/ci-test/abc.env",
 				EntryScriptFileName: "/tmp/code-location/_entry.sh",
 				EnvOutFileName:      "/tmp/ci-test/_env.out",
-				ExtraVolumeMounts:   []*MountPath{{SrcPath: "/src", DstPath: "/des"}},
-				SourceCodeMount:     &MountPath{SrcPath: "/tmp/code-location", DstPath: "/tmp/code-mount-location"},
-				CustomScriptMount:   &MountPath{SrcPath: "/tmp/custom-script-location", DstPath: "/tmp/script-mount-location"},
+				ExtraVolumeMounts:   []*helper.MountPath{{SrcPath: "/src", DstPath: "/des"}},
+				SourceCodeMount:     &helper.MountPath{SrcPath: "/tmp/code-location", DstPath: "/tmp/code-mount-location"},
+				CustomScriptMount:   &helper.MountPath{SrcPath: "/tmp/custom-script-location", DstPath: "/tmp/script-mount-location"},
 				ExposedPorts:        map[int]int{80: 8080},
 			}},
 			wantErr: false,
@@ -98,9 +99,9 @@ func Test_buildDockerRunCommand(t *testing.T) {
 				EnvInputFileName:    "/tmp/ci-test/abc.env",
 				EntryScriptFileName: "/tmp/code-location/_entry.sh",
 				EnvOutFileName:      "/tmp/ci-test/_env.out",
-				ExtraVolumeMounts:   []*MountPath{{SrcPath: "/src", DstPath: "/des"}, {SrcPath: "/src2", DstPath: "/des2"}},
-				SourceCodeMount:     &MountPath{SrcPath: "/tmp/code-location", DstPath: "/tmp/code-mount-location"},
-				CustomScriptMount:   &MountPath{SrcPath: "/tmp/custom-script-location", DstPath: "/tmp/script-mount-location"},
+				ExtraVolumeMounts:   []*helper.MountPath{{SrcPath: "/src", DstPath: "/des"}, {SrcPath: "/src2", DstPath: "/des2"}},
+				SourceCodeMount:     &helper.MountPath{SrcPath: "/tmp/code-location", DstPath: "/tmp/code-mount-location"},
+				CustomScriptMount:   &helper.MountPath{SrcPath: "/tmp/custom-script-location", DstPath: "/tmp/script-mount-location"},
 				ExposedPorts:        map[int]int{80: 8080, 90: 9090},
 			}},
 			wantErr: false,
@@ -182,8 +183,8 @@ func TestRunScriptsInDocker(t *testing.T) {
 					ExposedPorts:      map[int]int{80: 8080, 90: 9090},
 					OutputVars:        []string{"HOME", "PWD", "NAME", "KIND"},
 					DockerImage:       "alpine:latest",
-					SourceCodeMount:   &MountPath{SrcPath: "/tmp/code-location", DstPath: "/tmp/code-mount-location"},
-					CustomScriptMount: &MountPath{SrcPath: "/tmp/custom-script-location", DstPath: "/tmp/script-mount-location"},
+					SourceCodeMount:   &helper.MountPath{SrcPath: "/tmp/code-location", DstPath: "/tmp/code-mount-location"},
+					CustomScriptMount: &helper.MountPath{SrcPath: "/tmp/custom-script-location", DstPath: "/tmp/script-mount-location"},
 					command:           "/bin/sh",
 					args:              []string{"-c", "ls;sleep 1;export NAME=from-script;echo done;"},
 					scriptFileName:    "",

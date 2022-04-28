@@ -31,12 +31,12 @@ const (
 	STEP_TYPE_POST = "POST"
 )
 
-func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnvironmentVariables map[string]string, preeCiStageVariable map[int]map[string]*VariableObject) (outVars map[int]map[string]*VariableObject, err error) {
+func RunCiSteps(steps []*helper.StepObject, refPlugins []*helper.RefPluginObject, globalEnvironmentVariables map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, err error) {
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
-	stageVariable := make(map[int]map[string]*VariableObject)
-	refStageMap := make(map[int][]*StepObject)
+	stageVariable := make(map[int]map[string]*helper.VariableObject)
+	refStageMap := make(map[int][]*helper.StepObject)
 	for _, ref := range refPlugins {
 		refStageMap[ref.Id] = ref.Steps
 	}
@@ -51,7 +51,7 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 			scriptEnvs[v.Name] = v.Value
 		}
 		if len(preciStage.TriggerSkipConditions) > 0 {
-			shouldTrigger, err := shouldTriggerStage(preciStage.TriggerSkipConditions, preciStage.InputVars)
+			shouldTrigger, err := helper.ShouldTriggerStage(preciStage.TriggerSkipConditions, preciStage.InputVars)
 			if err != nil {
 				log.Println(err)
 				return nil, err
@@ -80,8 +80,8 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 
 		var stageOutputVarsFinal map[string]string
 		//---------------------------------------------------------------------------------------------------
-		if preciStage.StepType == STEP_TYPE_INLINE {
-			if preciStage.ExecutorType == SHELL {
+		if preciStage.StepType == helper.STEP_TYPE_INLINE {
+			if preciStage.ExecutorType == helper.SHELL {
 				stageOutputVars, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", i), preciStage.Script, scriptEnvs, outVars)
 				if err != nil {
 					return nil, err
@@ -112,10 +112,10 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 				}
 				stageOutputVarsFinal = stageOutputVars
 			}
-		} else if preciStage.StepType == STEP_TYPE_REF_PLUGIN {
+		} else if preciStage.StepType == helper.STEP_TYPE_REF_PLUGIN {
 			steps := refStageMap[preciStage.RefPluginId]
 			//FIXME: sdcsdc
-			preCiStageVariablePlugin := make(map[int]map[string]*VariableObject)
+			preCiStageVariablePlugin := make(map[int]map[string]*helper.VariableObject)
 			opt, err := RunCiSteps(steps, refPlugins, globalEnvironmentVariables, preCiStageVariablePlugin)
 			if err != nil {
 				fmt.Println(err)
@@ -136,7 +136,7 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 		}
 		preciStage.OutputVars = finalOutVars
 		if len(preciStage.SuccessFailureConditions) > 0 {
-			success, err := stageIsSuccess(preciStage.SuccessFailureConditions, finalOutVars)
+			success, err := helper.StageIsSuccess(preciStage.SuccessFailureConditions, finalOutVars)
 			if err != nil {
 				return nil, err
 			}
@@ -144,7 +144,7 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 				return nil, fmt.Errorf("stage not success")
 			}
 		}
-		finalOutVarMap := make(map[string]*VariableObject)
+		finalOutVarMap := make(map[string]*helper.VariableObject)
 		for _, out := range preciStage.OutputVars {
 			finalOutVarMap[out.Name] = out
 		}
@@ -153,15 +153,15 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 	return preeCiStageVariable, nil
 }
 
-func populateOutVars(outData map[string]string, desired []*VariableObject) ([]*VariableObject, error) {
-	var finalOutVars []*VariableObject
+func populateOutVars(outData map[string]string, desired []*helper.VariableObject) ([]*helper.VariableObject, error) {
+	var finalOutVars []*helper.VariableObject
 	for _, d := range desired {
 		value := outData[d.Name]
 		if len(value) == 0 {
 			log.Printf("%s not present\n", d.Name)
 			continue
 		}
-		typedVal, err := typeConverter(value, d.Format)
+		typedVal, err := helper.TypeConverter(value, d.Format)
 		if err != nil {
 			log.Println(err)
 			return nil, err
@@ -173,13 +173,13 @@ func populateOutVars(outData map[string]string, desired []*VariableObject) ([]*V
 	return finalOutVars, nil
 }
 
-func deduceVariables(desiredVars []*VariableObject, globalVars map[string]string, preeCiStageVariable map[int]map[string]*VariableObject, postCiStageVariables map[int]map[string]*VariableObject) ([]*VariableObject, error) {
-	var inputVars []*VariableObject
+func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject, postCiStageVariables map[int]map[string]*helper.VariableObject) ([]*helper.VariableObject, error) {
+	var inputVars []*helper.VariableObject
 	for _, desired := range desiredVars {
 		switch desired.VariableType {
-		case VALUE:
+		case helper.VALUE:
 			inputVars = append(inputVars, desired)
-		case REF_PRE_CI:
+		case helper.REF_PRE_CI:
 			if v, found := preeCiStageVariable[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value
@@ -194,7 +194,7 @@ func deduceVariables(desiredVars []*VariableObject, globalVars map[string]string
 			} else {
 				return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
 			}
-		case REF_POST_CI:
+		case helper.REF_POST_CI:
 			if v, found := postCiStageVariables[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value
@@ -209,7 +209,7 @@ func deduceVariables(desiredVars []*VariableObject, globalVars map[string]string
 			} else {
 				return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
 			}
-		case REF_GLOBAL:
+		case helper.REF_GLOBAL:
 			desired.Value = globalVars[desired.ReferenceVariableName]
 			err := desired.TypeCheck()
 			if err != nil {

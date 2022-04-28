@@ -1,4 +1,4 @@
-package main
+package helper
 
 import (
 	"encoding/json"
@@ -39,6 +39,11 @@ type StepObject struct {
 	SourceCodeMount          *MountPath         `json:"sourceCodeMount"`   // destination path - mountCodeToContainerPath
 	ExtraVolumeMounts        []*MountPath       `json:"extraVolumeMounts"` // filePathMapping
 	ArtifactPaths            []string           `json:"artifactPaths"`
+}
+
+type MountPath struct {
+	SrcPath string `json:"sourcePath"`
+	DstPath string `json:"destinationPath"`
 }
 
 //------------
@@ -183,7 +188,7 @@ type VariableObject struct {
 }
 
 func (v *VariableObject) TypeCheck() error {
-	typedValue, err := typeConverter(v.Value, v.Format)
+	typedValue, err := TypeConverter(v.Value, v.Format)
 	if err != nil {
 		return err
 	}

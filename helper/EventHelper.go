@@ -72,6 +72,11 @@ type CiRequest struct {
 	MinioEndpoint               string                       `json:"minioEndpoint"`
 	DefaultAddressPoolBaseCidr  string                       `json:"defaultAddressPoolBaseCidr"`
 	DefaultAddressPoolSize      int                          `json:"defaultAddressPoolSize"`
+	PreCiSteps                  []*StepObject                `json:"preCiSteps"`
+	PostCiSteps                 []*StepObject                `json:"postCiSteps"`
+	RefPlugins                  []*RefPluginObject           `json:"refPlugins"`
+	AppName                     string                       `json:"appName"`
+	TriggerByAuthor             string                       `json:"triggerByAuthor"`
 }
 
 type CdRequest struct {

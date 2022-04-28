@@ -126,7 +126,7 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 	envs := make(map[string]string)
 	envs["WORKING_DIRECTORY"] = util.WORKINGDIR
 	if cicdRequest.Type == util.CIEVENT {
-		image, err := buildDockerImagePath(cicdRequest.CiRequest)
+		image, err := helper.BuildDockerImagePath(cicdRequest.CiRequest)
 		if err != nil {
 			return nil, err
 		}
@@ -204,7 +204,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	ciCdRequest.CiRequest.TaskYaml = taskYaml
 
 	// run pre artifact processing
-	preeCiStageVariable := make(map[int]map[string]*VariableObject)
+	preeCiStageVariable := make(map[int]map[string]*helper.VariableObject)
 	preeCiStageVariable, err = RunCiSteps(ciCdRequest.CiRequest.PreCiSteps, ciCdRequest.CiRequest.RefPlugins, scriptEnvs, preeCiStageVariable)
 	if err != nil {
 		log.Println(err)

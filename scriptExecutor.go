@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/devtron-labs/ci-runner/helper"
+	"github.com/devtron-labs/ci-runner/util"
 	"github.com/joho/godotenv"
 	"log"
 	"os"
@@ -17,7 +19,7 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 	//------------
 	finalScript, err := prepareFinaleScript(script, outputVars, envOutFileName)
 	if err != nil {
-		log.Println(devtron, err)
+		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
 	//--------------
@@ -29,10 +31,10 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 	}
 	defer file.Close()
 	_, err = file.WriteString(finalScript)
-	//log.Println(devtron, "final script ", finalScript) removed it shows some part on ui
-	log.Println(devtron, scriptPath)
+	//log.Println(util.DEVTRON, "final script ", finalScript) removed it shows some part on ui
+	log.Println(util.DEVTRON, scriptPath)
 	if err != nil {
-		log.Println(devtron, err)
+		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
 	//add sysytem env variable
@@ -49,7 +51,7 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 
 	runScriptCMD := exec.Command("/bin/sh", scriptPath)
 	runScriptCMD.Env = inputEnvironmentVariable
-	err = RunCommand(runScriptCMD)
+	err = util.RunCommand(runScriptCMD)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -86,10 +88,6 @@ set -o pipefail
 	return finalScript, nil
 }
 
-type MountPath struct {
-	SrcPath string `json:"sourcePath"`
-	DstPath string `json:"destinationPath"`
-}
 type executionConf struct {
 	Script            string
 	EnvInputVars      map[string]string
@@ -98,9 +96,9 @@ type executionConf struct {
 	DockerImage       string
 	command           string
 	args              []string
-	CustomScriptMount *MountPath
-	SourceCodeMount   *MountPath
-	ExtraVolumeMounts []*MountPath
+	CustomScriptMount *helper.MountPath
+	SourceCodeMount   *helper.MountPath
+	ExtraVolumeMounts []*helper.MountPath
 	// system generate values
 	scriptFileName      string //internal
 	workDirectory       string
@@ -119,7 +117,7 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		customScriptMountFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_user_custom_script.sh", executionConf.scriptFileName))
 		err := os.WriteFile(customScriptMountFileName, []byte(executionConf.Script), 0644) //TODO check mode with entry script
 		if err != nil {
-			log.Println(devtron, err)
+			log.Println(util.DEVTRON, err)
 			return nil, err
 		}
 		executionConf.CustomScriptMount.SrcPath = customScriptMountFileName
@@ -131,41 +129,41 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 
 	err := godotenv.Write(executionConf.EnvInputVars, envInputFileName)
 	if err != nil {
-		log.Println(devtron, err)
+		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
 	entryScript, err := buildDockerEntryScript(executionConf.command, executionConf.args, executionConf.OutputVars)
 	if err != nil {
-		log.Println(devtron, err)
+		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
 	err = os.WriteFile(executionConf.EntryScriptFileName, []byte(entryScript), 0644) //TODO check mode with entry script
 	if err != nil {
-		log.Println(devtron, err)
+		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
 
 	err = os.WriteFile(executionConf.EnvOutFileName, []byte(""), 0644) //TODO check mode with entry script
 	if err != nil {
-		log.Println(devtron, err)
+		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
 	dockerRunCommand, err := buildDockerRunCommand(executionConf)
 	if err != nil {
-		log.Println(devtron, err)
+		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
 	fmt.Println(dockerRunCommand)
 	//dockerRunCommand = "echo hello------;sleep 10; echo done------"
 	err = os.WriteFile(executionConf.RunCommandFileName, []byte(dockerRunCommand), 0644)
 	if err != nil {
-		log.Println(devtron, err)
+		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
 	// docker run -it -v   -environment file  -p
 	runScriptCMD := exec.Command("/bin/sh", executionConf.RunCommandFileName)
 	//runScriptCMD.Env = inputEnvironmentVariable
-	err = RunCommand(runScriptCMD)
+	err = util.RunCommand(runScriptCMD)
 	if err != nil {
 		log.Println(err)
 		return nil, err

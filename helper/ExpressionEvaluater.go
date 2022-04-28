@@ -1,4 +1,4 @@
-package main
+package helper
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ type ConditionObject struct {
 	typecastConditionalValue interface{}
 }
 
-func shouldTriggerStage(conditions []*ConditionObject, variables []*VariableObject) (bool, error) {
+func ShouldTriggerStage(conditions []*ConditionObject, variables []*VariableObject) (bool, error) {
 	conditionType := conditions[0].ConditionType //assuming list has min 1
 	status := true
 	for _, condition := range conditions {
@@ -31,7 +31,7 @@ func shouldTriggerStage(conditions []*ConditionObject, variables []*VariableObje
 	}
 }
 
-func stageIsSuccess(conditions []*ConditionObject, variables []*VariableObject) (bool, error) {
+func StageIsSuccess(conditions []*ConditionObject, variables []*VariableObject) (bool, error) {
 	conditionType := conditions[0].ConditionType //assuming list has min 1
 	status := true
 	for _, condition := range conditions {
@@ -55,13 +55,13 @@ func evaluateExpression(condition *ConditionObject, variables []*VariableObject)
 	}
 	variableOperand := variableMap[condition.ConditionOnVariable]
 	if variableOperand.TypedValue == nil {
-		converted, err := typeConverter(variableOperand.Value, variableOperand.Format)
+		converted, err := TypeConverter(variableOperand.Value, variableOperand.Format)
 		if err != nil {
 			return false, err
 		}
 		variableOperand.TypedValue = converted
 	}
-	refOperand, err := typeConverter(condition.ConditionalValue, variableOperand.Format)
+	refOperand, err := TypeConverter(condition.ConditionalValue, variableOperand.Format)
 	if err != nil {
 		return false, err
 	}
@@ -80,7 +80,7 @@ func evaluateExpression(condition *ConditionObject, variables []*VariableObject)
 	return status, nil
 }
 
-func typeConverter(value string, format Format) (interface{}, error) {
+func TypeConverter(value string, format Format) (interface{}, error) {
 	switch format {
 	case STRING:
 		return value, nil
