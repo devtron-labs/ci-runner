@@ -67,14 +67,14 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 			outVars = append(outVars, outVar.Name)
 		}
 		//cleaning the directory
-		err = os.RemoveAll(output_path)
+		err = os.RemoveAll(util.Output_path)
 		if err != nil {
-			log.Println(devtron, err)
+			log.Println(util.DEVTRON, err)
 			return nil, err
 		}
-		err = os.MkdirAll(output_path, os.ModePerm|os.ModeDir)
+		err = os.MkdirAll(util.Output_path, os.ModePerm|os.ModeDir)
 		if err != nil {
-			log.Println(devtron, err)
+			log.Println(util.DEVTRON, err)
 			return nil, err
 		}
 
@@ -82,7 +82,7 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 		//---------------------------------------------------------------------------------------------------
 		if preciStage.StepType == STEP_TYPE_INLINE {
 			if preciStage.ExecutorType == SHELL {
-				stageOutputVars, err := RunScripts(output_path, fmt.Sprintf("stage-%d", i), preciStage.Script, scriptEnvs, outVars)
+				stageOutputVars, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", i), preciStage.Script, scriptEnvs, outVars)
 				if err != nil {
 					return nil, err
 				}
@@ -101,10 +101,10 @@ func RunCiSteps(steps []*StepObject, refPlugins []*RefPluginObject, globalEnviro
 					ExtraVolumeMounts: preciStage.ExtraVolumeMounts,
 
 					scriptFileName: fmt.Sprintf("stage-%d", i),
-					workDirectory:  output_path,
+					workDirectory:  util.Output_path,
 				}
 				if executionConf.SourceCodeMount != nil {
-					executionConf.SourceCodeMount.SrcPath = workingDir
+					executionConf.SourceCodeMount.SrcPath = util.WORKINGDIR
 				}
 				stageOutputVars, err := RunScriptsInDocker(executionConf)
 				if err != nil {

@@ -124,8 +124,8 @@ func collectAndUploadArtifact(ciRequest *helper.CiRequest) error {
 
 func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]string, error) {
 	envs := make(map[string]string)
-	envs["WORKING_DIRECTORY"] = workingDir
-	if cicdRequest.Type ==  util.CIEVENT {
+	envs["WORKING_DIRECTORY"] = util.WORKINGDIR
+	if cicdRequest.Type == util.CIEVENT {
 		image, err := buildDockerImagePath(cicdRequest.CiRequest)
 		if err != nil {
 			return nil, err
