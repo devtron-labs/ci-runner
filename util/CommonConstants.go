@@ -30,6 +30,6 @@ const CIEVENT = "CI"
 const CDSTAGE = "CD"
 
 var (
-	Output_path = filepath.Join("./process")
+	Output_path = filepath.Join(WORKINGDIR, "./process")
 	Bash_script = filepath.Join("_script.sh")
 )
