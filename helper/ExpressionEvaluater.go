@@ -7,7 +7,7 @@ import (
 )
 
 type ConditionObject struct {
-	ConditionType            ConditionType `json:"conditionType"`       //TRIGGER, SKIP, SUCCESS, FAILURE
+	ConditionType            ConditionType `json:"conditionType"`       //TRIGGER, SKIP, SUCCESS, FAIL
 	ConditionOnVariable      string        `json:"conditionOnVariable"` //name of variable
 	ConditionalOperator      string        `json:"conditionalOperator"`
 	ConditionalValue         string        `json:"conditionalValue"`

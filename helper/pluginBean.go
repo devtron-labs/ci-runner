@@ -97,6 +97,7 @@ type ExecutorType int
 const (
 	CONTAINER_IMAGE ExecutorType = iota
 	SHELL
+	PLUGIN // Added to avoid un-marshaling error in REF_PLUGIN type steps, otherwise this value won't be used
 )
 
 func (d ExecutorType) ValueOf(executorType string) (ExecutorType, error) {
@@ -104,6 +105,8 @@ func (d ExecutorType) ValueOf(executorType string) (ExecutorType, error) {
 		return CONTAINER_IMAGE, nil
 	} else if executorType == "SHELL" {
 		return SHELL, nil
+	} else if executorType == "PLUGIN" {
+		return PLUGIN, nil
 	}
 	return SHELL, fmt.Errorf("invalid executorType:  %s", executorType)
 }
@@ -203,23 +206,23 @@ const (
 	TRIGGER = iota
 	SKIP
 	SUCCESS
-	FAILURE
+	FAIL
 )
 
-func (d ConditionType) ValueOf(executorType string) (ConditionType, error) {
-	if executorType == "TRIGGER" {
+func (d ConditionType) ValueOf(conditionType string) (ConditionType, error) {
+	if conditionType == "TRIGGER" {
 		return TRIGGER, nil
-	} else if executorType == "SKIP" {
+	} else if conditionType == "SKIP" {
 		return SKIP, nil
-	} else if executorType == "SUCCESS" {
+	} else if conditionType == "SUCCESS" {
 		return SUCCESS, nil
-	} else if executorType == "FAILURE" {
-		return FAILURE, nil
+	} else if conditionType == "FAIL" {
+		return FAIL, nil
 	}
-	return SUCCESS, fmt.Errorf("invalid executorType: %s", executorType)
+	return SUCCESS, fmt.Errorf("invalid conditionType: %s", conditionType)
 }
 func (d ConditionType) String() string {
-	return [...]string{"TRIGGER", "SKIP", "SUCCESS", "FAILURE"}[d]
+	return [...]string{"TRIGGER", "SKIP", "SUCCESS", "FAIL"}[d]
 }
 
 func (t ConditionType) MarshalJSON() ([]byte, error) {
