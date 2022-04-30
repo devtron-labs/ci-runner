@@ -203,9 +203,12 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 	ciCdRequest.CiRequest.TaskYaml = taskYaml
 
+	refStageMap := make(map[int][]*helper.StepObject)
+	for _, ref := range ciCdRequest.CiRequest.RefPlugins {
+		refStageMap[ref.Id] = ref.Steps
+	}
 	// run pre artifact processing
-	preeCiStageVariable := make(map[int]map[string]*helper.VariableObject)
-	preeCiStageVariable, err = RunCiSteps(ciCdRequest.CiRequest.PreCiSteps, ciCdRequest.CiRequest.RefPlugins, scriptEnvs, preeCiStageVariable)
+	preeCiStageOutVariable, err := RunCiSteps(ciCdRequest.CiRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
 	if err != nil {
 		log.Println(err)
 		return artifactUploaded, err
@@ -220,7 +223,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	log.Println(util.DEVTRON, " /docker-build")
 
 	// run post artifact processing
-	preeCiStageVariable, err = RunCiSteps(ciCdRequest.CiRequest.PostCiSteps, ciCdRequest.CiRequest.RefPlugins, scriptEnvs, preeCiStageVariable)
+	_, err = RunCiSteps(ciCdRequest.CiRequest.PostCiSteps, refStageMap, scriptEnvs, preeCiStageOutVariable)
 	if err != nil {
 		return artifactUploaded, err
 	}

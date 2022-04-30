@@ -31,39 +31,36 @@ const (
 	STEP_TYPE_POST = "POST"
 )
 
-func RunCiSteps(steps []*helper.StepObject, refPlugins []*helper.RefPluginObject, globalEnvironmentVariables map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, err error) {
+func RunCiSteps(steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, err error) {
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
 	stageVariable := make(map[int]map[string]*helper.VariableObject)
-	refStageMap := make(map[int][]*helper.StepObject)
-	for _, ref := range refPlugins {
-		refStageMap[ref.Id] = ref.Steps
-	}
-	for i, preciStage := range steps {
-		vars, err := deduceVariables(preciStage.InputVars, globalEnvironmentVariables, preeCiStageVariable, stageVariable)
+	for i, ciStep := range steps {
+		//TODO: pass stageVar against correct arg as per stageType
+		vars, err := deduceVariables(ciStep.InputVars, globalEnvironmentVariables, preeCiStageVariable, stageVariable)
 		if err != nil {
 			return nil, err
 		}
-		preciStage.InputVars = vars
+		ciStep.InputVars = vars
 		scriptEnvs := make(map[string]string)
-		for _, v := range preciStage.InputVars {
+		for _, v := range ciStep.InputVars {
 			scriptEnvs[v.Name] = v.Value
 		}
-		if len(preciStage.TriggerSkipConditions) > 0 {
-			shouldTrigger, err := helper.ShouldTriggerStage(preciStage.TriggerSkipConditions, preciStage.InputVars)
+		if len(ciStep.TriggerSkipConditions) > 0 {
+			shouldTrigger, err := helper.ShouldTriggerStage(ciStep.TriggerSkipConditions, ciStep.InputVars)
 			if err != nil {
 				log.Println(err)
 				return nil, err
 			}
 			if !shouldTrigger {
-				log.Println("skipping stage as per pree Condition")
+				log.Println("skipping stage as per pass Condition")
 				continue
 			}
 		}
 
 		var outVars []string
-		for _, outVar := range preciStage.OutputVars {
+		for _, outVar := range ciStep.OutputVars {
 			outVars = append(outVars, outVar.Name)
 		}
 		//cleaning the directory
@@ -78,27 +75,27 @@ func RunCiSteps(steps []*helper.StepObject, refPlugins []*helper.RefPluginObject
 			return nil, err
 		}
 
-		var stageOutputVarsFinal map[string]string
+		var stepOutputVarsFinal map[string]string
 		//---------------------------------------------------------------------------------------------------
-		if preciStage.StepType == helper.STEP_TYPE_INLINE {
-			if preciStage.ExecutorType == helper.SHELL {
-				stageOutputVars, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", i), preciStage.Script, scriptEnvs, outVars)
+		if ciStep.StepType == helper.STEP_TYPE_INLINE {
+			if ciStep.ExecutorType == helper.SHELL {
+				stageOutputVars, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", i), ciStep.Script, scriptEnvs, outVars)
 				if err != nil {
 					return nil, err
 				}
-				stageOutputVarsFinal = stageOutputVars
+				stepOutputVarsFinal = stageOutputVars
 			} else {
 				executionConf := &executionConf{
-					Script:            preciStage.Script,
+					Script:            ciStep.Script,
 					EnvInputVars:      scriptEnvs,
-					ExposedPorts:      preciStage.ExposedPorts,
+					ExposedPorts:      ciStep.ExposedPorts,
 					OutputVars:        outVars,
-					DockerImage:       preciStage.DockerImage,
-					command:           preciStage.Command,
-					args:              preciStage.Args,
-					CustomScriptMount: preciStage.CustomScriptMount,
-					SourceCodeMount:   preciStage.SourceCodeMount,
-					ExtraVolumeMounts: preciStage.ExtraVolumeMounts,
+					DockerImage:       ciStep.DockerImage,
+					command:           ciStep.Command,
+					args:              ciStep.Args,
+					CustomScriptMount: ciStep.CustomScriptMount,
+					SourceCodeMount:   ciStep.SourceCodeMount,
+					ExtraVolumeMounts: ciStep.ExtraVolumeMounts,
 
 					scriptFileName: fmt.Sprintf("stage-%d", i),
 					workDirectory:  util.Output_path,
@@ -110,33 +107,35 @@ func RunCiSteps(steps []*helper.StepObject, refPlugins []*helper.RefPluginObject
 				if err != nil {
 					return nil, err
 				}
-				stageOutputVarsFinal = stageOutputVars
+				stepOutputVarsFinal = stageOutputVars
 			}
-		} else if preciStage.StepType == helper.STEP_TYPE_REF_PLUGIN {
-			steps := refStageMap[preciStage.RefPluginId]
+		} else if ciStep.StepType == helper.STEP_TYPE_REF_PLUGIN {
+			steps := refStageMap[ciStep.RefPluginId]
+			//TODO: update step input vars value in ref_plugin steps
 			//FIXME: sdcsdc
 			preCiStageVariablePlugin := make(map[int]map[string]*helper.VariableObject)
-			opt, err := RunCiSteps(steps, refPlugins, globalEnvironmentVariables, preCiStageVariablePlugin)
+			opt, err := RunCiSteps(steps, refStageMap, globalEnvironmentVariables, preCiStageVariablePlugin)
 			if err != nil {
 				fmt.Println(err)
 				return nil, err
 			}
+			//TODO: add output vars(only exposed to the UI) of above step in stepOutputVarsFinal
 			fmt.Println(opt)
-			//stageOutputVarsFinal=opt
-			//manupulate pree and post variables
+			//stepOutputVarsFinal=opt
+			//manipulate pre and post variables
 			// artifact path
 			//
 		} else {
-			return nil, fmt.Errorf("step Type :%s not supported", preciStage.StepType)
+			return nil, fmt.Errorf("step Type :%s not supported", ciStep.StepType)
 		}
 		//---------------------------------------------------------------------------------------------------
-		finalOutVars, err := populateOutVars(stageOutputVarsFinal, preciStage.OutputVars)
+		finalOutVars, err := populateOutVars(stepOutputVarsFinal, ciStep.OutputVars)
 		if err != nil {
 			return nil, err
 		}
-		preciStage.OutputVars = finalOutVars
-		if len(preciStage.SuccessFailureConditions) > 0 {
-			success, err := helper.StageIsSuccess(preciStage.SuccessFailureConditions, finalOutVars)
+		ciStep.OutputVars = finalOutVars
+		if len(ciStep.SuccessFailureConditions) > 0 {
+			success, err := helper.StageIsSuccess(ciStep.SuccessFailureConditions, finalOutVars)
 			if err != nil {
 				return nil, err
 			}
@@ -145,12 +144,12 @@ func RunCiSteps(steps []*helper.StepObject, refPlugins []*helper.RefPluginObject
 			}
 		}
 		finalOutVarMap := make(map[string]*helper.VariableObject)
-		for _, out := range preciStage.OutputVars {
+		for _, out := range ciStep.OutputVars {
 			finalOutVarMap[out.Name] = out
 		}
-		stageVariable[preciStage.Index] = finalOutVarMap
+		stageVariable[ciStep.Index] = finalOutVarMap
 	}
-	return preeCiStageVariable, nil
+	return stageVariable, nil
 }
 
 func populateOutVars(outData map[string]string, desired []*helper.VariableObject) ([]*helper.VariableObject, error) {
@@ -216,6 +215,7 @@ func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string
 				return nil, err
 			}
 			inputVars = append(inputVars, desired)
+			//TODO: add case for REF_PLUGIN type variable(also add in input arguments of method)
 		}
 	}
 	return inputVars, nil
