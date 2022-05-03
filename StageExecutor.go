@@ -26,19 +26,28 @@ import (
 	"github.com/devtron-labs/ci-runner/util"
 )
 
+type StepType string
+
 const (
-	STEP_TYPE_PRE  = "PRE"
-	STEP_TYPE_POST = "POST"
+	STEP_TYPE_PRE        StepType = "PRE"
+	STEP_TYPE_POST       StepType = "POST"
+	STEP_TYPE_REF_PLUGIN StepType = "REF_PLUGIN"
 )
 
-func RunCiSteps(steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, err error) {
+func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, err error) {
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
 	stageVariable := make(map[int]map[string]*helper.VariableObject)
 	for i, ciStep := range steps {
-		//TODO: pass stageVar against correct arg as per stageType
-		vars, err := deduceVariables(ciStep.InputVars, globalEnvironmentVariables, preeCiStageVariable, stageVariable)
+		var vars []*helper.VariableObject
+		if stepType == STEP_TYPE_PRE {
+			vars, err = deduceVariables(ciStep.InputVars, globalEnvironmentVariables, stageVariable, nil, nil)
+		} else if stepType == STEP_TYPE_POST {
+			vars, err = deduceVariables(ciStep.InputVars, globalEnvironmentVariables, preeCiStageVariable, stageVariable, nil)
+		} else if stepType == STEP_TYPE_REF_PLUGIN {
+			vars, err = deduceVariables(ciStep.InputVars, globalEnvironmentVariables, nil, nil, stageVariable)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -84,7 +93,7 @@ func RunCiSteps(steps []*helper.StepObject, refStageMap map[int][]*helper.StepOb
 					return nil, err
 				}
 				stepOutputVarsFinal = stageOutputVars
-			} else {
+			} else if ciStep.ExecutorType == helper.CONTAINER_IMAGE {
 				executionConf := &executionConf{
 					Script:            ciStep.Script,
 					EnvInputVars:      scriptEnvs,
@@ -111,15 +120,37 @@ func RunCiSteps(steps []*helper.StepObject, refStageMap map[int][]*helper.StepOb
 			}
 		} else if ciStep.StepType == helper.STEP_TYPE_REF_PLUGIN {
 			steps := refStageMap[ciStep.RefPluginId]
-			//TODO: update step input vars value in ref_plugin steps
-			//FIXME: sdcsdc
-			preCiStageVariablePlugin := make(map[int]map[string]*helper.VariableObject)
-			opt, err := RunCiSteps(steps, refStageMap, globalEnvironmentVariables, preCiStageVariablePlugin)
+			stepIndexVarNameValueMap := make(map[int]map[string]string)
+			for _, inVar := range ciStep.InputVars {
+				if varMap, ok := stepIndexVarNameValueMap[inVar.VariableStepIndexInPlugin]; ok {
+					varMap[inVar.Name] = inVar.Value
+					stepIndexVarNameValueMap[inVar.VariableStepIndexInPlugin] = varMap
+				} else {
+					varMap := map[string]string{inVar.Name: inVar.Value}
+					stepIndexVarNameValueMap[inVar.VariableStepIndexInPlugin] = varMap
+				}
+			}
+			for _, step := range steps {
+				if varMap, ok := stepIndexVarNameValueMap[step.Index]; ok {
+					for _, inVar := range step.InputVars {
+						if value, ok := varMap[inVar.Name]; ok {
+							inVar.Value = value
+						}
+					}
+				}
+			}
+			opt, err := RunCiSteps(STEP_TYPE_REF_PLUGIN, steps, refStageMap, globalEnvironmentVariables, nil)
 			if err != nil {
 				fmt.Println(err)
 				return nil, err
 			}
-			//TODO: add output vars(only exposed to the UI) of above step in stepOutputVarsFinal
+			for _, outputVar := range ciStep.OutputVars {
+				if varObj, ok := opt[outputVar.VariableStepIndexInPlugin]; ok {
+					if v, ok1 := varObj[outputVar.Name]; ok1 {
+						stepOutputVarsFinal[v.Name] = v.Value
+					}
+				}
+			}
 			fmt.Println(opt)
 			//stepOutputVarsFinal=opt
 			//manipulate pre and post variables
@@ -172,7 +203,7 @@ func populateOutVars(outData map[string]string, desired []*helper.VariableObject
 	return finalOutVars, nil
 }
 
-func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject, postCiStageVariables map[int]map[string]*helper.VariableObject) ([]*helper.VariableObject, error) {
+func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject, postCiStageVariables map[int]map[string]*helper.VariableObject, refPluginStageVariables map[int]map[string]*helper.VariableObject) ([]*helper.VariableObject, error) {
 	var inputVars []*helper.VariableObject
 	for _, desired := range desiredVars {
 		switch desired.VariableType {
@@ -215,7 +246,21 @@ func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string
 				return nil, err
 			}
 			inputVars = append(inputVars, desired)
-			//TODO: add case for REF_PLUGIN type variable(also add in input arguments of method)
+		case helper.REF_PLUGIN:
+			if v, found := refPluginStageVariables[desired.ReferenceVariableStepIndex]; found {
+				if d, foundD := v[desired.ReferenceVariableName]; foundD {
+					desired.Value = d.Value
+					err := desired.TypeCheck()
+					if err != nil {
+						return nil, err
+					}
+					inputVars = append(inputVars, desired)
+				} else {
+					return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
+				}
+			} else {
+				return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
+			}
 		}
 	}
 	return inputVars, nil

@@ -187,6 +187,7 @@ type VariableObject struct {
 	ReferenceVariableName      string       `json:"referenceVariableName"`
 	VariableType               VariableType `json:"variableType"`
 	ReferenceVariableStepIndex int          `json:"referenceVariableStepIndex"`
+	VariableStepIndexInPlugin  int          `json:"variableStepIndexInPlugin"`
 	TypedValue                 interface{}  `json:"-"` //typeCased and deduced
 }
 
