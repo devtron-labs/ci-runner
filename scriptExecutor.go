@@ -66,11 +66,7 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 
 //prepare final shell script to be executed
 func prepareFinaleScript(script string, outputVars []string, envOutFileName string) (string, error) {
-	scriptTemplate := `
-#!/bin/sh
-set -e
-set -o pipefail
-{{.script}}
+	scriptTemplate := `{{.script}}
 > {{.envOutFileName}}
 {{$envOutFileName := .envOutFileName}}
 {{range .outputVars}} 
@@ -179,7 +175,6 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 func buildDockerEntryScript(command string, args []string, outputVars []string) (string, error) {
 	entryTemplate := `#!/bin/sh
 set -e
-set -o pipefail
 {{.command}} {{.args}}
 > {{.envOutFileName}}
 {{$envOutFileName := .envOutFileName}}
