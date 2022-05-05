@@ -22,6 +22,7 @@ ArtifactPaths
 */
 
 type StepObject struct {
+	Name                     string             `json:"name"`
 	Index                    int                `json:"index"`
 	StepType                 string             `json:"stepType"`     // REF_PLUGIN or INLINE
 	ExecutorType             ExecutorType       `json:"executorType"` //continer_image/ shell

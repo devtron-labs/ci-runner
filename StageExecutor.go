@@ -40,13 +40,17 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 	}*/
 	stageVariable := make(map[int]map[string]*helper.VariableObject)
 	for i, ciStep := range steps {
+		log.Printf("running step : %s\n", ciStep.Name)
 		var vars []*helper.VariableObject
-		if stepType == STEP_TYPE_PRE {
-			vars, err = deduceVariables(ciStep.InputVars, globalEnvironmentVariables, stageVariable, nil, nil)
-		} else if stepType == STEP_TYPE_POST {
-			vars, err = deduceVariables(ciStep.InputVars, globalEnvironmentVariables, preeCiStageVariable, stageVariable, nil)
-		} else if stepType == STEP_TYPE_REF_PLUGIN {
+		if stepType == STEP_TYPE_REF_PLUGIN {
 			vars, err = deduceVariables(ciStep.InputVars, globalEnvironmentVariables, nil, nil, stageVariable)
+		} else {
+			log.Printf("running step : %s\n", ciStep.Name)
+			if stepType == STEP_TYPE_PRE {
+				vars, err = deduceVariables(ciStep.InputVars, globalEnvironmentVariables, stageVariable, nil, nil)
+			} else if stepType == STEP_TYPE_POST {
+				vars, err = deduceVariables(ciStep.InputVars, globalEnvironmentVariables, preeCiStageVariable, stageVariable, nil)
+			}
 		}
 		if err != nil {
 			return nil, err
