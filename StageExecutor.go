@@ -66,7 +66,7 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 				return nil, err
 			}
 			if !shouldTrigger {
-				log.Println("skipping stage as per pass Condition")
+				log.Printf("skipping %s as per pass Condition\n", ciStep.Name)
 				continue
 			}
 		}
