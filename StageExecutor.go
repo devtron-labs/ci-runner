@@ -55,9 +55,18 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 			return nil, err
 		}
 		ciStep.InputVars = vars
+
+		//variables with empty value
+		var emptyVariableList []string
 		scriptEnvs := make(map[string]string)
 		for _, v := range ciStep.InputVars {
 			scriptEnvs[v.Name] = v.Value
+			if len(v.Value) == 0 {
+				emptyVariableList = append(emptyVariableList, v.Name)
+			}
+		}
+		if stepType == STEP_TYPE_PRE || stepType == STEP_TYPE_POST {
+			log.Println(fmt.Sprintf("variables with empty value : %v", emptyVariableList))
 		}
 		if len(ciStep.TriggerSkipConditions) > 0 {
 			shouldTrigger, err := helper.ShouldTriggerStage(ciStep.TriggerSkipConditions, ciStep.InputVars)
