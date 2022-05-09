@@ -350,6 +350,17 @@ func RunPostDockerBuildTasks(ciRequest *helper.CiRequest, scriptEnvs map[string]
 
 func RunCdStageTasks(tasks []*helper.Task, scriptEnvs map[string]string) error {
 	log.Println(util.DEVTRON, " cd-stage-processing")
+	//cleaning the directory
+	err := os.RemoveAll(util.Output_path)
+	if err != nil {
+		log.Println(util.DEVTRON, err)
+		return err
+	}
+	err = os.MkdirAll(util.Output_path, os.ModePerm|os.ModeDir)
+	if err != nil {
+		log.Println(util.DEVTRON, err)
+		return err
+	}
 	taskMap := make(map[string]*helper.Task)
 	for i, task := range tasks {
 		if _, ok := taskMap[task.Name]; ok {
