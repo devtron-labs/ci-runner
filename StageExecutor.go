@@ -21,9 +21,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
+	"github.com/otiai10/copy"
 )
 
 type StepType string
@@ -96,6 +98,11 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 					return nil, err
 				}
 				stepOutputVarsFinal = stageOutputVars
+				if len(ciStep.ArtifactPaths) > 0 {
+					for _, path := range ciStep.ArtifactPaths {
+						err = copy.Copy(path, filepath.Join(util.TmpArtifactLocation, ciStep.Name, path))
+					}
+				}
 			} else if ciStep.ExecutorType == helper.CONTAINER_IMAGE {
 				executionConf := &executionConf{
 					Script:            ciStep.Script,
