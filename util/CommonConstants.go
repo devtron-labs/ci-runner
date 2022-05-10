@@ -33,5 +33,6 @@ var TmpArtifactLocation = "./job-artifact"
 
 var (
 	Output_path = filepath.Join(WORKINGDIR, "./process")
+
 	Bash_script = filepath.Join("_script.sh")
 )

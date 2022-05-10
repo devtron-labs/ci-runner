@@ -95,6 +95,7 @@ type executionConf struct {
 	CustomScriptMount *helper.MountPath
 	SourceCodeMount   *helper.MountPath
 	ExtraVolumeMounts []*helper.MountPath
+	OutputDirMount    []*helper.MountPath
 	// system generate values
 	scriptFileName      string //internal
 	workDirectory       string
@@ -203,6 +204,9 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 -v {{.SourceCodeMount.SrcPath}}:{{.SourceCodeMount.DstPath}} \
 {{- end}}
 {{- range .ExtraVolumeMounts }}
+-v {{.SrcPath}}:{{.DstPath}} \
+{{- end}}
+{{ - range .OutputDirMount }}
 -v {{.SrcPath}}:{{.DstPath}} \
 {{- end}}
 {{- if .CustomScriptMount }}

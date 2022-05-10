@@ -101,9 +101,19 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 				if len(ciStep.ArtifactPaths) > 0 {
 					for _, path := range ciStep.ArtifactPaths {
 						err = copy.Copy(path, filepath.Join(util.TmpArtifactLocation, ciStep.Name, path))
+						if err != nil {
+							return nil, err
+						}
 					}
 				}
 			} else if ciStep.ExecutorType == helper.CONTAINER_IMAGE {
+				var outputDirMount []*helper.MountPath
+				stepArtifact := filepath.Join(util.Output_path, "opt")
+
+				for _, artifact := range ciStep.ArtifactPaths {
+					path := &helper.MountPath{SrcPath: artifact, DstPath: filepath.Join(stepArtifact, artifact)}
+					outputDirMount = append(outputDirMount, path)
+				}
 				executionConf := &executionConf{
 					Script:            ciStep.Script,
 					EnvInputVars:      scriptEnvs,
@@ -115,9 +125,9 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 					CustomScriptMount: ciStep.CustomScriptMount,
 					SourceCodeMount:   ciStep.SourceCodeMount,
 					ExtraVolumeMounts: ciStep.ExtraVolumeMounts,
-
-					scriptFileName: fmt.Sprintf("stage-%d", i),
-					workDirectory:  util.Output_path,
+					scriptFileName:    fmt.Sprintf("stage-%d", i),
+					workDirectory:     util.Output_path,
+					OutputDirMount:    outputDirMount,
 				}
 				if executionConf.SourceCodeMount != nil {
 					executionConf.SourceCodeMount.SrcPath = util.WORKINGDIR
@@ -127,6 +137,10 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 					return nil, err
 				}
 				stepOutputVarsFinal = stageOutputVars
+				err = copy.Copy(stepArtifact, filepath.Join(util.TmpArtifactLocation, ciStep.Name))
+				if err != nil {
+					return nil, err
+				}
 			}
 		} else if ciStep.StepType == helper.STEP_TYPE_REF_PLUGIN {
 			steps := refStageMap[ciStep.RefPluginId]
