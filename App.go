@@ -46,7 +46,7 @@ func main() {
 		log.Println(util.DEVTRON, artifactUploaded, err)
 		var artifactUploadErr error
 		if !artifactUploaded {
-			artifactUploadErr = collectAndUploadArtifact(ciRequest)
+			artifactUploadErr = helper.ZipAndUpload(ciCdRequest.CiRequest.CiArtifactLocation, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.MinioEndpoint, ciCdRequest.CiRequest.AzureBlobConfig)
 		}
 
 		if err != nil || artifactUploadErr != nil {
@@ -244,7 +244,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	log.Println(util.DEVTRON, " /docker-push")
 
 	log.Println(util.DEVTRON, " artifact-upload")
-	err = collectAndUploadArtifact(ciCdRequest.CiRequest)
+	err = helper.ZipAndUpload(ciCdRequest.CiRequest.CiArtifactLocation, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.MinioEndpoint, ciCdRequest.CiRequest.AzureBlobConfig)
 	if err != nil {
 		return artifactUploaded, err
 	} else {

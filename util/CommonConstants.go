@@ -24,12 +24,15 @@ const DEVTRON = "DEVTRON"
 const INSECURE = "insecure"
 const SECUREWITHCERT = "secure-with-cert"
 const RETRYCOUNT = 10
-const WORKINGDIR = "/devtroncd"
+const WORKINGDIR = "/tmp"
 
 const CIEVENT = "CI"
 const CDSTAGE = "CD"
 
+var TmpArtifactLocation = "./job-artifact"
+
 var (
 	Output_path = filepath.Join(WORKINGDIR, "./process")
+
 	Bash_script = filepath.Join("_script.sh")
 )
