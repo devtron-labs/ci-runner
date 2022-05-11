@@ -206,7 +206,7 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 {{- range .ExtraVolumeMounts }}
 -v {{.SrcPath}}:{{.DstPath}} \
 {{- end}}
-{{ - range .OutputDirMount }}
+{{- range .OutputDirMount }}
 -v {{.SrcPath}}:{{.DstPath}} \
 {{- end}}
 {{- if .CustomScriptMount }}

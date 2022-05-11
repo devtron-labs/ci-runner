@@ -111,7 +111,13 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 				stepArtifact := filepath.Join(util.Output_path, "opt")
 
 				for _, artifact := range ciStep.ArtifactPaths {
-					path := &helper.MountPath{SrcPath: artifact, DstPath: filepath.Join(stepArtifact, artifact)}
+					hostPath := filepath.Join(stepArtifact, artifact)
+					err = os.MkdirAll(hostPath, os.ModePerm|os.ModeDir)
+					if err != nil {
+						log.Println(util.DEVTRON, err)
+						return nil, err
+					}
+					path := &helper.MountPath{DstPath: artifact, SrcPath: filepath.Join(stepArtifact, artifact)}
 					outputDirMount = append(outputDirMount, path)
 				}
 				executionConf := &executionConf{
@@ -137,9 +143,14 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 					return nil, err
 				}
 				stepOutputVarsFinal = stageOutputVars
-				err = copy.Copy(stepArtifact, filepath.Join(util.TmpArtifactLocation, ciStep.Name))
-				if err != nil {
-					return nil, err
+				if _, err := os.Stat(stepArtifact); os.IsNotExist(err) {
+					// Ignore if no file/folder
+					log.Println(util.DEVTRON, "artifact not found ", err)
+				} else {
+					err = copy.Copy(stepArtifact, filepath.Join(util.TmpArtifactLocation, ciStep.Name))
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 		} else if ciStep.StepType == helper.STEP_TYPE_REF_PLUGIN {
