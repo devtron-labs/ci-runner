@@ -215,7 +215,7 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 				return nil, err
 			}
 			if !success {
-				return nil, fmt.Errorf("stage not success")
+				return nil, fmt.Errorf("stage not successful because of condition failure")
 			}
 		}
 		finalOutVarMap := make(map[string]*helper.VariableObject)
