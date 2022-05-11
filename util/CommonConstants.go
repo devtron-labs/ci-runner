@@ -24,7 +24,7 @@ const DEVTRON = "DEVTRON"
 const INSECURE = "insecure"
 const SECUREWITHCERT = "secure-with-cert"
 const RETRYCOUNT = 10
-const WORKINGDIR = "/tmp"
+const WORKINGDIR = "/devtroncd"
 
 const CIEVENT = "CI"
 const CDSTAGE = "CD"
