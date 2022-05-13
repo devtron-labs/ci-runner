@@ -105,6 +105,9 @@ func ZipAndUpload(s3Location string, cloudProvider string, minioEndpoint string,
 }
 
 func IsDirEmpty(name string) (bool, error) {
+	if _, err := os.Stat(name); os.IsNotExist(err) {
+		return true, nil
+	}
 	f, err := os.Open(name)
 	if err != nil {
 		return false, err
