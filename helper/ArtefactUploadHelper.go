@@ -20,6 +20,7 @@ package helper
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -69,9 +70,16 @@ func UploadArtifact(artifactFiles map[string]string, s3Location string, cloudPro
 }
 
 func ZipAndUpload(s3Location string, cloudProvider string, minioEndpoint string, azureBlobConfig *AzureBlobConfig) error {
+	isEmpty, err := IsDirEmpty(util.TmpArtifactLocation)
+	if err != nil {
+		return err
+	} else if isEmpty {
+		log.Println(util.DEVTRON, "no artifact to upload")
+		return nil
+	}
 	zipFile := "job-artifact.zip"
 	zipCmd := exec.Command("zip", "-r", zipFile, util.TmpArtifactLocation)
-	err := util.RunCommand(zipCmd)
+	err = util.RunCommand(zipCmd)
 	if err != nil {
 		return err
 	}
@@ -92,4 +100,21 @@ func ZipAndUpload(s3Location string, cloudProvider string, minioEndpoint string,
 	default:
 		return fmt.Errorf("cloudprovider %s not supported", cloudProvider)
 	}
+}
+
+func IsDirEmpty(name string) (bool, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	// read in ONLY one file
+	_, err = f.Readdir(1)
+
+	// and if the file is EOF... well, the dir is empty.
+	if err == io.EOF {
+		return true, nil
+	}
+	return false, err
 }
