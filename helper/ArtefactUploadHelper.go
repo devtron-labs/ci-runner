@@ -72,11 +72,13 @@ func UploadArtifact(artifactFiles map[string]string, s3Location string, cloudPro
 func ZipAndUpload(s3Location string, cloudProvider string, minioEndpoint string, azureBlobConfig *AzureBlobConfig) error {
 	isEmpty, err := IsDirEmpty(util.TmpArtifactLocation)
 	if err != nil {
+		log.Println(util.DEVTRON, "artifact empty check error ")
 		return err
 	} else if isEmpty {
 		log.Println(util.DEVTRON, "no artifact to upload")
 		return nil
 	}
+	log.Println(util.DEVTRON, "artifact to upload")
 	zipFile := "job-artifact.zip"
 	zipCmd := exec.Command("zip", "-r", zipFile, util.TmpArtifactLocation)
 	err = util.RunCommand(zipCmd)
