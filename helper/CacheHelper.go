@@ -270,6 +270,8 @@ func (impl *AzureBlob) UploadBlob(context context.Context, blobName string, conf
 		return err
 	}
 	blobURL := containerURL.NewBlockBlobURL(blobName)
+	log.Println(util.DEVTRON, "upload blob url ", blobURL, "file", inputFileName)
+
 	file, err := os.Open(inputFileName)
 	if err != nil {
 		return err
