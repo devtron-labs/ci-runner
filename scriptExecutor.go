@@ -12,6 +12,52 @@ import (
 	"strings"
 )
 
+func RunScriptsV1(outputPath string, bashScript string, script string, envVars map[string]string) error {
+	log.Println("running script commands")
+	scriptTemplate := `#!/bin/sh
+{{ range $key, $value := .envVr }}
+export {{ $key }}={{ $value }} ;
+{{ end }}
+{{.script}}
+`
+
+	templateData := make(map[string]interface{})
+	templateData["envVr"] = envVars
+	templateData["script"] = script
+	finalScript, err := Tprintf(scriptTemplate, templateData)
+	if err != nil {
+		log.Println(util.DEVTRON, err)
+		return err
+	}
+	err = os.MkdirAll(outputPath, os.ModePerm|os.ModeDir)
+	if err != nil {
+		log.Println(util.DEVTRON, err)
+		return err
+	}
+	scriptPath := filepath.Join(outputPath, bashScript)
+	file, err := os.Create(scriptPath)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer file.Close()
+	_, err = file.WriteString(finalScript)
+	//log.Println(devtron, "final script ", finalScript) removed it shows some part on ui
+	log.Println(util.DEVTRON, scriptPath)
+	if err != nil {
+		log.Println(util.DEVTRON, err)
+		return err
+	}
+
+	runScriptCMD := exec.Command("/bin/sh", scriptPath)
+	err = util.RunCommand(runScriptCMD)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
 func RunScripts(workDirectory string, scriptFileName string, script string, envInputVars map[string]string, outputVars []string) (map[string]string, error) {
 	log.Println("running script commands")
 	envOutFileName := filepath.Join(workDirectory, fmt.Sprintf("%s_out.env", scriptFileName))

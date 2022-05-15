@@ -412,7 +412,7 @@ func RunCdStageTasks(tasks []*helper.Task, scriptEnvs map[string]string) error {
 		taskMap[task.Name] = task
 		log.Println(util.DEVTRON, "stage", task)
 		util.LogStage(task.Name)
-		_, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs, nil)
+		err := RunScriptsV1(util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return err
 		}
