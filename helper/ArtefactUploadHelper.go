@@ -69,7 +69,7 @@ func UploadArtifact(artifactFiles map[string]string, s3Location string, cloudPro
 	return err
 }
 
-func ZipAndUpload(s3Location string, cloudProvider string, minioEndpoint string, azureBlobConfig *AzureBlobConfig) error {
+func ZipAndUpload(artifactLocation string, cloudProvider string, minioEndpoint string, azureBlobConfig *AzureBlobConfig) error {
 	isEmpty, err := IsDirEmpty(util.TmpArtifactLocation)
 	if err != nil {
 		log.Println(util.DEVTRON, "artifact empty check error ")
@@ -85,19 +85,19 @@ func ZipAndUpload(s3Location string, cloudProvider string, minioEndpoint string,
 	if err != nil {
 		return err
 	}
-	log.Println(util.DEVTRON, " artifact upload to ", zipFile, s3Location)
+	log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactLocation)
 	switch cloudProvider {
 	case BLOB_STORAGE_S3:
-		artifactPush := exec.Command("aws", "s3", "cp", zipFile, s3Location)
+		artifactPush := exec.Command("aws", "s3", "cp", zipFile, artifactLocation)
 		err = util.RunCommand(artifactPush)
 		return err
 	case BLOB_STORAGE_MINIO:
-		artifactPush := exec.Command("aws", "--endpoint-url", minioEndpoint, "s3", "cp", zipFile, s3Location)
+		artifactPush := exec.Command("aws", "--endpoint-url", minioEndpoint, "s3", "cp", zipFile, artifactLocation)
 		err = util.RunCommand(artifactPush)
 		return err
 	case BLOB_STORAGE_AZURE:
 		b := AzureBlob{}
-		err = b.UploadBlob(context.Background(), zipFile, azureBlobConfig, zipFile)
+		err = b.UploadBlob(context.Background(), artifactLocation, azureBlobConfig, zipFile, azureBlobConfig.BlobContainerCiLog)
 		return err
 	default:
 		return fmt.Errorf("cloudprovider %s not supported", cloudProvider)
