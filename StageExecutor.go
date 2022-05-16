@@ -111,7 +111,12 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 					for _, path := range ciStep.ArtifactPaths {
 						err = copy.Copy(path, filepath.Join(util.TmpArtifactLocation, ciStep.Name, path))
 						if err != nil {
-							return nil, err
+							if _, ok := err.(*os.PathError); ok {
+								log.Println(util.DEVTRON, "dir not exists", path)
+								continue
+							} else {
+								return nil, err
+							}
 						}
 					}
 				}
