@@ -20,6 +20,7 @@ package helper
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -42,8 +43,6 @@ type AzureBlobConfig struct {
 	AccountKey           string `json:"accountKey"`
 }
 
-var tmpArtifactLocation = "./job-artifact"
-
 func UploadArtifact(artifactFiles map[string]string, s3Location string, cloudProvider string, minioEndpoint string, azureBlobConfig *AzureBlobConfig) error {
 	if len(artifactFiles) == 0 {
 		log.Println(util.DEVTRON, "no artifact to upload")
@@ -51,12 +50,12 @@ func UploadArtifact(artifactFiles map[string]string, s3Location string, cloudPro
 	}
 	//collect in a dir
 	log.Println(util.DEVTRON, "artifact upload ", artifactFiles, s3Location)
-	err := os.Mkdir(tmpArtifactLocation, os.ModePerm)
+	err := os.Mkdir(util.TmpArtifactLocation, os.ModePerm)
 	if err != nil {
 		return err
 	}
 	for key, val := range artifactFiles {
-		loc := filepath.Join(tmpArtifactLocation, key)
+		loc := filepath.Join(util.TmpArtifactLocation, key)
 		err := os.Mkdir(loc, os.ModePerm)
 		if err != nil {
 			return err
@@ -66,34 +65,61 @@ func UploadArtifact(artifactFiles map[string]string, s3Location string, cloudPro
 			return err
 		}
 	}
+	err = ZipAndUpload(s3Location, cloudProvider, minioEndpoint, azureBlobConfig)
+	return err
+}
+
+func ZipAndUpload(artifactLocation string, cloudProvider string, minioEndpoint string, azureBlobConfig *AzureBlobConfig) error {
+	isEmpty, err := IsDirEmpty(util.TmpArtifactLocation)
+	if err != nil {
+		log.Println(util.DEVTRON, "artifact empty check error ")
+		return err
+	} else if isEmpty {
+		log.Println(util.DEVTRON, "no artifact to upload")
+		return nil
+	}
+	log.Println(util.DEVTRON, "artifact to upload")
 	zipFile := "job-artifact.zip"
-	zipCmd := exec.Command("zip", "-r", zipFile, tmpArtifactLocation)
+	zipCmd := exec.Command("zip", "-r", zipFile, util.TmpArtifactLocation)
 	err = util.RunCommand(zipCmd)
 	if err != nil {
 		return err
 	}
-	log.Println(util.DEVTRON, " artifact upload to ", zipFile, s3Location)
+	log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactLocation)
 	switch cloudProvider {
 	case BLOB_STORAGE_S3:
-		artifactPush := exec.Command("aws", "s3", "cp", zipFile, s3Location)
+		artifactPush := exec.Command("aws", "s3", "cp", zipFile, artifactLocation)
 		err = util.RunCommand(artifactPush)
 		return err
 	case BLOB_STORAGE_MINIO:
-		artifactPush := exec.Command("aws", "--endpoint-url", minioEndpoint, "s3", "cp", zipFile, s3Location)
+		artifactPush := exec.Command("aws", "--endpoint-url", minioEndpoint, "s3", "cp", zipFile, artifactLocation)
 		err = util.RunCommand(artifactPush)
 		return err
 	case BLOB_STORAGE_AZURE:
 		b := AzureBlob{}
-		err = b.UploadBlob(context.Background(), zipFile, azureBlobConfig, zipFile)
+		err = b.UploadBlob(context.Background(), artifactLocation, azureBlobConfig, zipFile, azureBlobConfig.BlobContainerCiLog)
 		return err
 	default:
 		return fmt.Errorf("cloudprovider %s not supported", cloudProvider)
 	}
-	/*	tail := exec.Command("/bin/sh", "-c", "tail -f /dev/null")
-		err = RunCommand(tail)
-		if err != nil {
-			log.Println(err)
-			return err
-		}*/
-	//return RunCommand(artifactPush)
+}
+
+func IsDirEmpty(name string) (bool, error) {
+	if _, err := os.Stat(name); os.IsNotExist(err) {
+		return true, nil
+	}
+	f, err := os.Open(name)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	// read in ONLY one file
+	_, err = f.Readdir(1)
+
+	// and if the file is EOF... well, the dir is empty.
+	if err == io.EOF {
+		return true, nil
+	}
+	return false, err
 }

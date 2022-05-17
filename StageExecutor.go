@@ -21,12 +21,300 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
+	"github.com/otiai10/copy"
 )
+
+type StepType string
+
+const (
+	STEP_TYPE_PRE        StepType = "PRE"
+	STEP_TYPE_POST       StepType = "POST"
+	STEP_TYPE_REF_PLUGIN StepType = "REF_PLUGIN"
+)
+
+func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, err error) {
+	/*if stageType == STEP_TYPE_POST {
+		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
+	}*/
+	stageVariable := make(map[int]map[string]*helper.VariableObject)
+	for i, ciStep := range steps {
+		var vars []*helper.VariableObject
+		if stepType == STEP_TYPE_REF_PLUGIN {
+			vars, err = deduceVariables(ciStep.InputVars, globalEnvironmentVariables, nil, nil, stageVariable)
+		} else {
+			log.Printf("running step : %s\n", ciStep.Name)
+			if stepType == STEP_TYPE_PRE {
+				vars, err = deduceVariables(ciStep.InputVars, globalEnvironmentVariables, stageVariable, nil, nil)
+			} else if stepType == STEP_TYPE_POST {
+				vars, err = deduceVariables(ciStep.InputVars, globalEnvironmentVariables, preeCiStageVariable, stageVariable, nil)
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		ciStep.InputVars = vars
+
+		//variables with empty value
+		var emptyVariableList []string
+		scriptEnvs := make(map[string]string)
+		for _, v := range ciStep.InputVars {
+			scriptEnvs[v.Name] = v.Value
+			if len(v.Value) == 0 {
+				emptyVariableList = append(emptyVariableList, v.Name)
+			}
+		}
+		if stepType == STEP_TYPE_PRE || stepType == STEP_TYPE_POST {
+			log.Println(fmt.Sprintf("variables with empty value : %v", emptyVariableList))
+		}
+		if len(ciStep.TriggerSkipConditions) > 0 {
+			shouldTrigger, err := helper.ShouldTriggerStage(ciStep.TriggerSkipConditions, ciStep.InputVars)
+			if err != nil {
+				log.Println(err)
+				return nil, err
+			}
+			if !shouldTrigger {
+				log.Printf("skipping %s as per pass Condition\n", ciStep.Name)
+				continue
+			}
+		}
+
+		var outVars []string
+		for _, outVar := range ciStep.OutputVars {
+			outVars = append(outVars, outVar.Name)
+		}
+		//cleaning the directory
+		err = os.RemoveAll(util.Output_path)
+		if err != nil {
+			log.Println(util.DEVTRON, err)
+			return nil, err
+		}
+		err = os.MkdirAll(util.Output_path, os.ModePerm|os.ModeDir)
+		if err != nil {
+			log.Println(util.DEVTRON, err)
+			return nil, err
+		}
+
+		var stepOutputVarsFinal map[string]string
+		//---------------------------------------------------------------------------------------------------
+		if ciStep.StepType == helper.STEP_TYPE_INLINE {
+			if ciStep.ExecutorType == helper.SHELL {
+				stageOutputVars, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", i), ciStep.Script, scriptEnvs, outVars)
+				if err != nil {
+					return nil, err
+				}
+				stepOutputVarsFinal = stageOutputVars
+				if len(ciStep.ArtifactPaths) > 0 {
+					for _, path := range ciStep.ArtifactPaths {
+						err = copy.Copy(path, filepath.Join(util.TmpArtifactLocation, ciStep.Name, path))
+						if err != nil {
+							if _, ok := err.(*os.PathError); ok {
+								log.Println(util.DEVTRON, "dir not exists", path)
+								continue
+							} else {
+								return nil, err
+							}
+						}
+					}
+				}
+			} else if ciStep.ExecutorType == helper.CONTAINER_IMAGE {
+				var outputDirMount []*helper.MountPath
+				stepArtifact := filepath.Join(util.Output_path, "opt")
+
+				for _, artifact := range ciStep.ArtifactPaths {
+					hostPath := filepath.Join(stepArtifact, artifact)
+					err = os.MkdirAll(hostPath, os.ModePerm|os.ModeDir)
+					if err != nil {
+						log.Println(util.DEVTRON, err)
+						return nil, err
+					}
+					path := &helper.MountPath{DstPath: artifact, SrcPath: filepath.Join(stepArtifact, artifact)}
+					outputDirMount = append(outputDirMount, path)
+				}
+				executionConf := &executionConf{
+					Script:            ciStep.Script,
+					EnvInputVars:      scriptEnvs,
+					ExposedPorts:      ciStep.ExposedPorts,
+					OutputVars:        outVars,
+					DockerImage:       ciStep.DockerImage,
+					command:           ciStep.Command,
+					args:              ciStep.Args,
+					CustomScriptMount: ciStep.CustomScriptMount,
+					SourceCodeMount:   ciStep.SourceCodeMount,
+					ExtraVolumeMounts: ciStep.ExtraVolumeMounts,
+					scriptFileName:    fmt.Sprintf("stage-%d", i),
+					workDirectory:     util.Output_path,
+					OutputDirMount:    outputDirMount,
+				}
+				if executionConf.SourceCodeMount != nil {
+					executionConf.SourceCodeMount.SrcPath = util.WORKINGDIR
+				}
+				stageOutputVars, err := RunScriptsInDocker(executionConf)
+				if err != nil {
+					return nil, err
+				}
+				stepOutputVarsFinal = stageOutputVars
+				if _, err := os.Stat(stepArtifact); os.IsNotExist(err) {
+					// Ignore if no file/folder
+					log.Println(util.DEVTRON, "artifact not found ", err)
+				} else {
+					err = copy.Copy(stepArtifact, filepath.Join(util.TmpArtifactLocation, ciStep.Name))
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+		} else if ciStep.StepType == helper.STEP_TYPE_REF_PLUGIN {
+			steps := refStageMap[ciStep.RefPluginId]
+			stepIndexVarNameValueMap := make(map[int]map[string]string)
+			for _, inVar := range ciStep.InputVars {
+				if varMap, ok := stepIndexVarNameValueMap[inVar.VariableStepIndexInPlugin]; ok {
+					varMap[inVar.Name] = inVar.Value
+					stepIndexVarNameValueMap[inVar.VariableStepIndexInPlugin] = varMap
+				} else {
+					varMap := map[string]string{inVar.Name: inVar.Value}
+					stepIndexVarNameValueMap[inVar.VariableStepIndexInPlugin] = varMap
+				}
+			}
+			for _, step := range steps {
+				if varMap, ok := stepIndexVarNameValueMap[step.Index]; ok {
+					for _, inVar := range step.InputVars {
+						if value, ok := varMap[inVar.Name]; ok {
+							inVar.Value = value
+						}
+					}
+				}
+			}
+			opt, err := RunCiSteps(STEP_TYPE_REF_PLUGIN, steps, refStageMap, globalEnvironmentVariables, nil)
+			if err != nil {
+				fmt.Println(err)
+				return nil, err
+			}
+			for _, outputVar := range ciStep.OutputVars {
+				if varObj, ok := opt[outputVar.VariableStepIndexInPlugin]; ok {
+					if v, ok1 := varObj[outputVar.Name]; ok1 {
+						stepOutputVarsFinal[v.Name] = v.Value
+					}
+				}
+			}
+			fmt.Println(opt)
+			//stepOutputVarsFinal=opt
+			//manipulate pre and post variables
+			// artifact path
+			//
+		} else {
+			return nil, fmt.Errorf("step Type :%s not supported", ciStep.StepType)
+		}
+		//---------------------------------------------------------------------------------------------------
+		finalOutVars, err := populateOutVars(stepOutputVarsFinal, ciStep.OutputVars)
+		if err != nil {
+			return nil, err
+		}
+		ciStep.OutputVars = finalOutVars
+		if len(ciStep.SuccessFailureConditions) > 0 {
+			success, err := helper.StageIsSuccess(ciStep.SuccessFailureConditions, finalOutVars)
+			if err != nil {
+				return nil, err
+			}
+			if !success {
+				return nil, fmt.Errorf("stage not successful because of condition failure")
+			}
+		}
+		finalOutVarMap := make(map[string]*helper.VariableObject)
+		for _, out := range ciStep.OutputVars {
+			finalOutVarMap[out.Name] = out
+		}
+		stageVariable[ciStep.Index] = finalOutVarMap
+	}
+	return stageVariable, nil
+}
+
+func populateOutVars(outData map[string]string, desired []*helper.VariableObject) ([]*helper.VariableObject, error) {
+	var finalOutVars []*helper.VariableObject
+	for _, d := range desired {
+		value := outData[d.Name]
+		if len(value) == 0 {
+			log.Printf("%s not present\n", d.Name)
+			continue
+		}
+		typedVal, err := helper.TypeConverter(value, d.Format)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+		d.Value = value
+		d.TypedValue = typedVal
+		finalOutVars = append(finalOutVars, d)
+	}
+	return finalOutVars, nil
+}
+
+func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject, postCiStageVariables map[int]map[string]*helper.VariableObject, refPluginStageVariables map[int]map[string]*helper.VariableObject) ([]*helper.VariableObject, error) {
+	var inputVars []*helper.VariableObject
+	for _, desired := range desiredVars {
+		switch desired.VariableType {
+		case helper.VALUE:
+			inputVars = append(inputVars, desired)
+		case helper.REF_PRE_CI:
+			if v, found := preeCiStageVariable[desired.ReferenceVariableStepIndex]; found {
+				if d, foundD := v[desired.ReferenceVariableName]; foundD {
+					desired.Value = d.Value
+					err := desired.TypeCheck()
+					if err != nil {
+						return nil, err
+					}
+					inputVars = append(inputVars, desired)
+				} else {
+					return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
+				}
+			} else {
+				return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
+			}
+		case helper.REF_POST_CI:
+			if v, found := postCiStageVariables[desired.ReferenceVariableStepIndex]; found {
+				if d, foundD := v[desired.ReferenceVariableName]; foundD {
+					desired.Value = d.Value
+					err := desired.TypeCheck()
+					if err != nil {
+						return nil, err
+					}
+					inputVars = append(inputVars, desired)
+				} else {
+					return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
+				}
+			} else {
+				return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
+			}
+		case helper.REF_GLOBAL:
+			desired.Value = globalVars[desired.ReferenceVariableName]
+			err := desired.TypeCheck()
+			if err != nil {
+				return nil, err
+			}
+			inputVars = append(inputVars, desired)
+		case helper.REF_PLUGIN:
+			if v, found := refPluginStageVariables[desired.ReferenceVariableStepIndex]; found {
+				if d, foundD := v[desired.ReferenceVariableName]; foundD {
+					desired.Value = d.Value
+					err := desired.TypeCheck()
+					if err != nil {
+						return nil, err
+					}
+					inputVars = append(inputVars, desired)
+				} else {
+					return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
+				}
+			} else {
+				return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
+			}
+		}
+	}
+	return inputVars, nil
+
+}
 
 func RunPreDockerBuildTasks(ciRequest *helper.CiRequest, scriptEnvs map[string]string, taskYaml *helper.TaskYaml) error {
 	//before task
@@ -37,7 +325,7 @@ func RunPreDockerBuildTasks(ciRequest *helper.CiRequest, scriptEnvs map[string]s
 		log.Println(util.DEVTRON, "pre", task)
 		//log running cmd
 		util.LogStage(task.Name)
-		err := RunScripts(util.Output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs)
+		_, err := RunScripts(util.Output_path, fmt.Sprintf("before-%d", i), task.Script, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
@@ -60,7 +348,7 @@ func RunPreDockerBuildTasks(ciRequest *helper.CiRequest, scriptEnvs map[string]s
 		log.Println(util.DEVTRON, "pre - yaml", task)
 		//log running cmd
 		util.LogStage(task.Name)
-		err = RunScripts(util.Output_path, fmt.Sprintf("before-yaml-%d", i), task.Script, scriptEnvs)
+		_, err = RunScripts(util.Output_path, fmt.Sprintf("before-yaml-%d", i), task.Script, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
@@ -76,7 +364,7 @@ func RunPostDockerBuildTasks(ciRequest *helper.CiRequest, scriptEnvs map[string]
 		afterTaskMap[task.Name] = task
 		log.Println(util.DEVTRON, "post", task)
 		util.LogStage(task.Name)
-		err := RunScripts(util.Output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs)
+		_, err := RunScripts(util.Output_path, fmt.Sprintf("after-%d", i), task.Script, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
@@ -98,7 +386,7 @@ func RunPostDockerBuildTasks(ciRequest *helper.CiRequest, scriptEnvs map[string]
 		log.Println(util.DEVTRON, "post - yaml", task)
 		//log running cmd
 		util.LogStage(task.Name)
-		err = RunScripts(util.Output_path, fmt.Sprintf("after-yaml-%d", i), task.Script, scriptEnvs)
+		_, err = RunScripts(util.Output_path, fmt.Sprintf("after-yaml-%d", i), task.Script, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
@@ -108,6 +396,17 @@ func RunPostDockerBuildTasks(ciRequest *helper.CiRequest, scriptEnvs map[string]
 
 func RunCdStageTasks(tasks []*helper.Task, scriptEnvs map[string]string) error {
 	log.Println(util.DEVTRON, " cd-stage-processing")
+	//cleaning the directory
+	err := os.RemoveAll(util.Output_path)
+	if err != nil {
+		log.Println(util.DEVTRON, err)
+		return err
+	}
+	err = os.MkdirAll(util.Output_path, os.ModePerm|os.ModeDir)
+	if err != nil {
+		log.Println(util.DEVTRON, err)
+		return err
+	}
 	taskMap := make(map[string]*helper.Task)
 	for i, task := range tasks {
 		if _, ok := taskMap[task.Name]; ok {
@@ -118,56 +417,10 @@ func RunCdStageTasks(tasks []*helper.Task, scriptEnvs map[string]string) error {
 		taskMap[task.Name] = task
 		log.Println(util.DEVTRON, "stage", task)
 		util.LogStage(task.Name)
-		err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
+		err := RunScriptsV1(util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-func RunScripts(outputPath string, bashScript string, script string, envVars map[string]string) error {
-	log.Println("running script commands")
-	scriptTemplate := `#!/bin/sh
-{{ range $key, $value := .envVr }}
-export {{ $key }}={{ $value }} ;
-{{ end }}
-{{.script}}
-`
-
-	templateData := make(map[string]interface{})
-	templateData["envVr"] = envVars
-	templateData["script"] = script
-	finalScript, err := Tprintf(scriptTemplate, templateData)
-	if err != nil {
-		log.Println(util.DEVTRON, err)
-		return err
-	}
-	err = os.MkdirAll(outputPath, os.ModePerm|os.ModeDir)
-	if err != nil {
-		log.Println(util.DEVTRON, err)
-		return err
-	}
-	scriptPath := filepath.Join(outputPath, bashScript)
-	file, err := os.Create(scriptPath)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	defer file.Close()
-	_, err = file.WriteString(finalScript)
-	//log.Println(devtron, "final script ", finalScript) removed it shows some part on ui
-	log.Println(util.DEVTRON, scriptPath)
-	if err != nil {
-		log.Println(util.DEVTRON, err)
-		return err
-	}
-
-	runScriptCMD := exec.Command("/bin/sh", scriptPath)
-	err = util.RunCommand(runScriptCMD)
-	if err != nil {
-		log.Println(err)
-		return err
 	}
 	return nil
 }

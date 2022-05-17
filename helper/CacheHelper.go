@@ -169,7 +169,7 @@ func SyncCache(ciRequest *CiRequest) error {
 		err = util.RunCommand(cachePush)
 	case BLOB_STORAGE_AZURE:
 		b := AzureBlob{}
-		err = b.UploadBlob(context.Background(), ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig, ciRequest.CiCacheFileName)
+		err = b.UploadBlob(context.Background(), ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig, ciRequest.CiCacheFileName, ciRequest.AzureBlobConfig.BlobContainerCiCache)
 	default:
 		return fmt.Errorf("cloudprovider %s not supported", ciRequest.CloudProvider)
 	}
@@ -211,7 +211,7 @@ func (impl *AzureBlob) getTokenCredentials() (azblob.TokenCredential, error) {
 	return credential, err
 }
 
-func (impl *AzureBlob) buildContainerUrl(config *AzureBlobConfig) (*azblob.ContainerURL, error) {
+func (impl *AzureBlob) buildContainerUrl(config *AzureBlobConfig, container string) (*azblob.ContainerURL, error) {
 	var credential azblob.Credential
 	var err error
 	if len(config.AccountKey) > 0 {
@@ -229,7 +229,7 @@ func (impl *AzureBlob) buildContainerUrl(config *AzureBlobConfig) (*azblob.Conta
 
 	// From the Azure portal, get your storage account blob service URL endpoint.
 	URL, _ := url.Parse(
-		fmt.Sprintf("https://%s.blob.core.windows.net/%s", config.AccountName, config.BlobContainerCiCache))
+		fmt.Sprintf("https://%s.blob.core.windows.net/%s", config.AccountName, container))
 
 	// Create a ContainerURL object that wraps the container URL and a request
 	// pipeline to make requests.
@@ -238,7 +238,7 @@ func (impl *AzureBlob) buildContainerUrl(config *AzureBlobConfig) (*azblob.Conta
 }
 
 func (impl *AzureBlob) DownloadBlob(context context.Context, blobName string, config *AzureBlobConfig, file *os.File) (success bool, err error) {
-	containerURL, err := impl.buildContainerUrl(config)
+	containerURL, err := impl.buildContainerUrl(config, config.BlobContainerCiCache)
 	if err != nil {
 		return false, err
 	}
@@ -264,12 +264,14 @@ func (impl *AzureBlob) DownloadBlob(context context.Context, blobName string, co
 	return true, err
 }
 
-func (impl *AzureBlob) UploadBlob(context context.Context, blobName string, config *AzureBlobConfig, inputFileName string) error {
-	containerURL, err := impl.buildContainerUrl(config)
+func (impl *AzureBlob) UploadBlob(context context.Context, blobName string, config *AzureBlobConfig, inputFileName string, container string) error {
+	containerURL, err := impl.buildContainerUrl(config, container)
 	if err != nil {
 		return err
 	}
 	blobURL := containerURL.NewBlockBlobURL(blobName)
+	log.Println(util.DEVTRON, "upload blob url ", blobURL, "file", inputFileName)
+
 	file, err := os.Open(inputFileName)
 	if err != nil {
 		return err
