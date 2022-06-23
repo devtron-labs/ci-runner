@@ -20,6 +20,7 @@ package pubsub
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/ci-runner/util"
@@ -44,7 +45,17 @@ func NewPubSubClient() (*PubSubClient, error) {
 	if err != nil {
 		return &PubSubClient{}, err
 	}
-	nc, err := nats.Connect(cfg.NatsServerHost)
+	nc, err := nats.Connect(cfg.NatsServerHost,
+		nats.ReconnectWait(10*time.Second), nats.MaxReconnects(100),
+		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
+			log.Fatal("Nats Connection got disconnected!", "Reason", err)
+		}),
+		nats.ReconnectHandler(func(nc *nats.Conn) {
+			log.Println("Nats Connection got reconnected", "url", nc.ConnectedUrl())
+		}),
+		nats.ClosedHandler(func(nc *nats.Conn) {
+			log.Fatal("Nats Client Connection closed!", "Reason", nc.LastError())
+		}))
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
 		os.Exit(1)
