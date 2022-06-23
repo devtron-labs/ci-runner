@@ -48,13 +48,13 @@ func NewPubSubClient() (*PubSubClient, error) {
 	nc, err := nats.Connect(cfg.NatsServerHost,
 		nats.ReconnectWait(10*time.Second), nats.MaxReconnects(100),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
-			log.Fatal("Got disconnected!", "Reason", err)
+			log.Fatal("Nats Connection got disconnected!", "Reason", err)
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
-			log.Println("Got reconnected", "url", nc.ConnectedUrl())
+			log.Println("Nats Connection got reconnected", "url", nc.ConnectedUrl())
 		}),
 		nats.ClosedHandler(func(nc *nats.Conn) {
-			log.Fatal("Connection closed!", "Reason", nc.LastError())
+			log.Fatal("Nats Client Connection closed!", "Reason", nc.LastError())
 		}))
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
