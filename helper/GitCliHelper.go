@@ -66,6 +66,7 @@ func (impl *GitUtil) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnv
 			return "", "", err
 		}
 		errOutput := string(exErr.Stderr)
+		log.Println(util.DEVTRON, "errOutput", "errOutput", errOutput)
 		return "", errOutput, err
 	}
 	output := string(outBytes)
