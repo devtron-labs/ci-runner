@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -54,8 +55,15 @@ func (impl *GitUtil) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnv
 	if setHomeEnvToNull {
 		cmd.Env = append(cmd.Env, "HOME=/dev/null")
 	}
-	outBytes, err := cmd.CombinedOutput()
-	log.Println(util.DEVTRON, "outBytes", "outBytes", string(outBytes))
+
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+
+	log.Println(util.DEVTRON, "out", "out", out.String())
+	log.Println(util.DEVTRON, "stderr", "stderr", stderr.String())
 	if err != nil {
 		log.Println(util.DEVTRON, "err inside ", "err", err)
 		exErr, ok := err.(*exec.ExitError)
@@ -69,7 +77,7 @@ func (impl *GitUtil) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnv
 		log.Println(util.DEVTRON, "errOutput", "errOutput", errOutput)
 		return "", errOutput, err
 	}
-	output := string(outBytes)
+	output := out.String()
 	output = strings.Replace(output, "\n", "", -1)
 	output = strings.TrimSpace(output)
 	return output, "", nil
