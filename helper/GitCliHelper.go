@@ -55,6 +55,7 @@ func (impl *GitUtil) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnv
 		cmd.Env = append(cmd.Env, "HOME=/dev/null")
 	}
 	outBytes, err := cmd.CombinedOutput()
+	log.Println(util.DEVTRON, "outBytes", "outBytes", string(outBytes))
 	if err != nil {
 		log.Println(util.DEVTRON, "err inside ", "err", err)
 		exErr, ok := err.(*exec.ExitError)
