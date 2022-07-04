@@ -53,6 +53,8 @@ func (impl *GitUtil) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnv
 	if setHomeEnvToNull {
 		cmd.Env = append(cmd.Env, "HOME=/dev/null")
 	}
+	// https://stackoverflow.com/questions/18159704/how-to-debug-exit-status-1-error-when-running-exec-command-in-golang
+	// in CombinedOutput, both stdOut and stdError are returned in single output
 	outBytes, err := cmd.CombinedOutput()
 	output := string(outBytes)
 	output = strings.Replace(output, "\n", "", -1)
