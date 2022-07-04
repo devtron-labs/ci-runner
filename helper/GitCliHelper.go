@@ -1,16 +1,14 @@
 package helper
 
 import (
-	"bytes"
 	"fmt"
+	"github.com/devtron-labs/ci-runner/util"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/config"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/devtron-labs/ci-runner/util"
-	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/config"
 )
 
 type GitUtil struct {
@@ -55,31 +53,18 @@ func (impl *GitUtil) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnv
 	if setHomeEnvToNull {
 		cmd.Env = append(cmd.Env, "HOME=/dev/null")
 	}
-
-	var out bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-	err = cmd.Run()
-
-	log.Println(util.DEVTRON, "out", "out", out.String())
-	log.Println(util.DEVTRON, "stderr", "stderr", stderr.String())
-	if err != nil {
-		log.Println(util.DEVTRON, "err inside ", "err", err)
-		exErr, ok := err.(*exec.ExitError)
-		log.Println(util.DEVTRON, "ok ", "ok", ok)
-		log.Println(util.DEVTRON, "exErr ", "exErr", exErr)
-		log.Println(util.DEVTRON, "exitCode ", "exitCode", exErr.ExitCode())
-		if !ok {
-			return "", "", err
-		}
-		errOutput := string(exErr.Stderr)
-		log.Println(util.DEVTRON, "errOutput", "errOutput", errOutput)
-		return "", errOutput, err
-	}
-	output := out.String()
+	outBytes, err := cmd.CombinedOutput()
+	output := string(outBytes)
 	output = strings.Replace(output, "\n", "", -1)
 	output = strings.TrimSpace(output)
+	if err != nil {
+		exErr, ok := err.(*exec.ExitError)
+		if !ok {
+			return "", output, err
+		}
+		errOutput := string(exErr.Stderr)
+		return "", fmt.Sprintf("%s\n%s", output, errOutput), err
+	}
 	return output, "", nil
 }
 
