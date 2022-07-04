@@ -56,7 +56,11 @@ func (impl *GitUtil) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnv
 	}
 	outBytes, err := cmd.CombinedOutput()
 	if err != nil {
+		log.Println(util.DEVTRON, "err inside ", "err", err)
 		exErr, ok := err.(*exec.ExitError)
+		log.Println(util.DEVTRON, "ok ", "ok", ok)
+		log.Println(util.DEVTRON, "exErr ", "exErr", exErr)
+		log.Println(util.DEVTRON, "exitCode ", "exitCode", exErr.ExitCode())
 		if !ok {
 			return "", "", err
 		}
