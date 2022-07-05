@@ -2,14 +2,13 @@ package helper
 
 import (
 	"fmt"
+	"github.com/devtron-labs/ci-runner/util"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/config"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/devtron-labs/ci-runner/util"
-	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/config"
 )
 
 type GitUtil struct {
@@ -54,18 +53,20 @@ func (impl *GitUtil) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnv
 	if setHomeEnvToNull {
 		cmd.Env = append(cmd.Env, "HOME=/dev/null")
 	}
+	// https://stackoverflow.com/questions/18159704/how-to-debug-exit-status-1-error-when-running-exec-command-in-golang
+	// in CombinedOutput, both stdOut and stdError are returned in single output
 	outBytes, err := cmd.CombinedOutput()
-	if err != nil {
-		exErr, ok := err.(*exec.ExitError)
-		if !ok {
-			return "", "", err
-		}
-		errOutput := string(exErr.Stderr)
-		return "", errOutput, err
-	}
 	output := string(outBytes)
 	output = strings.Replace(output, "\n", "", -1)
 	output = strings.TrimSpace(output)
+	if err != nil {
+		exErr, ok := err.(*exec.ExitError)
+		if !ok {
+			return "", output, err
+		}
+		errOutput := string(exErr.Stderr)
+		return "", fmt.Sprintf("%s\n%s", output, errOutput), err
+	}
 	return output, "", nil
 }
 
