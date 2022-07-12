@@ -38,7 +38,10 @@ func main() {
 		log.Println(err)
 		os.Exit(1)
 	}
-	log.Println(util.DEVTRON, " ci-cd request details -----> ", args)
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel == "" || logLevel == "DEBUG" {
+		log.Println(util.DEVTRON, " ci-cd request details -----> ", args)
+	}
 
 	if ciCdRequest.Type == util.CIEVENT {
 		ciRequest := ciCdRequest.CiRequest
