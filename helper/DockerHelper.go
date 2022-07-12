@@ -22,12 +22,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/devtron-labs/ci-runner/util"
 	"io"
 	"io/ioutil"
 	"log"
@@ -39,6 +33,13 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/devtron-labs/ci-runner/util"
 )
 
 func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int) {
@@ -171,6 +172,9 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	log.Println(util.DEVTRON, " docker file location: ", dockerFileLocationDir)
 
 	dockerBuild := "docker build "
+	if ciRequest.TargetPlatform != "" {
+		dockerBuild = "docker buildx build --platform " + ciRequest.TargetPlatform + " "
+	}
 	if ciRequest.DockerBuildArgs != "" {
 		dockerBuildArgsMap := make(map[string]string)
 		err := json.Unmarshal([]byte(ciRequest.DockerBuildArgs), &dockerBuildArgsMap)
