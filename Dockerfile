@@ -23,6 +23,8 @@ RUN apk --purge -v del py-pip
 RUN rm /var/cache/apk/*
 COPY --from=docker/compose:latest /usr/local/bin/docker-compose /usr/bin/docker-compose
 
+RUN docker buildx create --use
+
 COPY ./git-ask-pass.sh /git-ask-pass.sh
 RUN chmod +x /git-ask-pass.sh
 
