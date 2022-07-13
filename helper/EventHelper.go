@@ -45,6 +45,7 @@ type CiRequest struct {
 	DockerCert                  string                       `json:"dockerCert"`
 	DockerRepository            string                       `json:"dockerRepository"`
 	DockerBuildArgs             string                       `json:"dockerBuildArgs"`
+	DockerBuildTargetPlatform   string                       `json:"dockerBuildTargetPlatform"`
 	DockerFileLocation          string                       `json:"dockerfileLocation"`
 	DockerUsername              string                       `json:"dockerUsername"`
 	DockerPassword              string                       `json:"dockerPassword"`
@@ -77,7 +78,6 @@ type CiRequest struct {
 	RefPlugins                  []*RefPluginObject           `json:"refPlugins"`
 	AppName                     string                       `json:"appName"`
 	TriggerByAuthor             string                       `json:"triggerByAuthor"`
-	TargetPlatform              string                       `json:"targetPlatform"`
 }
 
 type CdRequest struct {

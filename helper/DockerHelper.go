@@ -172,8 +172,8 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	log.Println(util.DEVTRON, " docker file location: ", dockerFileLocationDir)
 
 	dockerBuild := "docker build "
-	if ciRequest.TargetPlatform != "" {
-		dockerBuild = "docker buildx build --platform " + ciRequest.TargetPlatform + " "
+	if ciRequest.DockerBuildTargetPlatform != "" {
+		dockerBuild = "docker buildx build --platform " + ciRequest.DockerBuildTargetPlatform + " "
 	}
 	if ciRequest.DockerBuildArgs != "" {
 		dockerBuildArgsMap := make(map[string]string)
