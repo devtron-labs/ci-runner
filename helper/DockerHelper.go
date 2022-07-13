@@ -172,7 +172,8 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	log.Println(util.DEVTRON, " docker file location: ", dockerFileLocationDir)
 
 	dockerBuild := "docker build "
-	if ciRequest.DockerBuildTargetPlatform != "" {
+	useBuildx := ciRequest.DockerBuildTargetPlatform != ""
+	if useBuildx {
 		dockerBuild = "docker buildx build --platform " + ciRequest.DockerBuildTargetPlatform + " "
 	}
 	if ciRequest.DockerBuildArgs != "" {
@@ -187,7 +188,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		}
 	}
 
-	if ciRequest.DockerBuildTargetPlatform != "" && strings.Contains(ciRequest.DockerBuildTargetPlatform, ",") {
+	if useBuildx {
 		multiPlatformCmd := "docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host'"
 		log.Println(" -----> " + multiPlatformCmd)
 		dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
@@ -196,16 +197,16 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			log.Println(err)
 			return "", err
 		}
-		multiPlatformCmd = "docker buildx inspect --bootstrap"
-		log.Println(" -----> " + multiPlatformCmd)
-		dockerBuildCMD = exec.Command("/bin/sh", "-c", multiPlatformCmd)
-		err = util.RunCommand(dockerBuildCMD)
-		if err != nil {
-			log.Println(err)
-			return "", err
-		}
 	}
-	dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
+	dest, err := BuildDockerImagePath(ciRequest)
+	if err != nil {
+		return "", err
+	}
+	if useBuildx {
+		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push .", dockerBuild, ciRequest.DockerFileLocation, dest)
+	} else {
+		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
+	}
 	log.Println(" -----> " + dockerBuild)
 
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
@@ -214,17 +215,16 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		log.Println(err)
 		return "", err
 	}
-	dest, err := BuildDockerImagePath(ciRequest)
-	if err != nil {
-		return "", err
-	}
-	dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
-	log.Println(" -----> " + dockerTag)
-	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
-	err = util.RunCommand(dockerTagCMD)
-	if err != nil {
-		log.Println(err)
-		return "", err
+
+	if !useBuildx {
+		dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
+		log.Println(" -----> " + dockerTag)
+		dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
+		err = util.RunCommand(dockerTagCMD)
+		if err != nil {
+			log.Println(err)
+			return "", err
+		}
 	}
 	return dest, nil
 }
@@ -248,13 +248,15 @@ func BuildDockerImagePath(ciRequest *CiRequest) (string, error) {
 
 func PushArtifact(ciRequest *CiRequest, dest string) (string, error) {
 	//awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
-	dockerPush := "docker push " + dest
-	log.Println("-----> " + dockerPush)
-	dockerPushCMD := exec.Command("/bin/sh", "-c", dockerPush)
-	err := util.RunCommand(dockerPushCMD)
-	if err != nil {
-		log.Println(err)
-		return "", err
+	if ciRequest.DockerBuildTargetPlatform == "" {
+		dockerPush := "docker push " + dest
+		log.Println("-----> " + dockerPush)
+		dockerPushCMD := exec.Command("/bin/sh", "-c", dockerPush)
+		err := util.RunCommand(dockerPushCMD)
+		if err != nil {
+			log.Println(err)
+			return "", err
+		}
 	}
 	dockerPull := "docker pull " + dest
 	dockerPullCmd := exec.Command("/bin/sh", "-c", dockerPull)
