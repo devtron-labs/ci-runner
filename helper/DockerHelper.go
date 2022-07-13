@@ -188,7 +188,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	}
 
 	if ciRequest.DockerBuildTargetPlatform != "" && strings.Contains(ciRequest.DockerBuildTargetPlatform, ",") {
-		multiPlatformCmd := "docker buildx create --use"
+		multiPlatformCmd := "docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host'"
 		log.Println(" -----> " + multiPlatformCmd)
 		dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
 		err = util.RunCommand(dockerBuildCMD)
