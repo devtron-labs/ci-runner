@@ -186,6 +186,25 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
 		}
 	}
+
+	if ciRequest.DockerBuildTargetPlatform != "" && strings.Contains(ciRequest.DockerBuildTargetPlatform, ",") {
+		multiPlatformCmd := "docker buildx create --use"
+		log.Println(" -----> " + multiPlatformCmd)
+		dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
+		err = util.RunCommand(dockerBuildCMD)
+		if err != nil {
+			log.Println(err)
+			return "", err
+		}
+		multiPlatformCmd = "docker buildx inspect --bootstrap"
+		log.Println(" -----> " + multiPlatformCmd)
+		dockerBuildCMD = exec.Command("/bin/sh", "-c", multiPlatformCmd)
+		err = util.RunCommand(dockerBuildCMD)
+		if err != nil {
+			log.Println(err)
+			return "", err
+		}
+	}
 	dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
 	log.Println(" -----> " + dockerBuild)
 
