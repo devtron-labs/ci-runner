@@ -222,16 +222,30 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		return "", err
 	}
 	if useBuildx {
-		localCachePath := util.LOCAL_BUILDX_LOCATION + "/cache"
-		makeDirCmd := "mkdir -p " + localCachePath
-		pathCreateCommand := exec.Command("/bin/sh", "-c", makeDirCmd)
-		log.Println(" -----> " + makeDirCmd)
-		err = util.RunCommand(pathCreateCommand)
+		oldCacheBuildxPath := util.LOCAL_BUILDX_LOCATION + "/old"
+		localCachePath := util.LOCAL_BUILDX_CACHE_LOCATION
+		s, err2 := checkAndCreateDirectory(localCachePath, err)
+		s, err2 = checkAndCreateDirectory(oldCacheBuildxPath, err)
+		if err2 != nil {
+			return s, err2
+		}
+		copyContent := "cp -R " + localCachePath + "/ " + oldCacheBuildxPath
+		copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
+		err = util.RunCommand(copyContentCmd)
 		if err != nil {
 			log.Println(err)
 			return "", err
 		}
-		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest="+localCachePath+" --cache-from=type=local,src="+localCachePath+" --metadata-file "+util.LOCAL_BUILDX_LOCATION+"/manifest.json", dockerBuild, ciRequest.DockerFileLocation, dest)
+
+		cleanContent := "rm -rf " + localCachePath + "/*"
+		cleanContentCmd := exec.Command("/bin/sh", "-c", cleanContent)
+		err = util.RunCommand(cleanContentCmd)
+		if err != nil {
+			log.Println(err)
+			return "", err
+		}
+
+		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest="+localCachePath+" --cache-from=type=local,src="+oldCacheBuildxPath+" --metadata-file "+util.LOCAL_BUILDX_LOCATION+"/manifest.json", dockerBuild, ciRequest.DockerFileLocation, dest)
 	} else {
 		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
 	}
@@ -255,6 +269,18 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		}
 	}
 	return dest, nil
+}
+
+func checkAndCreateDirectory(localCachePath string, err error) (string, error) {
+	makeDirCmd := "mkdir -p " + localCachePath
+	pathCreateCommand := exec.Command("/bin/sh", "-c", makeDirCmd)
+	log.Println(" -----> " + makeDirCmd)
+	err = util.RunCommand(pathCreateCommand)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	return "", nil
 }
 
 func BuildDockerImagePath(ciRequest *CiRequest) (string, error) {

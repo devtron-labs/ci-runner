@@ -152,7 +152,7 @@ func SyncCache(ciRequest *CiRequest) error {
 	log.Println("Generating new cache")
 	var cachePath string
 	if ciRequest.DockerBuildTargetPlatform != "" {
-		cachePath = util.LOCAL_BUILDX_LOCATION
+		cachePath = util.LOCAL_BUILDX_CACHE_LOCATION
 	} else {
 		cachePath = "/var/lib/docker"
 	}
