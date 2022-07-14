@@ -150,7 +150,14 @@ func SyncCache(ciRequest *CiRequest) error {
 	util.DeleteFile(ciRequest.CiCacheFileName)
 	// Generate new cache
 	log.Println("Generating new cache")
-	tarCmd := exec.Command("tar", "-cvzf", ciRequest.CiCacheFileName, "/var/lib/docker")
+	var cachePath string
+	if ciRequest.DockerBuildTargetPlatform != "" {
+		cachePath = util.LOCAL_BUILDX_LOCATION
+	} else {
+		cachePath = "/var/lib/docker"
+	}
+
+	tarCmd := exec.Command("tar", "-cvzf", ciRequest.CiCacheFileName, cachePath)
 	tarCmd.Dir = "/"
 	err = tarCmd.Run()
 	if err != nil {

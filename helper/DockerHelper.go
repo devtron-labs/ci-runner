@@ -222,7 +222,16 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		return "", err
 	}
 	if useBuildx {
-		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push .", dockerBuild, ciRequest.DockerFileLocation, dest)
+		localCachePath := util.LOCAL_BUILDX_LOCATION + "/cache"
+		makeDirCmd := "mkdir -p " + localCachePath
+		pathCreateCommand := exec.Command("/bin/sh", "-c", makeDirCmd)
+		log.Println(" -----> " + makeDirCmd)
+		err = util.RunCommand(pathCreateCommand)
+		if err != nil {
+			log.Println(err)
+			return "", err
+		}
+		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest="+localCachePath+" --cache-from=type=local,src="+localCachePath+" --metadata-file "+util.LOCAL_BUILDX_LOCATION+"/manifest.json", dockerBuild, ciRequest.DockerFileLocation, dest)
 	} else {
 		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
 	}
