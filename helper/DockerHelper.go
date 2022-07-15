@@ -199,7 +199,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 
-		multiPlatformCmd = "docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'"
+		multiPlatformCmd = "docker buildx create --name custom-builder --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'"
 		log.Println(" -----> " + multiPlatformCmd)
 		dockerBuildCMD = exec.Command("/bin/sh", "-c", multiPlatformCmd)
 		err = util.RunCommand(dockerBuildCMD)
