@@ -247,7 +247,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		}
 		oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
 		manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s --metadata-file %s", dockerBuild, ciRequest.DockerFileLocation, dest, localCachePath, oldCacheBuildxPath, manifestLocation)
+		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s --allow network.host --metadata-file %s", dockerBuild, ciRequest.DockerFileLocation, dest, localCachePath, oldCacheBuildxPath, manifestLocation)
 	} else {
 		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
 	}
