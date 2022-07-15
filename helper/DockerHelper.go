@@ -229,7 +229,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		if err2 != nil {
 			return s, err2
 		}
-		copyContent := "cp -R " + localCachePath + "/ " + oldCacheBuildxPath
+		copyContent := "cp -R " + localCachePath + " " + oldCacheBuildxPath
 		copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
 		err = util.RunCommand(copyContentCmd)
 		if err != nil {
@@ -245,7 +245,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 
-		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest="+localCachePath+" --cache-from=type=local,src="+oldCacheBuildxPath+" --metadata-file "+util.LOCAL_BUILDX_LOCATION+"/manifest.json", dockerBuild, ciRequest.DockerFileLocation, dest)
+		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest="+localCachePath+",mode=max"+" --cache-from=type=local,src="+oldCacheBuildxPath+"/cache --metadata-file "+util.LOCAL_BUILDX_LOCATION+"/manifest.json", dockerBuild, ciRequest.DockerFileLocation, dest)
 	} else {
 		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
 	}
