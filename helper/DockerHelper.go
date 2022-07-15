@@ -199,7 +199,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 
-		multiPlatformCmd = "docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host'"
+		multiPlatformCmd = "docker buildx create --use"
 		log.Println(" -----> " + multiPlatformCmd)
 		dockerBuildCMD = exec.Command("/bin/sh", "-c", multiPlatformCmd)
 		err = util.RunCommand(dockerBuildCMD)
@@ -222,6 +222,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		return "", err
 	}
 	if useBuildx {
+		log.Println(" -----> Setting up cache directory for Buildx")
 		oldCacheBuildxPath := util.LOCAL_BUILDX_LOCATION + "/old"
 		localCachePath := util.LOCAL_BUILDX_CACHE_LOCATION
 		s, err2 := checkAndCreateDirectory(localCachePath, err)
@@ -244,8 +245,9 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			log.Println(err)
 			return "", err
 		}
-
-		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest="+localCachePath+",mode=max"+" --cache-from=type=local,src="+oldCacheBuildxPath+"/cache --metadata-file "+util.LOCAL_BUILDX_LOCATION+"/manifest.json", dockerBuild, ciRequest.DockerFileLocation, dest)
+		oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
+		manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
+		dockerBuild = fmt.Sprintf("%s -f %s -t %s --push . --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s --metadata-file %s", dockerBuild, ciRequest.DockerFileLocation, dest, localCachePath, oldCacheBuildxPath, manifestLocation)
 	} else {
 		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
 	}
@@ -274,7 +276,6 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 func checkAndCreateDirectory(localCachePath string, err error) (string, error) {
 	makeDirCmd := "mkdir -p " + localCachePath
 	pathCreateCommand := exec.Command("/bin/sh", "-c", makeDirCmd)
-	log.Println(" -----> " + makeDirCmd)
 	err = util.RunCommand(pathCreateCommand)
 	if err != nil {
 		log.Println(err)
