@@ -208,14 +208,14 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 
-		multiPlatformCmd = "docker buildx inspect --bootstrap"
-		log.Println(" -----> " + multiPlatformCmd)
-		dockerBuildCMD = exec.Command("/bin/sh", "-c", multiPlatformCmd)
-		err = util.RunCommand(dockerBuildCMD)
-		if err != nil {
-			log.Println(err)
-			return "", err
-		}
+		//multiPlatformCmd = "docker buildx inspect --bootstrap"
+		//log.Println(" -----> " + multiPlatformCmd)
+		//dockerBuildCMD = exec.Command("/bin/sh", "-c", multiPlatformCmd)
+		//err = util.RunCommand(dockerBuildCMD)
+		//if err != nil {
+		//	log.Println(err)
+		//	return "", err
+		//}
 	}
 	dest, err := BuildDockerImagePath(ciRequest)
 	if err != nil {
