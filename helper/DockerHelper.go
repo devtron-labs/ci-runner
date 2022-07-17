@@ -171,10 +171,10 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	dockerFileLocationDir := ciRequest.DockerFileLocation[:strings.LastIndex(ciRequest.DockerFileLocation, "/")+1]
 	log.Println(util.DEVTRON, " docker file location: ", dockerFileLocationDir)
 
-	dockerBuild := "docker build --ulimit nofile=1048576:1048576"
+	dockerBuild := "docker build --ulimit nofile=1024:1024"
 	useBuildx := ciRequest.DockerBuildTargetPlatform != ""
 	if useBuildx {
-		dockerBuild = "docker buildx build --ulimit nofile=1048576:1048576 --platform " + ciRequest.DockerBuildTargetPlatform + " "
+		dockerBuild = "docker buildx build --ulimit nofile=1024:1024 --platform " + ciRequest.DockerBuildTargetPlatform + " "
 	}
 	if ciRequest.DockerBuildArgs != "" {
 		dockerBuildArgsMap := make(map[string]string)
