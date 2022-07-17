@@ -57,7 +57,7 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 		defaultAddressPoolFlag = fmt.Sprintf("--default-address-pool base=%s,size=%d", defaultAddressPoolBaseCidr, defaultAddressPoolSize)
 	}
 	if connection == util.INSECURE {
-		dockerdstart = fmt.Sprintf("dockerd  %s --default-ulimit nofile=1048576:1048576 --insecure-registry %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, u.Host)
+		dockerdstart = fmt.Sprintf("dockerd  %s --default-ulimit nofile=1024:1024 --insecure-registry %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, u.Host)
 		util.LogStage("Insecure Registry")
 	} else {
 		if connection == util.SECUREWITHCERT {
@@ -77,7 +77,7 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 			}
 			util.LogStage("Secure with Cert")
 		}
-		dockerdstart = fmt.Sprintf("dockerd %s --default-ulimit nofile=1048576:1048576 --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag)
+		dockerdstart = fmt.Sprintf("dockerd %s --default-ulimit nofile=1024:1024 --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag)
 	}
 	out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
 	log.Println(string(out))
