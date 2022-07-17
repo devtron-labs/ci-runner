@@ -28,6 +28,6 @@ RUN chmod +x /git-ask-pass.sh
 
 COPY --from=build-env /go/bin/cirunner .
 COPY ./ssh-config /root/.ssh/config
-RUN echo "*               soft    nofile           1048576" >>/etc/security/limits.conf
-RUN echo "*               hard    nofile           1048576" >>/etc/security/limits.conf
+#RUN echo "*               soft    nofile           1048576" >>/etc/security/limits.conf
+#RUN echo "*               hard    nofile           1048576" >>/etc/security/limits.conf
 ENTRYPOINT ["./cirunner"]
