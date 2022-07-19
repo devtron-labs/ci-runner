@@ -303,22 +303,33 @@ func BuildDockerImagePath(ciRequest *CiRequest) (string, error) {
 
 func PushArtifact(ciRequest *CiRequest, dest string) (string, error) {
 	//awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
+	var digest string
+	var err error
 	if ciRequest.DockerBuildTargetPlatform == "" {
 		dockerPush := "docker push " + dest
 		log.Println("-----> " + dockerPush)
 		dockerPushCMD := exec.Command("/bin/sh", "-c", dockerPush)
-		err := util.RunCommand(dockerPushCMD)
+		err = util.RunCommand(dockerPushCMD)
+	} else {
+		manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
+		digest, err = readImageDigestFromManifest(manifestLocation)
+		if err != nil {
+			log.Println("error occurred while extracting digest from manifest reason ", err)
+			err = nil // would extract digest using docker pull cmd
+		}
+	}
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	if digest == "" {
+		dockerPull := "docker pull " + dest
+		dockerPullCmd := exec.Command("/bin/sh", "-c", dockerPull)
+		digest, err = runGetDockerImageDigest(dockerPullCmd)
 		if err != nil {
 			log.Println(err)
 			return "", err
 		}
-	}
-	dockerPull := "docker pull " + dest
-	dockerPullCmd := exec.Command("/bin/sh", "-c", dockerPull)
-	digest, err := runGetDockerImageDigest(dockerPullCmd)
-	if err != nil {
-		log.Println(err)
-		return "", err
 	}
 	log.Println("Digest -----> ", digest)
 	return digest, nil
@@ -342,6 +353,23 @@ func runGetDockerImageDigest(cmd *exec.Cmd) (string, error) {
 
 	}
 	return digest, nil
+}
+
+func readImageDigestFromManifest(manifestFilePath string) (string, error) {
+	manifestFile, err := ioutil.ReadFile(manifestFilePath)
+	if err != nil {
+		return "", err
+	}
+	var data map[string]interface{}
+	err = json.Unmarshal(manifestFile, &data)
+	if err != nil {
+		return "", err
+	}
+	imageDigest, found := data["containerimage.digest"]
+	if !found {
+		return "", nil
+	}
+	return imageDigest.(string), nil
 }
 
 func StopDocker() error {
