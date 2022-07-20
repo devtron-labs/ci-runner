@@ -189,33 +189,15 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	}
 
 	if useBuildx {
-		// docker run --privileged --rm tonistiigi/binfmt --install all
-		multiPlatformCmd := "docker run --privileged --rm tonistiigi/binfmt --install all"
-		log.Println(" -----> " + multiPlatformCmd)
-		dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
-		err = util.RunCommand(dockerBuildCMD)
+		err := installAllSupportedPlatforms(err)
 		if err != nil {
-			log.Println(err)
 			return "", err
 		}
 
-		multiPlatformCmd = "docker buildx create --name custom-builder --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'"
-		log.Println(" -----> " + multiPlatformCmd)
-		dockerBuildCMD = exec.Command("/bin/sh", "-c", multiPlatformCmd)
-		err = util.RunCommand(dockerBuildCMD)
-		if err != nil {
-			log.Println(err)
-			return "", err
+		err2 := createBuildxBuilder()
+		if err2 != nil {
+			return "", err2
 		}
-
-		//multiPlatformCmd = "docker buildx inspect --bootstrap"
-		//log.Println(" -----> " + multiPlatformCmd)
-		//dockerBuildCMD = exec.Command("/bin/sh", "-c", multiPlatformCmd)
-		//err = util.RunCommand(dockerBuildCMD)
-		//if err != nil {
-		//	log.Println(err)
-		//	return "", err
-		//}
 	}
 	dest, err := BuildDockerImagePath(ciRequest)
 	if err != nil {
@@ -225,24 +207,8 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		log.Println(" -----> Setting up cache directory for Buildx")
 		oldCacheBuildxPath := util.LOCAL_BUILDX_LOCATION + "/old"
 		localCachePath := util.LOCAL_BUILDX_CACHE_LOCATION
-		s, err2 := checkAndCreateDirectory(localCachePath, err)
-		s, err2 = checkAndCreateDirectory(oldCacheBuildxPath, err)
-		if err2 != nil {
-			return s, err2
-		}
-		copyContent := "cp -R " + localCachePath + " " + oldCacheBuildxPath
-		copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
-		err = util.RunCommand(copyContentCmd)
+		err := setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
 		if err != nil {
-			log.Println(err)
-			return "", err
-		}
-
-		cleanContent := "rm -rf " + localCachePath + "/*"
-		cleanContentCmd := exec.Command("/bin/sh", "-c", cleanContent)
-		err = util.RunCommand(cleanContentCmd)
-		if err != nil {
-			log.Println(err)
 			return "", err
 		}
 		oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
@@ -273,15 +239,66 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	return dest, nil
 }
 
-func checkAndCreateDirectory(localCachePath string, err error) (string, error) {
-	makeDirCmd := "mkdir -p " + localCachePath
-	pathCreateCommand := exec.Command("/bin/sh", "-c", makeDirCmd)
-	err = util.RunCommand(pathCreateCommand)
+func setupCacheForBuildx(localCachePath string, oldCacheBuildxPath string) error {
+	err := checkAndCreateDirectory(localCachePath)
+	if err != nil {
+		return err
+	}
+	err = checkAndCreateDirectory(oldCacheBuildxPath)
+	if err != nil {
+		return err
+	}
+	copyContent := "cp -R " + localCachePath + " " + oldCacheBuildxPath
+	copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
+	err = util.RunCommand(copyContentCmd)
 	if err != nil {
 		log.Println(err)
-		return "", err
+		return err
 	}
-	return "", nil
+
+	cleanContent := "rm -rf " + localCachePath + "/*"
+	cleanContentCmd := exec.Command("/bin/sh", "-c", cleanContent)
+	err = util.RunCommand(cleanContentCmd)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func createBuildxBuilder() error {
+	multiPlatformCmd := "docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'"
+	log.Println(" -----> " + multiPlatformCmd)
+	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
+	err := util.RunCommand(dockerBuildCMD)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func installAllSupportedPlatforms(err error) error {
+	multiPlatformCmd := "docker run --privileged --rm tonistiigi/binfmt --install all"
+	log.Println(" -----> " + multiPlatformCmd)
+	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
+	err = util.RunCommand(dockerBuildCMD)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func checkAndCreateDirectory(localCachePath string) error {
+	makeDirCmd := "mkdir -p " + localCachePath
+	pathCreateCommand := exec.Command("/bin/sh", "-c", makeDirCmd)
+	err := util.RunCommand(pathCreateCommand)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
 }
 
 func BuildDockerImagePath(ciRequest *CiRequest) (string, error) {
