@@ -22,12 +22,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/devtron-labs/ci-runner/util"
 	"io"
 	"io/ioutil"
 	"log"
@@ -39,6 +33,13 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/devtron-labs/ci-runner/util"
 )
 
 func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int) {
@@ -171,6 +172,10 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	log.Println(util.DEVTRON, " docker file location: ", dockerFileLocationDir)
 
 	dockerBuild := "docker build "
+	useBuildx := ciRequest.DockerBuildTargetPlatform != ""
+	if useBuildx {
+		dockerBuild = "docker buildx build --platform " + ciRequest.DockerBuildTargetPlatform + " "
+	}
 	if ciRequest.DockerBuildArgs != "" {
 		dockerBuildArgsMap := make(map[string]string)
 		err := json.Unmarshal([]byte(ciRequest.DockerBuildArgs), &dockerBuildArgsMap)
@@ -182,7 +187,36 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
 		}
 	}
-	dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
+
+	if useBuildx {
+		err := installAllSupportedPlatforms(err)
+		if err != nil {
+			return "", err
+		}
+
+		err2 := createBuildxBuilder()
+		if err2 != nil {
+			return "", err2
+		}
+	}
+	dest, err := BuildDockerImagePath(ciRequest)
+	if err != nil {
+		return "", err
+	}
+	if useBuildx {
+		log.Println(" -----> Setting up cache directory for Buildx")
+		oldCacheBuildxPath := util.LOCAL_BUILDX_LOCATION + "/old"
+		localCachePath := util.LOCAL_BUILDX_CACHE_LOCATION
+		err := setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
+		if err != nil {
+			return "", err
+		}
+		oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
+		manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
+		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s --allow network.host --allow security.insecure --metadata-file %s", dockerBuild, ciRequest.DockerFileLocation, dest, localCachePath, oldCacheBuildxPath, manifestLocation)
+	} else {
+		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
+	}
 	log.Println(" -----> " + dockerBuild)
 
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
@@ -191,19 +225,80 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		log.Println(err)
 		return "", err
 	}
-	dest, err := BuildDockerImagePath(ciRequest)
-	if err != nil {
-		return "", err
-	}
-	dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
-	log.Println(" -----> " + dockerTag)
-	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
-	err = util.RunCommand(dockerTagCMD)
-	if err != nil {
-		log.Println(err)
-		return "", err
+
+	if !useBuildx {
+		dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
+		log.Println(" -----> " + dockerTag)
+		dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
+		err = util.RunCommand(dockerTagCMD)
+		if err != nil {
+			log.Println(err)
+			return "", err
+		}
 	}
 	return dest, nil
+}
+
+func setupCacheForBuildx(localCachePath string, oldCacheBuildxPath string) error {
+	err := checkAndCreateDirectory(localCachePath)
+	if err != nil {
+		return err
+	}
+	err = checkAndCreateDirectory(oldCacheBuildxPath)
+	if err != nil {
+		return err
+	}
+	copyContent := "cp -R " + localCachePath + " " + oldCacheBuildxPath
+	copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
+	err = util.RunCommand(copyContentCmd)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	cleanContent := "rm -rf " + localCachePath + "/*"
+	cleanContentCmd := exec.Command("/bin/sh", "-c", cleanContent)
+	err = util.RunCommand(cleanContentCmd)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func createBuildxBuilder() error {
+	multiPlatformCmd := "docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'"
+	log.Println(" -----> " + multiPlatformCmd)
+	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
+	err := util.RunCommand(dockerBuildCMD)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func installAllSupportedPlatforms(err error) error {
+	multiPlatformCmd := "docker run --privileged --rm tonistiigi/binfmt --install all"
+	log.Println(" -----> " + multiPlatformCmd)
+	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
+	err = util.RunCommand(dockerBuildCMD)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func checkAndCreateDirectory(localCachePath string) error {
+	makeDirCmd := "mkdir -p " + localCachePath
+	pathCreateCommand := exec.Command("/bin/sh", "-c", makeDirCmd)
+	err := util.RunCommand(pathCreateCommand)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
 }
 
 func BuildDockerImagePath(ciRequest *CiRequest) (string, error) {
@@ -223,7 +318,7 @@ func BuildDockerImagePath(ciRequest *CiRequest) (string, error) {
 	return dest, nil
 }
 
-func PushArtifact(ciRequest *CiRequest, dest string) (string, error) {
+func PushArtifact(dest string) error {
 	//awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
 	dockerPush := "docker push " + dest
 	log.Println("-----> " + dockerPush)
@@ -231,17 +326,41 @@ func PushArtifact(ciRequest *CiRequest, dest string) (string, error) {
 	err := util.RunCommand(dockerPushCMD)
 	if err != nil {
 		log.Println(err)
-		return "", err
+		return err
 	}
+
+	//digest := extractDigestUsingPull(dest)
+	//log.Println("Digest -----> ", digest)
+	//return digest, nil
+	return nil
+}
+
+func ExtractDigestForBuildx(dest string) (string, error) {
+
+	var digest string
+	var err error
+	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
+	digest, err = readImageDigestFromManifest(manifestLocation)
+	if err != nil {
+		log.Println("error occurred while extracting digest from manifest reason ", err)
+		err = nil // would extract digest using docker pull cmd
+	}
+	if digest == "" {
+		digest, err = ExtractDigestUsingPull(dest)
+	}
+	log.Println("Digest -----> ", digest)
+
+	return digest, err
+}
+
+func ExtractDigestUsingPull(dest string) (string, error) {
 	dockerPull := "docker pull " + dest
 	dockerPullCmd := exec.Command("/bin/sh", "-c", dockerPull)
 	digest, err := runGetDockerImageDigest(dockerPullCmd)
 	if err != nil {
 		log.Println(err)
-		return "", err
 	}
-	log.Println("Digest -----> ", digest)
-	return digest, nil
+	return digest, err
 }
 
 func runGetDockerImageDigest(cmd *exec.Cmd) (string, error) {
@@ -262,6 +381,23 @@ func runGetDockerImageDigest(cmd *exec.Cmd) (string, error) {
 
 	}
 	return digest, nil
+}
+
+func readImageDigestFromManifest(manifestFilePath string) (string, error) {
+	manifestFile, err := ioutil.ReadFile(manifestFilePath)
+	if err != nil {
+		return "", err
+	}
+	var data map[string]interface{}
+	err = json.Unmarshal(manifestFile, &data)
+	if err != nil {
+		return "", err
+	}
+	imageDigest, found := data["containerimage.digest"]
+	if !found {
+		return "", nil
+	}
+	return imageDigest.(string), nil
 }
 
 func StopDocker() error {

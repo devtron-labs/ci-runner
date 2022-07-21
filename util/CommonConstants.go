@@ -25,6 +25,8 @@ const INSECURE = "insecure"
 const SECUREWITHCERT = "secure-with-cert"
 const RETRYCOUNT = 10
 const WORKINGDIR = "/devtroncd"
+const LOCAL_BUILDX_LOCATION = "/var/lib/devtron/buildx"
+const LOCAL_BUILDX_CACHE_LOCATION = LOCAL_BUILDX_LOCATION + "/cache"
 
 const CIEVENT = "CI"
 const CDSTAGE = "CD"
