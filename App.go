@@ -142,6 +142,8 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["DOCKER_IMAGE"] = image
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
+		envs["DEVTRON_CD_TRIGGERED_BY"] = cicdRequest.CdRequest.DeploymentTriggeredBy
+		envs["DEVTRON_CD_TRIGGERED_AT"] = cicdRequest.CdRequest.DeploymentTriggeredAt.String()
 		for k, v := range cicdRequest.CdRequest.ExtraEnvironmentVariables {
 			envs[k] = v
 		}
