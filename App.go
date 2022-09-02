@@ -50,7 +50,7 @@ func main() {
 		log.Println(util.DEVTRON, artifactUploaded, err)
 		var artifactUploadErr error
 		if !artifactUploaded {
-			artifactUploadErr = helper.ZipAndUpload(ciCdRequest.CiRequest.CiArtifactLocation, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.MinioEndpoint, ciCdRequest.CiRequest.AzureBlobConfig)
+			artifactUploadErr = helper.ZipAndUpload(ciRequest.StorageModuleConfigured, ciCdRequest.CiRequest.CiArtifactLocation, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.MinioEndpoint, ciCdRequest.CiRequest.AzureBlobConfig)
 		}
 
 		if err != nil || artifactUploadErr != nil {
@@ -96,34 +96,7 @@ func collectAndUploadCDArtifacts(cdRequest *helper.CdRequest) error {
 		}
 	}
 	log.Println(util.DEVTRON, " artifacts", artifactFiles)
-	return helper.UploadArtifact(artifactFiles, cdRequest.ArtifactLocation, cdRequest.CloudProvider, cdRequest.MinioEndpoint, cdRequest.AzureBlobConfig)
-}
-
-func collectAndUploadArtifact(ciRequest *helper.CiRequest) error {
-	artifactFiles := make(map[string]string)
-	var allTasks []*helper.Task
-	if ciRequest.TaskYaml != nil {
-		for _, pc := range ciRequest.TaskYaml.PipelineConf {
-			for _, t := range append(pc.BeforeTasks, pc.AfterTasks...) {
-				allTasks = append(allTasks, t)
-			}
-		}
-	}
-
-	allTasks = append(allTasks, ciRequest.BeforeDockerBuild...)
-	allTasks = append(allTasks, ciRequest.AfterDockerBuild...)
-
-	for _, task := range allTasks {
-		if task.RunStatus {
-			if _, err := os.Stat(task.OutputLocation); os.IsNotExist(err) { // Ignore if no file/folder
-				log.Println(util.DEVTRON, "artifact not found ", err)
-				continue
-			}
-			artifactFiles[task.Name] = task.OutputLocation
-		}
-	}
-	log.Println(util.DEVTRON, " artifacts", artifactFiles)
-	return helper.UploadArtifact(artifactFiles, ciRequest.CiArtifactLocation, ciRequest.CloudProvider, ciRequest.MinioEndpoint, ciRequest.AzureBlobConfig)
+	return helper.UploadArtifact(cdRequest.StorageModuleConfigured, artifactFiles, cdRequest.ArtifactLocation, cdRequest.CloudProvider, cdRequest.MinioEndpoint, cdRequest.AzureBlobConfig)
 }
 
 func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]string, error) {
@@ -259,7 +232,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	log.Println(util.DEVTRON, " /docker-push")
 
 	log.Println(util.DEVTRON, " artifact-upload")
-	err = helper.ZipAndUpload(ciCdRequest.CiRequest.CiArtifactLocation, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.MinioEndpoint, ciCdRequest.CiRequest.AzureBlobConfig)
+	err = helper.ZipAndUpload(ciCdRequest.CiRequest.StorageModuleConfigured, ciCdRequest.CiRequest.CiArtifactLocation, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.MinioEndpoint, ciCdRequest.CiRequest.AzureBlobConfig)
 	if err != nil {
 		return artifactUploaded, err
 	} else {

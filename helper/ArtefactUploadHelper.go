@@ -43,7 +43,7 @@ type AzureBlobConfig struct {
 	AccountKey           string `json:"accountKey"`
 }
 
-func UploadArtifact(artifactFiles map[string]string, s3Location string, cloudProvider string, minioEndpoint string, azureBlobConfig *AzureBlobConfig) error {
+func UploadArtifact(storageModuleConfigured bool, artifactFiles map[string]string, s3Location string, cloudProvider string, minioEndpoint string, azureBlobConfig *AzureBlobConfig) error {
 	if len(artifactFiles) == 0 {
 		log.Println(util.DEVTRON, "no artifact to upload")
 		return nil
@@ -65,11 +65,15 @@ func UploadArtifact(artifactFiles map[string]string, s3Location string, cloudPro
 			return err
 		}
 	}
-	err = ZipAndUpload(s3Location, cloudProvider, minioEndpoint, azureBlobConfig)
+	err = ZipAndUpload(storageModuleConfigured, s3Location, cloudProvider, minioEndpoint, azureBlobConfig)
 	return err
 }
 
-func ZipAndUpload(artifactLocation string, cloudProvider string, minioEndpoint string, azureBlobConfig *AzureBlobConfig) error {
+func ZipAndUpload(storageModuleConfigured bool, artifactLocation string, cloudProvider string, minioEndpoint string, azureBlobConfig *AzureBlobConfig) error {
+	if !storageModuleConfigured {
+		log.Println(util.DEVTRON, "not going to upload artifact as storage module not configured...")
+		return nil
+	}
 	isEmpty, err := IsDirEmpty(util.TmpArtifactLocation)
 	if err != nil {
 		log.Println(util.DEVTRON, "artifact empty check error ")
