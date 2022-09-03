@@ -109,7 +109,7 @@ type CdRequest struct {
 	DefaultAddressPoolBaseCidr string             `json:"defaultAddressPoolBaseCidr"`
 	DefaultAddressPoolSize     int                `json:"defaultAddressPoolSize"`
 	DeploymentTriggeredBy      string             `json:"deploymentTriggeredBy"`
-	DeploymentTriggeredAt      time.Time          `json:"deploymentTriggeredAt"`
+	DeploymentTriggerTime      time.Time          `json:"deploymentTriggerTime"`
 }
 
 type CiCdTriggerEvent struct {
