@@ -108,6 +108,8 @@ type CdRequest struct {
 	MinioEndpoint              string             `json:"minioEndpoint"`
 	DefaultAddressPoolBaseCidr string             `json:"defaultAddressPoolBaseCidr"`
 	DefaultAddressPoolSize     int                `json:"defaultAddressPoolSize"`
+	DeploymentTriggeredBy      string             `json:"deploymentTriggeredBy"`
+	DeploymentTriggerTime      time.Time          `json:"deploymentTriggerTime"`
 }
 
 type CiCdTriggerEvent struct {
