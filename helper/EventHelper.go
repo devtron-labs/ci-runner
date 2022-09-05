@@ -66,7 +66,7 @@ type CiRequest struct {
 	CiYamlLocation              string                       `json:"CiYamlLocations"`
 	TaskYaml                    *TaskYaml                    `json:"-"`
 	TestExecutorImageProperties *TestExecutorImageProperties `json:"testExecutorImageProperties"`
-	StorageModuleConfigured     bool                         `json:"storageModuleConfigured"`
+	BlobStorageConfigured       bool                         `json:"blobStorageConfigured"`
 	InvalidateCache             bool                         `json:"invalidateCache"`
 	ScanEnabled                 bool                         `json:"scanEnabled"`
 	CloudProvider               string                       `json:"cloudProvider"`
@@ -105,7 +105,7 @@ type CdRequest struct {
 	IsExtRun                   bool               `json:"isExtRun"`
 	ExtraEnvironmentVariables  map[string]string  `json:"extraEnvironmentVariables"`
 	CloudProvider              string             `json:"cloudProvider"`
-	StorageModuleConfigured    bool               `json:"storageModuleConfigured"`
+	BlobStorageConfigured      bool               `json:"blobStorageConfigured"`
 	AzureBlobConfig            *AzureBlobConfig   `json:"azureBlobConfig"`
 	MinioEndpoint              string             `json:"minioEndpoint"`
 	DefaultAddressPoolBaseCidr string             `json:"defaultAddressPoolBaseCidr"`

@@ -94,7 +94,7 @@ func DownLoadFromS3(file *os.File, ciRequest *CiRequest, sess *session.Session) 
 }
 
 func GetCache(ciRequest *CiRequest) error {
-	if !ciRequest.StorageModuleConfigured {
+	if !ciRequest.BlobStorageConfigured {
 		log.Println("ignoring cache as storage module not configured ... ")
 		return nil
 	}
@@ -146,7 +146,7 @@ func GetCache(ciRequest *CiRequest) error {
 }
 
 func SyncCache(ciRequest *CiRequest) error {
-	if !ciRequest.StorageModuleConfigured {
+	if !ciRequest.BlobStorageConfigured {
 		log.Println("ignoring cache as storage module not configured... ")
 		return nil
 	}
