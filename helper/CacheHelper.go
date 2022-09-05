@@ -114,7 +114,7 @@ func GetCache(ciRequest *CiRequest) error {
 		downloadSuccess, err = DownLoadFromS3(file, ciRequest, sess)
 	case BLOB_STORAGE_MINIO:
 		sess := session.Must(session.NewSession(&aws.Config{
-			Region:           aws.String("us-west-2"),
+			Region:           aws.String(ciRequest.CiCacheRegion),
 			Endpoint:         aws.String(ciRequest.MinioEndpoint),
 			DisableSSL:       aws.Bool(true),
 			S3ForcePathStyle: aws.Bool(true),
