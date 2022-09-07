@@ -18,8 +18,7 @@
 package helper
 
 import (
-	"context"
-	"fmt"
+	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 	"io"
 	"log"
 	"os"
@@ -35,21 +34,21 @@ const BLOB_STORAGE_S3 = "S3"
 const BLOB_STORAGE_GCP = "GCP"
 const BLOB_STORAGE_MINIO = "MINIO"
 
-type AzureBlobConfig struct {
-	Enabled              bool   `json:"enabled"`
-	AccountName          string `json:"accountName"`
-	BlobContainerCiLog   string `json:"blobContainerCiLog"`
-	BlobContainerCiCache string `json:"blobContainerCiCache"`
-	AccountKey           string `json:"accountKey"`
-}
+//type AzureBlobConfig struct {
+//	Enabled              bool   `json:"enabled"`
+//	AccountName          string `json:"accountName"`
+//	BlobContainerCiLog   string `json:"blobContainerCiLog"`
+//	BlobContainerCiCache string `json:"blobContainerCiCache"`
+//	AccountKey           string `json:"accountKey"`
+//}
 
-func UploadArtifact(storageModuleConfigured bool, artifactFiles map[string]string, s3Location string, cloudProvider string, minioEndpoint string, azureBlobConfig *AzureBlobConfig) error {
+func UploadArtifact(storageModuleConfigured bool, artifactFiles map[string]string, blobStorageS3Config *blob_storage.BlobStorageS3Config, artifactFileLocation string, cloudProvider string, minioEndpoint string, azureBlobConfig *blob_storage.AzureBlobConfig) error {
 	if len(artifactFiles) == 0 {
 		log.Println(util.DEVTRON, "no artifact to upload")
 		return nil
 	}
 	//collect in a dir
-	log.Println(util.DEVTRON, "artifact upload ", artifactFiles, s3Location)
+	log.Println(util.DEVTRON, "artifact upload ", artifactFiles, artifactFileLocation)
 	err := os.Mkdir(util.TmpArtifactLocation, os.ModePerm)
 	if err != nil {
 		return err
@@ -65,11 +64,11 @@ func UploadArtifact(storageModuleConfigured bool, artifactFiles map[string]strin
 			return err
 		}
 	}
-	err = ZipAndUpload(storageModuleConfigured, s3Location, cloudProvider, minioEndpoint, azureBlobConfig)
+	err = ZipAndUpload(storageModuleConfigured, blobStorageS3Config, artifactFileLocation, cloudProvider, minioEndpoint, azureBlobConfig)
 	return err
 }
 
-func ZipAndUpload(storageModuleConfigured bool, artifactLocation string, cloudProvider string, minioEndpoint string, azureBlobConfig *AzureBlobConfig) error {
+func ZipAndUpload(storageModuleConfigured bool, blobStorageS3Config *blob_storage.BlobStorageS3Config, artifactFileName string, cloudProvider string, minioEndpoint string, azureBlobConfig *blob_storage.AzureBlobConfig) error {
 	if !storageModuleConfigured {
 		log.Println(util.DEVTRON, "not going to upload artifact as storage module not configured...")
 		return nil
@@ -89,23 +88,44 @@ func ZipAndUpload(storageModuleConfigured bool, artifactLocation string, cloudPr
 	if err != nil {
 		return err
 	}
-	log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactLocation)
-	switch cloudProvider {
-	case BLOB_STORAGE_S3:
-		artifactPush := exec.Command("aws", "s3", "cp", zipFile, artifactLocation)
-		err = util.RunCommand(artifactPush)
-		return err
-	case BLOB_STORAGE_MINIO:
-		artifactPush := exec.Command("aws", "--endpoint-url", minioEndpoint, "s3", "cp", zipFile, artifactLocation)
-		err = util.RunCommand(artifactPush)
-		return err
-	case BLOB_STORAGE_AZURE:
-		b := AzureBlob{}
-		err = b.UploadBlob(context.Background(), artifactLocation, azureBlobConfig, zipFile, azureBlobConfig.BlobContainerCiLog)
-		return err
-	default:
-		return fmt.Errorf("cloudprovider %s not supported", cloudProvider)
+	log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactFileName)
+	awsS3BaseConfig := &blob_storage.AwsS3BaseConfig{
+		AccessKey:   blobStorageS3Config.AccessKey,
+		Passkey:     blobStorageS3Config.Passkey,
+		EndpointUrl: blobStorageS3Config.EndpointUrl,
+		BucketName:  blobStorageS3Config.CiArtifactBucketName,
+		Region:      blobStorageS3Config.CiArtifactRegion,
 	}
+	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
+	request := &blob_storage.BlobStorageRequest{
+		StorageType:     getStorageTypeFromProvider(cloudProvider),
+		BucketName:      blobStorageS3Config.CiArtifactBucketName,
+		SourceKey:       zipFile,
+		DestinationKey:  artifactFileName,
+		Endpoint:        blobStorageS3Config.EndpointUrl,
+		AzureBlobConfig: azureBlobConfig,
+		AwsS3BaseConfig: awsS3BaseConfig,
+	}
+
+	err = blobStorageService.PutWithCommand(request)
+	return err
+
+	//switch cloudProvider {
+	//case BLOB_STORAGE_S3:
+	//	artifactPush := exec.Command("aws", "s3", "cp", zipFile, artifactLocation)
+	//	err = util.RunCommand(artifactPush)
+	//	return err
+	//case BLOB_STORAGE_MINIO:
+	//	artifactPush := exec.Command("aws", "--endpoint-url", minioEndpoint, "s3", "cp", zipFile, artifactLocation)
+	//	err = util.RunCommand(artifactPush)
+	//	return err
+	//case BLOB_STORAGE_AZURE:
+	//	b := AzureBlob{}
+	//	err = b.UploadBlob(context.Background(), artifactLocation, azureBlobConfig, zipFile, azureBlobConfig.BlobContainerCiLog)
+	//	return err
+	//default:
+	//	return fmt.Errorf("cloudprovider %s not supported", cloudProvider)
+	//}
 }
 
 func IsDirEmpty(name string) (bool, error) {
