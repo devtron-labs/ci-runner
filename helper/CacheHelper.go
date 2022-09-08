@@ -202,11 +202,9 @@ func SyncCache(ciRequest *CiRequest) error {
 	}
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
 	request := &blob_storage.BlobStorageRequest{
-		StorageType: getStorageTypeFromProvider(ciRequest.CloudProvider),
-		//Key:                  ciRequest.CiCacheFileName,
-		//BucketName:           ciRequest.CiCacheLocation,
+		StorageType:     getStorageTypeFromProvider(ciRequest.CloudProvider),
 		SourceKey:       ciRequest.CiCacheFileName,
-		DestinationKey:  "s3://" + ciRequest.CiCacheLocation + "/" + ciRequest.CiCacheFileName,
+		DestinationKey:  ciRequest.CiCacheFileName,
 		AzureBlobConfig: ciRequest.AzureBlobConfig,
 		AwsS3BaseConfig: awsS3BaseConfig,
 	}
