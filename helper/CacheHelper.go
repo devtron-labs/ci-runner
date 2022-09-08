@@ -112,14 +112,11 @@ func GetCache(ciRequest *CiRequest) error {
 		Region:      ciRequest.CiCacheRegion,
 	}
 	request := &blob_storage.BlobStorageRequest{
-		StorageType:          getStorageTypeFromProvider(ciRequest.CloudProvider),
-		SourceKey:            ciRequest.CiCacheFileName,
-		BucketName:           ciRequest.CiCacheLocation,
-		Endpoint:             ciRequest.MinioEndpoint,
-		Region:               ciRequest.CiCacheRegion,
-		FileDownloadLocation: ciRequest.CiCacheFileName,
-		AzureBlobConfig:      ciRequest.AzureBlobConfig,
-		AwsS3BaseConfig:      awsS3BaseConfig,
+		StorageType:     getStorageTypeFromProvider(ciRequest.CloudProvider),
+		SourceKey:       ciRequest.CiCacheFileName,
+		DestinationKey:  ciRequest.CiCacheFileName,
+		AzureBlobConfig: ciRequest.AzureBlobConfig,
+		AwsS3BaseConfig: awsS3BaseConfig,
 	}
 	downloadSuccess, bytesSize, err := blobStorageService.Get(request)
 	if bytesSize >= ciRequest.CacheLimit {
@@ -208,13 +205,10 @@ func SyncCache(ciRequest *CiRequest) error {
 		StorageType: getStorageTypeFromProvider(ciRequest.CloudProvider),
 		//Key:                  ciRequest.CiCacheFileName,
 		//BucketName:           ciRequest.CiCacheLocation,
-		SourceKey:            ciRequest.CiCacheFileName,
-		DestinationKey:       "s3://" + ciRequest.CiCacheLocation + "/" + ciRequest.CiCacheFileName,
-		Endpoint:             ciRequest.MinioEndpoint,
-		Region:               ciRequest.CiCacheRegion,
-		AzureBlobConfig:      ciRequest.AzureBlobConfig,
-		AwsS3BaseConfig:      awsS3BaseConfig,
-		FileDownloadLocation: ciRequest.CiCacheFileName,
+		SourceKey:       ciRequest.CiCacheFileName,
+		DestinationKey:  "s3://" + ciRequest.CiCacheLocation + "/" + ciRequest.CiCacheFileName,
+		AzureBlobConfig: ciRequest.AzureBlobConfig,
+		AwsS3BaseConfig: awsS3BaseConfig,
 	}
 
 	err = blobStorageService.PutWithCommand(request)

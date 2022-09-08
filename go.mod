@@ -6,7 +6,7 @@ require (
 	github.com/Knetic/govaluate v3.0.0+incompatible
 	github.com/aws/aws-sdk-go v1.43.27
 	github.com/caarlos0/env v3.5.0+incompatible
-	github.com/devtron-labs/common-lib v0.0.0-20220907122658-d1bc13f4ba89
+	github.com/devtron-labs/common-lib v0.0.0-20220908102938-155c54938e6c
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/joho/godotenv v1.4.0
 	github.com/nats-io/nats.go v1.15.0
