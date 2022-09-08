@@ -99,10 +99,8 @@ func ZipAndUpload(storageModuleConfigured bool, blobStorageS3Config *blob_storag
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:     getStorageTypeFromProvider(cloudProvider),
-		BucketName:      blobStorageS3Config.CiArtifactBucketName,
 		SourceKey:       zipFile,
 		DestinationKey:  artifactFileName,
-		Endpoint:        blobStorageS3Config.EndpointUrl,
 		AzureBlobConfig: azureBlobConfig,
 		AwsS3BaseConfig: awsS3BaseConfig,
 	}
