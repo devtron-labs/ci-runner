@@ -40,21 +40,22 @@ func (impl *BlobStorageServiceImpl) PutWithCommand(request *BlobStorageRequest) 
 	switch request.StorageType {
 	case BLOB_STORAGE_S3:
 		s3BaseConfig := request.AwsS3BaseConfig
-		cmdArgs := []string{""}
+		var cachePush *exec.Cmd
 		if s3BaseConfig.EndpointUrl != "" {
-			cmdArgs = append(cmdArgs, "--endpoint-url", s3BaseConfig.EndpointUrl)
+			cachePush = exec.Command("aws", "--endpoint-url", s3BaseConfig.EndpointUrl, "s3", "cp", request.SourceKey, "s3://"+s3BaseConfig.BucketName+"/"+request.DestinationKey)
+		} else {
+			cachePush = exec.Command("aws", "s3", "cp", request.SourceKey, "s3://"+s3BaseConfig.BucketName+"/"+request.DestinationKey)
 		}
-		cmdArgs = append(cmdArgs, "s3", "cp", request.SourceKey, "s3://"+s3BaseConfig.BucketName+"/"+request.DestinationKey)
-		if s3BaseConfig.Region != "" {
-			cmdArgs = append(cmdArgs, "--region", s3BaseConfig.Region)
+		err = utils.RunCommand(cachePush)
+	case BLOB_STORAGE_MINIO:
+		s3BaseConfig := request.AwsS3BaseConfig
+		var cachePush *exec.Cmd
+		if s3BaseConfig.EndpointUrl != "" {
+			cachePush = exec.Command("aws", "--endpoint-url", s3BaseConfig.EndpointUrl, "s3", "cp", request.SourceKey, "s3://"+s3BaseConfig.BucketName+"/"+request.DestinationKey)
+		} else {
+			cachePush = exec.Command("aws", "s3", "cp", request.SourceKey, "s3://"+s3BaseConfig.BucketName+"/"+request.DestinationKey)
 		}
-		command := exec.Command("aws", cmdArgs...)
-		if s3BaseConfig.AccessKey != "" {
-			command.Env = os.Environ()
-			command.Env = append(command.Env, "AWS_ACCESS_KEY_ID="+s3BaseConfig.AccessKey)
-			command.Env = append(command.Env, "AWS_SECRET_ACCESS_KEY="+s3BaseConfig.Passkey)
-		}
-		err = utils.RunCommand(command)
+		err = utils.RunCommand(cachePush)
 	case BLOB_STORAGE_AZURE:
 		b := AzureBlob{}
 		err = b.UploadBlob(context.Background(), request.DestinationKey, request.AzureBlobConfig, request.SourceKey, request.AzureBlobConfig.BlobContainerCiCache)
@@ -85,7 +86,21 @@ func (impl *BlobStorageServiceImpl) Get(request *BlobStorageRequest) (bool, int6
 		if s3BaseConfig.AccessKey != "" {
 			awsCfg.Credentials = credentials.NewStaticCredentials(s3BaseConfig.AccessKey, s3BaseConfig.Passkey, "")
 		}
-
+		if s3BaseConfig.EndpointUrl != "" { // to handle s3 compatible storage
+			awsCfg.Endpoint = aws.String(s3BaseConfig.EndpointUrl)
+			awsCfg.DisableSSL = aws.Bool(true)
+			awsCfg.S3ForcePathStyle = aws.Bool(true)
+		}
+		sess := session.Must(session.NewSession(awsCfg))
+		downloadSuccess, numBytes, err = DownLoadFromS3(file, request, sess)
+	case BLOB_STORAGE_MINIO:
+		s3BaseConfig := request.AwsS3BaseConfig
+		awsCfg := &aws.Config{
+			Region: aws.String(s3BaseConfig.Region),
+		}
+		if s3BaseConfig.AccessKey != "" {
+			awsCfg.Credentials = credentials.NewStaticCredentials(s3BaseConfig.AccessKey, s3BaseConfig.Passkey, "")
+		}
 		if s3BaseConfig.EndpointUrl != "" { // to handle s3 compatible storage
 			awsCfg.Endpoint = aws.String(s3BaseConfig.EndpointUrl)
 			awsCfg.DisableSSL = aws.Bool(true)
