@@ -104,12 +104,15 @@ func GetCache(ciRequest *CiRequest) error {
 	//----------download file
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
 	blobStorageS3Config := ciRequest.BlobStorageS3Config
-	awsS3BaseConfig := &blob_storage.AwsS3BaseConfig{
-		AccessKey:   blobStorageS3Config.AccessKey,
-		Passkey:     blobStorageS3Config.Passkey,
-		EndpointUrl: blobStorageS3Config.EndpointUrl,
-		BucketName:  ciRequest.CiCacheLocation,
-		Region:      ciRequest.CiCacheRegion,
+	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
+	if blobStorageS3Config != nil {
+		awsS3BaseConfig = &blob_storage.AwsS3BaseConfig{
+			AccessKey:   blobStorageS3Config.AccessKey,
+			Passkey:     blobStorageS3Config.Passkey,
+			EndpointUrl: blobStorageS3Config.EndpointUrl,
+			BucketName:  ciRequest.CiCacheLocation,
+			Region:      ciRequest.CiCacheRegion,
+		}
 	}
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:     getStorageTypeFromProvider(ciRequest.CloudProvider),
@@ -193,13 +196,17 @@ func SyncCache(ciRequest *CiRequest) error {
 
 	log.Println(util.DEVTRON, " -----> pushing new cache")
 	blobStorageS3Config := ciRequest.BlobStorageS3Config
-	awsS3BaseConfig := &blob_storage.AwsS3BaseConfig{
-		AccessKey:   blobStorageS3Config.AccessKey,
-		Passkey:     blobStorageS3Config.Passkey,
-		EndpointUrl: blobStorageS3Config.EndpointUrl,
-		BucketName:  ciRequest.CiCacheLocation,
-		Region:      ciRequest.CiCacheRegion,
+	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
+	if blobStorageS3Config != nil {
+		awsS3BaseConfig = &blob_storage.AwsS3BaseConfig{
+			AccessKey:   blobStorageS3Config.AccessKey,
+			Passkey:     blobStorageS3Config.Passkey,
+			EndpointUrl: blobStorageS3Config.EndpointUrl,
+			BucketName:  ciRequest.CiCacheLocation,
+			Region:      ciRequest.CiCacheRegion,
+		}
 	}
+
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:     getStorageTypeFromProvider(ciRequest.CloudProvider),
