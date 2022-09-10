@@ -89,12 +89,15 @@ func ZipAndUpload(storageModuleConfigured bool, blobStorageS3Config *blob_storag
 		return err
 	}
 	log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactFileName)
-	awsS3BaseConfig := &blob_storage.AwsS3BaseConfig{
-		AccessKey:   blobStorageS3Config.AccessKey,
-		Passkey:     blobStorageS3Config.Passkey,
-		EndpointUrl: blobStorageS3Config.EndpointUrl,
-		BucketName:  blobStorageS3Config.CiArtifactBucketName,
-		Region:      blobStorageS3Config.CiArtifactRegion,
+	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
+	if blobStorageS3Config != nil {
+		awsS3BaseConfig = &blob_storage.AwsS3BaseConfig{
+			AccessKey:   blobStorageS3Config.AccessKey,
+			Passkey:     blobStorageS3Config.Passkey,
+			EndpointUrl: blobStorageS3Config.EndpointUrl,
+			BucketName:  blobStorageS3Config.CiArtifactBucketName,
+			Region:      blobStorageS3Config.CiArtifactRegion,
+		}
 	}
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
 	request := &blob_storage.BlobStorageRequest{
