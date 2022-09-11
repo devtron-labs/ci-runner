@@ -114,11 +114,21 @@ func GetCache(ciRequest *CiRequest) error {
 			Region:      ciRequest.CiCacheRegion,
 		}
 	}
+	azureBlobConfig := ciRequest.AzureBlobConfig
+	var azureBlobBaseConfig *blob_storage.AzureBlobBaseConfig
+	if azureBlobConfig != nil {
+		azureBlobBaseConfig = &blob_storage.AzureBlobBaseConfig{
+			AccountKey:        azureBlobConfig.AccountKey,
+			AccountName:       azureBlobConfig.AccountName,
+			Enabled:           azureBlobConfig.Enabled,
+			BlobContainerName: azureBlobConfig.BlobContainerCiCache,
+		}
+	}
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:     getStorageTypeFromProvider(ciRequest.CloudProvider),
 		SourceKey:       ciRequest.CiCacheFileName,
 		DestinationKey:  ciRequest.CiCacheFileName,
-		AzureBlobConfig: ciRequest.AzureBlobConfig,
+		AzureBlobConfig: azureBlobBaseConfig,
 		AwsS3BaseConfig: awsS3BaseConfig,
 	}
 	downloadSuccess, bytesSize, err := blobStorageService.Get(request)
@@ -208,11 +218,21 @@ func SyncCache(ciRequest *CiRequest) error {
 	}
 
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
+	azureBlobConfig := ciRequest.AzureBlobConfig
+	var azureBlobBaseConfig *blob_storage.AzureBlobBaseConfig
+	if azureBlobConfig != nil {
+		azureBlobBaseConfig = &blob_storage.AzureBlobBaseConfig{
+			AccountKey:        azureBlobConfig.AccountKey,
+			AccountName:       azureBlobConfig.AccountName,
+			Enabled:           azureBlobConfig.Enabled,
+			BlobContainerName: azureBlobConfig.BlobContainerCiCache,
+		}
+	}
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:     getStorageTypeFromProvider(ciRequest.CloudProvider),
 		SourceKey:       ciRequest.CiCacheFileName,
 		DestinationKey:  ciRequest.CiCacheFileName,
-		AzureBlobConfig: ciRequest.AzureBlobConfig,
+		AzureBlobConfig: azureBlobBaseConfig,
 		AwsS3BaseConfig: awsS3BaseConfig,
 	}
 

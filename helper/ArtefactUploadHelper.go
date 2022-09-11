@@ -99,12 +99,23 @@ func ZipAndUpload(storageModuleConfigured bool, blobStorageS3Config *blob_storag
 			Region:      blobStorageS3Config.CiArtifactRegion,
 		}
 	}
+
+	var azureBlobBaseConfig *blob_storage.AzureBlobBaseConfig
+	if azureBlobConfig != nil {
+		azureBlobBaseConfig = &blob_storage.AzureBlobBaseConfig{
+			AccountKey:        azureBlobConfig.AccountKey,
+			AccountName:       azureBlobConfig.AccountName,
+			Enabled:           azureBlobConfig.Enabled,
+			BlobContainerName: azureBlobConfig.BlobContainerArtifact,
+		}
+	}
+
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:     getStorageTypeFromProvider(cloudProvider),
 		SourceKey:       zipFile,
 		DestinationKey:  artifactFileName,
-		AzureBlobConfig: azureBlobConfig,
+		AzureBlobConfig: azureBlobBaseConfig,
 		AwsS3BaseConfig: awsS3BaseConfig,
 	}
 
