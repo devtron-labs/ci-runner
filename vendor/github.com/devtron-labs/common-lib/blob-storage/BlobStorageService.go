@@ -40,11 +40,11 @@ func (impl *BlobStorageServiceImpl) PutWithCommand(request *BlobStorageRequest) 
 	switch request.StorageType {
 	case BLOB_STORAGE_S3:
 		s3BaseConfig := request.AwsS3BaseConfig
-		cmdArgs := []string{""}
+		var cmdArgs []string
+		cmdArgs = append(cmdArgs, "s3", "cp", request.SourceKey, "s3://"+s3BaseConfig.BucketName+"/"+request.DestinationKey)
 		if s3BaseConfig.EndpointUrl != "" {
 			cmdArgs = append(cmdArgs, "--endpoint-url", s3BaseConfig.EndpointUrl)
 		}
-		cmdArgs = append(cmdArgs, "s3", "cp", request.SourceKey, "s3://"+s3BaseConfig.BucketName+"/"+request.DestinationKey)
 		if s3BaseConfig.Region != "" {
 			cmdArgs = append(cmdArgs, "--region", s3BaseConfig.Region)
 		}
