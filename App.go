@@ -50,7 +50,7 @@ func main() {
 		log.Println(util.DEVTRON, artifactUploaded, err)
 		var artifactUploadErr error
 		if !artifactUploaded {
-			artifactUploadErr = helper.ZipAndUpload(ciRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.MinioEndpoint, ciCdRequest.CiRequest.AzureBlobConfig)
+			artifactUploadErr = helper.ZipAndUpload(ciRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig)
 		}
 
 		if err != nil || artifactUploadErr != nil {
@@ -96,7 +96,7 @@ func collectAndUploadCDArtifacts(cdRequest *helper.CdRequest) error {
 		}
 	}
 	log.Println(util.DEVTRON, " artifacts", artifactFiles)
-	return helper.UploadArtifact(cdRequest.BlobStorageConfigured, artifactFiles, cdRequest.BlobStorageS3Config, cdRequest.ArtifactFileName, cdRequest.CloudProvider, cdRequest.MinioEndpoint, cdRequest.AzureBlobConfig)
+	return helper.UploadArtifact(cdRequest.BlobStorageConfigured, artifactFiles, cdRequest.BlobStorageS3Config, cdRequest.ArtifactFileName, cdRequest.CloudProvider, cdRequest.AzureBlobConfig)
 }
 
 func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]string, error) {
@@ -232,7 +232,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	log.Println(util.DEVTRON, " /docker-push")
 
 	log.Println(util.DEVTRON, " artifact-upload")
-	err = helper.ZipAndUpload(ciCdRequest.CiRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.MinioEndpoint, ciCdRequest.CiRequest.AzureBlobConfig)
+	err = helper.ZipAndUpload(ciCdRequest.CiRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig)
 	if err != nil {
 		return artifactUploaded, err
 	} else {

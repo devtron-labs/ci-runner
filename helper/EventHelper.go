@@ -74,7 +74,7 @@ type CiRequest struct {
 	BlobStorageConfigured       bool                              `json:"blobStorageConfigured"`
 	InvalidateCache             bool                              `json:"invalidateCache"`
 	ScanEnabled                 bool                              `json:"scanEnabled"`
-	CloudProvider               string                            `json:"cloudProvider"`
+	CloudProvider               blob_storage.BlobStorageType      `json:"cloudProvider"`
 	AzureBlobConfig             *blob_storage.AzureBlobConfig     `json:"azureBlobConfig"`
 	MinioEndpoint               string                            `json:"minioEndpoint"`
 	DefaultAddressPoolBaseCidr  string                            `json:"defaultAddressPoolBaseCidr"`
@@ -113,7 +113,7 @@ type CdRequest struct {
 	OrchestratorToken          string                            `json:"orchestratorToken"`
 	IsExtRun                   bool                              `json:"isExtRun"`
 	ExtraEnvironmentVariables  map[string]string                 `json:"extraEnvironmentVariables"`
-	CloudProvider              string                            `json:"cloudProvider"`
+	CloudProvider              blob_storage.BlobStorageType      `json:"cloudProvider"`
 	BlobStorageConfigured      bool                              `json:"blobStorageConfigured"`
 	AzureBlobConfig            *blob_storage.AzureBlobConfig     `json:"azureBlobConfig"`
 	MinioEndpoint              string                            `json:"minioEndpoint"`
