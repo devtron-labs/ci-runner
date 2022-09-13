@@ -45,6 +45,13 @@ type AzureBlobBaseConfig struct {
 	BlobContainerName string `json:"blobContainerName"`
 }
 
+type GcpBlobConfig struct {
+	CredentialFileJsonData string `json:"credentialFileData"`
+	CacheBucketName        string `json:"ciCacheBucketName"`
+	LogBucketName          string `json:"logBucketName"`
+	ArtifactBucketName     string `json:"artifactBucketName"`
+}
+
 type GcpBlobBaseConfig struct {
 	BucketName             string `json:"bucketName"`
 	CredentialFileJsonData string `json:"credentialFileData"`

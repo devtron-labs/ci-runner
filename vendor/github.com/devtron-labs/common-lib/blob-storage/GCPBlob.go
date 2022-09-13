@@ -38,17 +38,6 @@ func getGcpObject(request *BlobStorageRequest, ctx context.Context) (error, *sto
 	if err != nil {
 		return err, nil
 	}
-	objects := storageClient.Bucket(config.BucketName).Objects(ctx, &storage.Query{
-		Versions: false,
-		Prefix:   request.DestinationKey,
-	})
-	for {
-		objectAttrs, err := objects.Next()
-		if err == iterator.Done {
-			break
-		}
-		fmt.Println(objectAttrs)
-	}
 	gcpObject := storageClient.Bucket(config.BucketName).Object(request.DestinationKey)
 	return err, gcpObject
 }
@@ -56,7 +45,7 @@ func getGcpObject(request *BlobStorageRequest, ctx context.Context) (error, *sto
 func createGcpClient(ctx context.Context, request *BlobStorageRequest) (*storage.Client, error) {
 	config := request.GcpBlobBaseConfig
 	fmt.Println("going to create gcp client")
-	storageClient, err := storage.NewClient(ctx, option.WithCredentialsFile(config.CredentialFileJsonData))
+	storageClient, err := storage.NewClient(ctx, option.WithCredentialsJSON([]byte(config.CredentialFileJsonData)))
 	if err != nil {
 		return nil, err
 	}
@@ -65,11 +54,40 @@ func createGcpClient(ctx context.Context, request *BlobStorageRequest) (*storage
 
 func (impl *GCPBlob) DownloadBlob(request *BlobStorageRequest, file *os.File) (bool, int64, error) {
 	ctx := context.Background()
+	config := request.GcpBlobBaseConfig
+	storageClient, err := createGcpClient(ctx, request)
+	if err != nil {
+		return false, 0, err
+	}
+	objects := storageClient.Bucket(config.BucketName).Objects(ctx, &storage.Query{
+		Versions: true,
+		Prefix:   request.DestinationKey,
+	})
+	var latestGeneration int64 = 0
+	var latestTimestampInMillis int64 = 0
+	for {
+		objectAttrs, err := objects.Next()
+		if err == iterator.Done {
+			break
+		}
+		updatedTime := objectAttrs.Updated
+		generation := objectAttrs.Generation
+		fileTimestampInMillis := updatedTime.UnixMilli()
+		if latestTimestampInMillis == 0 {
+			latestTimestampInMillis = fileTimestampInMillis
+			latestGeneration = generation
+		}
+		if fileTimestampInMillis > latestTimestampInMillis {
+			latestTimestampInMillis = fileTimestampInMillis
+			latestGeneration = generation
+		}
+
+	}
 	err, gcpObject := getGcpObject(request, ctx)
 	if err != nil {
 		return false, 0, err
 	}
-	objectReader, err := gcpObject.NewReader(ctx)
+	objectReader, err := gcpObject.If(storage.Conditions{GenerationMatch: latestGeneration}).NewReader(ctx)
 	if err != nil {
 		return false, 0, err
 	}

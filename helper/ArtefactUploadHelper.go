@@ -33,7 +33,9 @@ import (
 //const BLOB_STORAGE_S3 = "S3"
 //const BLOB_STORAGE_GCP = "GCP"
 
-func UploadArtifact(storageModuleConfigured bool, artifactFiles map[string]string, blobStorageS3Config *blob_storage.BlobStorageS3Config, artifactFileLocation string, cloudProvider blob_storage.BlobStorageType, azureBlobConfig *blob_storage.AzureBlobConfig) error {
+func UploadArtifact(storageModuleConfigured bool, artifactFiles map[string]string, blobStorageS3Config *blob_storage.BlobStorageS3Config,
+	artifactFileLocation string, cloudProvider blob_storage.BlobStorageType, azureBlobConfig *blob_storage.AzureBlobConfig,
+	gcpBlobConfig *blob_storage.GcpBlobConfig) error {
 	if len(artifactFiles) == 0 {
 		log.Println(util.DEVTRON, "no artifact to upload")
 		return nil
@@ -55,11 +57,12 @@ func UploadArtifact(storageModuleConfigured bool, artifactFiles map[string]strin
 			return err
 		}
 	}
-	err = ZipAndUpload(storageModuleConfigured, blobStorageS3Config, artifactFileLocation, cloudProvider, azureBlobConfig)
+	err = ZipAndUpload(storageModuleConfigured, blobStorageS3Config, artifactFileLocation, cloudProvider, azureBlobConfig, gcpBlobConfig)
 	return err
 }
 
-func ZipAndUpload(storageModuleConfigured bool, blobStorageS3Config *blob_storage.BlobStorageS3Config, artifactFileName string, cloudProvider blob_storage.BlobStorageType, azureBlobConfig *blob_storage.AzureBlobConfig) error {
+func ZipAndUpload(storageModuleConfigured bool, blobStorageS3Config *blob_storage.BlobStorageS3Config, artifactFileName string,
+	cloudProvider blob_storage.BlobStorageType, azureBlobConfig *blob_storage.AzureBlobConfig, gcpBlobConfig *blob_storage.GcpBlobConfig) error {
 	if !storageModuleConfigured {
 		log.Println(util.DEVTRON, "not going to upload artifact as storage module not configured...")
 		return nil
@@ -82,7 +85,7 @@ func ZipAndUpload(storageModuleConfigured bool, blobStorageS3Config *blob_storag
 	log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactFileName)
 
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
-	request := blob_storage.CreateBlobStorageRequest(cloudProvider, zipFile, artifactFileName, blobStorageS3Config, azureBlobConfig)
+	request := createBlobStorageRequest(cloudProvider, zipFile, artifactFileName, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
 
 	err = blobStorageService.PutWithCommand(request)
 	return err
@@ -106,4 +109,45 @@ func IsDirEmpty(name string) (bool, error) {
 		return true, nil
 	}
 	return false, err
+}
+
+func createBlobStorageRequest(cloudProvider blob_storage.BlobStorageType, sourceKey string, destinationKey string,
+	blobStorageS3Config *blob_storage.BlobStorageS3Config, azureBlobConfig *blob_storage.AzureBlobConfig,
+	gcpBlobConfig *blob_storage.GcpBlobConfig) *blob_storage.BlobStorageRequest {
+	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
+	if blobStorageS3Config != nil {
+		awsS3BaseConfig = &blob_storage.AwsS3BaseConfig{
+			AccessKey:   blobStorageS3Config.AccessKey,
+			Passkey:     blobStorageS3Config.Passkey,
+			EndpointUrl: blobStorageS3Config.EndpointUrl,
+			BucketName:  blobStorageS3Config.CiArtifactBucketName,
+			Region:      blobStorageS3Config.CiArtifactRegion,
+		}
+	}
+
+	var azureBlobBaseConfig *blob_storage.AzureBlobBaseConfig
+	if azureBlobConfig != nil {
+		azureBlobBaseConfig = &blob_storage.AzureBlobBaseConfig{
+			AccountKey:        azureBlobConfig.AccountKey,
+			AccountName:       azureBlobConfig.AccountName,
+			Enabled:           azureBlobConfig.Enabled,
+			BlobContainerName: azureBlobConfig.BlobContainerArtifact,
+		}
+	}
+	var gcpBlobBaseConfig *blob_storage.GcpBlobBaseConfig
+	if gcpBlobConfig != nil {
+		gcpBlobBaseConfig = &blob_storage.GcpBlobBaseConfig{
+			CredentialFileJsonData: gcpBlobConfig.CredentialFileJsonData,
+			BucketName:             gcpBlobConfig.ArtifactBucketName,
+		}
+	}
+	request := &blob_storage.BlobStorageRequest{
+		StorageType:         cloudProvider,
+		SourceKey:           sourceKey,
+		DestinationKey:      destinationKey,
+		AzureBlobBaseConfig: azureBlobBaseConfig,
+		AwsS3BaseConfig:     awsS3BaseConfig,
+		GcpBlobBaseConfig:   gcpBlobBaseConfig,
+	}
+	return request
 }
