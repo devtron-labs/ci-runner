@@ -21,9 +21,10 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 	"log"
 	"time"
+
+	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/ci-runner/pubsub"
@@ -121,6 +122,8 @@ type CdRequest struct {
 	MinioEndpoint              string                            `json:"minioEndpoint"`
 	DefaultAddressPoolBaseCidr string                            `json:"defaultAddressPoolBaseCidr"`
 	DefaultAddressPoolSize     int                               `json:"defaultAddressPoolSize"`
+	DeploymentTriggeredBy      string                            `json:"deploymentTriggeredBy"`
+	DeploymentTriggerTime      time.Time                         `json:"deploymentTriggerTime"`
 }
 
 type CiCdTriggerEvent struct {
