@@ -91,7 +91,7 @@ func SyncCache(ciRequest *CiRequest) error {
 
 	log.Println(util.DEVTRON, " -----> pushing new cache")
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
-	request := createBlobStorageRequestForCache(ciRequest.CloudProvider, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName, ciRequest.BlobStorageS3Config, ciRequest.AzureBlobConfig, nil)
+	request := createBlobStorageRequestForCache(ciRequest.CloudProvider, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName, ciRequest.BlobStorageS3Config, ciRequest.AzureBlobConfig, ciRequest.GcpBlobConfig)
 	err = blobStorageService.PutWithCommand(request)
 	if err != nil {
 		log.Println(util.DEVTRON, " -----> push err", err)
