@@ -54,7 +54,7 @@ func GetCache(ciRequest *CiRequest) error {
 			log.Fatal(" Could not extract cache blob ", err)
 		}
 	} else if err != nil {
-		log.Println(util.DEVTRON, "build cache  error", err.Error())
+		log.Println(util.DEVTRON, "build cache error", err.Error())
 	}
 	return nil
 }
@@ -106,6 +106,7 @@ func createBlobStorageRequestForCache(cloudProvider blob_storage.BlobStorageType
 			AccessKey:   blobStorageS3Config.AccessKey,
 			Passkey:     blobStorageS3Config.Passkey,
 			EndpointUrl: blobStorageS3Config.EndpointUrl,
+			IsInSecure:  blobStorageS3Config.IsInSecure,
 			BucketName:  blobStorageS3Config.CiCacheBucketName,
 			Region:      blobStorageS3Config.CiCacheRegion,
 		}

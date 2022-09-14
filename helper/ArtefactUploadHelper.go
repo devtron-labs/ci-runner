@@ -120,6 +120,7 @@ func createBlobStorageRequest(cloudProvider blob_storage.BlobStorageType, source
 			AccessKey:   blobStorageS3Config.AccessKey,
 			Passkey:     blobStorageS3Config.Passkey,
 			EndpointUrl: blobStorageS3Config.EndpointUrl,
+			IsInSecure:  blobStorageS3Config.IsInSecure,
 			BucketName:  blobStorageS3Config.CiArtifactBucketName,
 			Region:      blobStorageS3Config.CiArtifactRegion,
 		}
