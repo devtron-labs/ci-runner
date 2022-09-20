@@ -18,8 +18,7 @@
 package helper
 
 import (
-	"context"
-	"fmt"
+	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 	"io"
 	"log"
 	"os"
@@ -30,26 +29,19 @@ import (
 	"github.com/otiai10/copy"
 )
 
-const BLOB_STORAGE_AZURE = "AZURE"
-const BLOB_STORAGE_S3 = "S3"
-const BLOB_STORAGE_GCP = "GCP"
-const BLOB_STORAGE_MINIO = "MINIO"
+//const BLOB_STORAGE_AZURE = "AZURE"
+//const BLOB_STORAGE_S3 = "S3"
+//const BLOB_STORAGE_GCP = "GCP"
 
-type AzureBlobConfig struct {
-	Enabled              bool   `json:"enabled"`
-	AccountName          string `json:"accountName"`
-	BlobContainerCiLog   string `json:"blobContainerCiLog"`
-	BlobContainerCiCache string `json:"blobContainerCiCache"`
-	AccountKey           string `json:"accountKey"`
-}
-
-func UploadArtifact(artifactFiles map[string]string, s3Location string, cloudProvider string, minioEndpoint string, azureBlobConfig *AzureBlobConfig) error {
+func UploadArtifact(storageModuleConfigured bool, artifactFiles map[string]string, blobStorageS3Config *blob_storage.BlobStorageS3Config,
+	artifactFileLocation string, cloudProvider blob_storage.BlobStorageType, azureBlobConfig *blob_storage.AzureBlobConfig,
+	gcpBlobConfig *blob_storage.GcpBlobConfig) error {
 	if len(artifactFiles) == 0 {
 		log.Println(util.DEVTRON, "no artifact to upload")
 		return nil
 	}
 	//collect in a dir
-	log.Println(util.DEVTRON, "artifact upload ", artifactFiles, s3Location)
+	log.Println(util.DEVTRON, "artifact upload ", artifactFiles, artifactFileLocation)
 	err := os.Mkdir(util.TmpArtifactLocation, os.ModePerm)
 	if err != nil {
 		return err
@@ -65,11 +57,16 @@ func UploadArtifact(artifactFiles map[string]string, s3Location string, cloudPro
 			return err
 		}
 	}
-	err = ZipAndUpload(s3Location, cloudProvider, minioEndpoint, azureBlobConfig)
+	err = ZipAndUpload(storageModuleConfigured, blobStorageS3Config, artifactFileLocation, cloudProvider, azureBlobConfig, gcpBlobConfig)
 	return err
 }
 
-func ZipAndUpload(artifactLocation string, cloudProvider string, minioEndpoint string, azureBlobConfig *AzureBlobConfig) error {
+func ZipAndUpload(storageModuleConfigured bool, blobStorageS3Config *blob_storage.BlobStorageS3Config, artifactFileName string,
+	cloudProvider blob_storage.BlobStorageType, azureBlobConfig *blob_storage.AzureBlobConfig, gcpBlobConfig *blob_storage.GcpBlobConfig) error {
+	if !storageModuleConfigured {
+		log.Println(util.DEVTRON, "not going to upload artifact as storage module not configured...")
+		return nil
+	}
 	isEmpty, err := IsDirEmpty(util.TmpArtifactLocation)
 	if err != nil {
 		log.Println(util.DEVTRON, "artifact empty check error ")
@@ -85,23 +82,13 @@ func ZipAndUpload(artifactLocation string, cloudProvider string, minioEndpoint s
 	if err != nil {
 		return err
 	}
-	log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactLocation)
-	switch cloudProvider {
-	case BLOB_STORAGE_S3:
-		artifactPush := exec.Command("aws", "s3", "cp", zipFile, artifactLocation)
-		err = util.RunCommand(artifactPush)
-		return err
-	case BLOB_STORAGE_MINIO:
-		artifactPush := exec.Command("aws", "--endpoint-url", minioEndpoint, "s3", "cp", zipFile, artifactLocation)
-		err = util.RunCommand(artifactPush)
-		return err
-	case BLOB_STORAGE_AZURE:
-		b := AzureBlob{}
-		err = b.UploadBlob(context.Background(), artifactLocation, azureBlobConfig, zipFile, azureBlobConfig.BlobContainerCiLog)
-		return err
-	default:
-		return fmt.Errorf("cloudprovider %s not supported", cloudProvider)
-	}
+	log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactFileName)
+
+	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
+	request := createBlobStorageRequest(cloudProvider, zipFile, artifactFileName, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
+
+	err = blobStorageService.PutWithCommand(request)
+	return err
 }
 
 func IsDirEmpty(name string) (bool, error) {
@@ -122,4 +109,46 @@ func IsDirEmpty(name string) (bool, error) {
 		return true, nil
 	}
 	return false, err
+}
+
+func createBlobStorageRequest(cloudProvider blob_storage.BlobStorageType, sourceKey string, destinationKey string,
+	blobStorageS3Config *blob_storage.BlobStorageS3Config, azureBlobConfig *blob_storage.AzureBlobConfig,
+	gcpBlobConfig *blob_storage.GcpBlobConfig) *blob_storage.BlobStorageRequest {
+	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
+	if blobStorageS3Config != nil {
+		awsS3BaseConfig = &blob_storage.AwsS3BaseConfig{
+			AccessKey:   blobStorageS3Config.AccessKey,
+			Passkey:     blobStorageS3Config.Passkey,
+			EndpointUrl: blobStorageS3Config.EndpointUrl,
+			IsInSecure:  blobStorageS3Config.IsInSecure,
+			BucketName:  blobStorageS3Config.CiArtifactBucketName,
+			Region:      blobStorageS3Config.CiArtifactRegion,
+		}
+	}
+
+	var azureBlobBaseConfig *blob_storage.AzureBlobBaseConfig
+	if azureBlobConfig != nil {
+		azureBlobBaseConfig = &blob_storage.AzureBlobBaseConfig{
+			AccountKey:        azureBlobConfig.AccountKey,
+			AccountName:       azureBlobConfig.AccountName,
+			Enabled:           azureBlobConfig.Enabled,
+			BlobContainerName: azureBlobConfig.BlobContainerArtifact,
+		}
+	}
+	var gcpBlobBaseConfig *blob_storage.GcpBlobBaseConfig
+	if gcpBlobConfig != nil {
+		gcpBlobBaseConfig = &blob_storage.GcpBlobBaseConfig{
+			CredentialFileJsonData: gcpBlobConfig.CredentialFileJsonData,
+			BucketName:             gcpBlobConfig.ArtifactBucketName,
+		}
+	}
+	request := &blob_storage.BlobStorageRequest{
+		StorageType:         cloudProvider,
+		SourceKey:           sourceKey,
+		DestinationKey:      destinationKey,
+		AzureBlobBaseConfig: azureBlobBaseConfig,
+		AwsS3BaseConfig:     awsS3BaseConfig,
+		GcpBlobBaseConfig:   gcpBlobBaseConfig,
+	}
+	return request
 }
