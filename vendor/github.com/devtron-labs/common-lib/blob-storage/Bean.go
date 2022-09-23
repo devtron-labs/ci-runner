@@ -23,12 +23,13 @@ type BlobStorageS3Config struct {
 }
 
 type AwsS3BaseConfig struct {
-	AccessKey   string `json:"accessKey"`
-	Passkey     string `json:"passkey"`
-	EndpointUrl string `json:"endpointUrl"`
-	IsInSecure  bool   `json:"isInSecure"`
-	BucketName  string `json:"bucketName"`
-	Region      string `json:"region"`
+	AccessKey         string `json:"accessKey"`
+	Passkey           string `json:"passkey"`
+	EndpointUrl       string `json:"endpointUrl"`
+	IsInSecure        bool   `json:"isInSecure"`
+	BucketName        string `json:"bucketName"`
+	Region            string `json:"region"`
+	VersioningEnabled bool   `json:"versioningEnabled"`
 }
 
 type AzureBlobConfig struct {
