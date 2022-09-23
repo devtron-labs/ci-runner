@@ -117,12 +117,13 @@ func createBlobStorageRequest(cloudProvider blob_storage.BlobStorageType, source
 	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
 	if blobStorageS3Config != nil {
 		awsS3BaseConfig = &blob_storage.AwsS3BaseConfig{
-			AccessKey:   blobStorageS3Config.AccessKey,
-			Passkey:     blobStorageS3Config.Passkey,
-			EndpointUrl: blobStorageS3Config.EndpointUrl,
-			IsInSecure:  blobStorageS3Config.IsInSecure,
-			BucketName:  blobStorageS3Config.CiArtifactBucketName,
-			Region:      blobStorageS3Config.CiArtifactRegion,
+			AccessKey:         blobStorageS3Config.AccessKey,
+			Passkey:           blobStorageS3Config.Passkey,
+			EndpointUrl:       blobStorageS3Config.EndpointUrl,
+			IsInSecure:        blobStorageS3Config.IsInSecure,
+			BucketName:        blobStorageS3Config.CiArtifactBucketName,
+			Region:            blobStorageS3Config.CiArtifactRegion,
+			VersioningEnabled: blobStorageS3Config.CiArtifactBucketVersioning,
 		}
 	}
 
