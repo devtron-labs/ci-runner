@@ -247,6 +247,8 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 
+		log.Println(" -----> copied content")
+
 	}
 	return dest, nil
 }
