@@ -239,7 +239,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		log.Println(" -----> copying content")
 
 		// copy content
-		dockerCopyCommand := "docker run --rm --entrypoint \"/bin/sh\" -v /devtroncd/.m2:/root/.m3 " + dockerTag + " -c \"rsync -tr /root/.m2/repository /root/.m3\""
+		dockerCopyCommand := "docker run --rm --entrypoint \"/bin/sh\" -v /devtroncd/.m2:/root/.m3 " + dest + " -c \"rsync -tr /root/.m2/repository /root/.m3\""
 		dockerCopyExec := exec.Command("/bin/sh", "-c", dockerCopyCommand)
 		err = util.RunCommand(dockerCopyExec)
 		if err != nil {
