@@ -26,6 +26,8 @@ COPY --from=docker/compose:latest /usr/local/bin/docker-compose /usr/bin/docker-
 COPY ./git-ask-pass.sh /git-ask-pass.sh
 RUN chmod +x /git-ask-pass.sh
 
+RUN (curl -sSL "https://github.com/buildpacks/pack/releases/download/v0.27.0/pack-v0.27.0-linux.tgz" | tar -C /usr/local/bin/ --no-same-owner -xzv pack)
+
 COPY --from=build-env /go/bin/cirunner .
 COPY ./ssh-config /root/.ssh/config
 ENTRYPOINT ["./cirunner"]

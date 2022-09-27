@@ -171,72 +171,119 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	dockerFileLocationDir := ciRequest.DockerFileLocation[:strings.LastIndex(ciRequest.DockerFileLocation, "/")+1]
 	log.Println(util.DEVTRON, " docker file location: ", dockerFileLocationDir)
 
-	dockerBuild := "docker build "
-	useBuildx := ciRequest.DockerBuildTargetPlatform != ""
-	if useBuildx {
-		dockerBuild = "docker buildx build --platform " + ciRequest.DockerBuildTargetPlatform + " "
-	}
-	if ciRequest.DockerBuildArgs != "" {
-		dockerBuildArgsMap := make(map[string]string)
-		err := json.Unmarshal([]byte(ciRequest.DockerBuildArgs), &dockerBuildArgsMap)
-		if err != nil {
-			log.Println("err", err)
-			return "", err
-		}
-		for k, v := range dockerBuildArgsMap {
-			dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
-		}
-	}
-
-	if useBuildx {
-		err := installAllSupportedPlatforms(err)
-		if err != nil {
-			return "", err
-		}
-
-		err2 := createBuildxBuilder()
-		if err2 != nil {
-			return "", err2
-		}
-	}
 	dest, err := BuildDockerImagePath(ciRequest)
 	if err != nil {
 		return "", err
 	}
-	if useBuildx {
-		log.Println(" -----> Setting up cache directory for Buildx")
-		oldCacheBuildxPath := util.LOCAL_BUILDX_LOCATION + "/old"
-		localCachePath := util.LOCAL_BUILDX_CACHE_LOCATION
-		err := setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
+	if ciRequest.BuildType == util.DOCKER_BUILD_TYPE {
+		dockerBuild := "docker build "
+		useBuildx := ciRequest.DockerBuildTargetPlatform != ""
+		if useBuildx {
+			dockerBuild = "docker buildx build --platform " + ciRequest.DockerBuildTargetPlatform + " "
+		}
+		if ciRequest.DockerBuildArgs != "" {
+			dockerBuildArgsMap := make(map[string]string)
+			err = json.Unmarshal([]byte(ciRequest.DockerBuildArgs), &dockerBuildArgsMap)
+			if err != nil {
+				log.Println("err", err)
+				return "", err
+			}
+			for k, v := range dockerBuildArgsMap {
+				dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
+			}
+		}
+		if useBuildx {
+			err = installAllSupportedPlatforms()
+			if err != nil {
+				return "", err
+			}
+
+			err = createBuildxBuilder()
+			if err != nil {
+				return "", err
+			}
+
+			log.Println(" -----> Setting up cache directory for Buildx")
+			oldCacheBuildxPath := util.LOCAL_BUILDX_LOCATION + "/old"
+			localCachePath := util.LOCAL_BUILDX_CACHE_LOCATION
+			err = setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
+			if err != nil {
+				return "", err
+			}
+			oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
+			manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
+			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s --allow network.host --allow security.insecure --metadata-file %s", dockerBuild, ciRequest.DockerFileLocation, dest, localCachePath, oldCacheBuildxPath, manifestLocation)
+		} else {
+			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
+		}
+		log.Println(" -----> " + dockerBuild)
+		err = executeCmd(dockerBuild)
 		if err != nil {
 			return "", err
 		}
-		oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
-		manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s --allow network.host --allow security.insecure --metadata-file %s", dockerBuild, ciRequest.DockerFileLocation, dest, localCachePath, oldCacheBuildxPath, manifestLocation)
-	} else {
-		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
-	}
-	log.Println(" -----> " + dockerBuild)
 
+		if !useBuildx {
+			err = tagDockerBuild(ciRequest.DockerRepository, dest)
+			if err != nil {
+				return "", err
+			}
+		}
+	} else if ciRequest.BuildType == util.BUILDPACK_BUILD_TYPE {
+		buildPackParams := ciRequest.BuildPackParams
+		buildPackCmd := fmt.Sprintf("pack build %s --path ./ --builder %s", dest, buildPackParams.BuilderId)
+		if buildPackParams.EnvParams != "" {
+			BuildPackArgsMap := make(map[string]string)
+			err = json.Unmarshal([]byte(buildPackParams.EnvParams), &BuildPackArgsMap)
+			if err != nil {
+				log.Println("err", err)
+				return "", err
+			} else {
+				for k, v := range BuildPackArgsMap {
+					buildPackCmd = buildPackCmd + " --env " + k + "=" + v
+				}
+			}
+		}
+		if buildPackParams.Volume != "" {
+			buildPackCmd = buildPackCmd + " --volume " + buildPackParams.Volume
+		}
+		if len(buildPackParams.BuildPacks) > 0 {
+			for _, buildPack := range buildPackParams.BuildPacks {
+				buildPackCmd = buildPackCmd + " --buildpack " + buildPack
+			}
+		}
+		err = executeCmd(buildPackCmd)
+		if err != nil {
+			return "", err
+		}
+		builderRmCmd := "docker image rm " + buildPackParams.BuilderId
+		err = executeCmd(builderRmCmd)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return dest, nil
+}
+
+func executeCmd(dockerBuild string) error {
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
-	err = util.RunCommand(dockerBuildCMD)
+	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
-		return "", err
 	}
+	return err
+}
 
-	if !useBuildx {
-		dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
-		log.Println(" -----> " + dockerTag)
-		dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
-		err = util.RunCommand(dockerTagCMD)
-		if err != nil {
-			log.Println(err)
-			return "", err
-		}
+func tagDockerBuild(dockerRepository string, dest string) error {
+	dockerTag := "docker tag " + dockerRepository + ":latest" + " " + dest
+	log.Println(" -----> " + dockerTag)
+	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
+	err := util.RunCommand(dockerTagCMD)
+	if err != nil {
+		log.Println(err)
+		return err
 	}
-	return dest, nil
+	return nil
 }
 
 func setupCacheForBuildx(localCachePath string, oldCacheBuildxPath string) error {
@@ -278,11 +325,11 @@ func createBuildxBuilder() error {
 	return nil
 }
 
-func installAllSupportedPlatforms(err error) error {
+func installAllSupportedPlatforms() error {
 	multiPlatformCmd := "docker run --privileged --rm tonistiigi/binfmt --install all"
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
-	err = util.RunCommand(dockerBuildCMD)
+	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
 		return err

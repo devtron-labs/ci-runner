@@ -37,8 +37,38 @@ type TestExecutorImageProperties struct {
 	Arg       string `json:"arg,omitempty"`
 }
 
+type DryRunRequest struct {
+	CiProjectDetails           []CiProjectDetails `json:"ciProjectDetails"`
+	DockerRegistryId           string             `json:"dockerRegistryId"`
+	DockerRegistryType         string             `json:"dockerRegistryType"`
+	DockerRegistryURL          string             `json:"dockerRegistryURL"`
+	DockerConnection           string             `json:"dockerConnection"`
+	DockerCert                 string             `json:"dockerCert"`
+	DockerRepository           string             `json:"dockerRepository"`
+	DockerBuildArgs            string             `json:"dockerBuildArgs"`
+	DockerBuildTargetPlatform  string             `json:"dockerBuildTargetPlatform"`
+	DockerFileLocation         string             `json:"dockerfileLocation"`
+	DockerUsername             string             `json:"dockerUsername"`
+	DockerPassword             string             `json:"dockerPassword"`
+	AwsRegion                  string             `json:"awsRegion"`
+	AccessKey                  string             `json:"accessKey"`
+	SecretKey                  string             `json:"secretKey"`
+	DefaultAddressPoolBaseCidr string             `json:"defaultAddressPoolBaseCidr"`
+	DefaultAddressPoolSize     int                `json:"defaultAddressPoolSize"`
+	BuildPackParams            *BuildPackParams   `json:"buildPackParams"`
+	ProjectDockerfile          string             `json:"projectDockerfile"`
+}
+
+type BuildPackParams struct {
+	BuilderId  string   `json:"builderId"`
+	EnvParams  string   `json:"envParams"`
+	BuildPacks []string `json:"buildPacks"`
+	Volume     string   `json:"volume"`
+}
+
 type CiRequest struct {
 	CiProjectDetails            []CiProjectDetails                `json:"ciProjectDetails"`
+	BuildType                   string                            `json:"buildType"`
 	DockerImageTag              string                            `json:"dockerImageTag"`
 	DockerRegistryId            string                            `json:"dockerRegistryId"`
 	DockerRegistryType          string                            `json:"dockerRegistryType"`
@@ -86,6 +116,8 @@ type CiRequest struct {
 	RefPlugins                  []*RefPluginObject                `json:"refPlugins"`
 	AppName                     string                            `json:"appName"`
 	TriggerByAuthor             string                            `json:"triggerByAuthor"`
+	BuildPackParams             *BuildPackParams                  `json:"buildPackParams"`
+	ProjectDockerfile           string                            `json:"projectDockerfile"`
 }
 
 type CdRequest struct {
@@ -127,9 +159,10 @@ type CdRequest struct {
 }
 
 type CiCdTriggerEvent struct {
-	Type      string     `json:"type"`
-	CiRequest *CiRequest `json:"ciRequest"`
-	CdRequest *CdRequest `json:"cdRequest"`
+	Type          string         `json:"type"`
+	DryRunRequest *DryRunRequest `json:"dryRunRequest"`
+	CiRequest     *CiRequest     `json:"ciRequest"`
+	CdRequest     *CdRequest     `json:"cdRequest"`
 }
 
 type CiArtifactDTO struct {
