@@ -459,6 +459,7 @@ func waitForDockerDaemon(retryCount int) {
 	retry := 0
 	for err != nil {
 		if retry == retryCount {
+			time.Sleep(800 * time.Second)
 			break
 		}
 		time.Sleep(1 * time.Second)
