@@ -236,7 +236,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 
-		log.Println(" -----> copying content")
+		/*log.Println(" -----> copying content")
 
 		// copy content
 		dockerCopyCommand := "docker run --rm --entrypoint \"/bin/sh\" -v /devtroncd/.m2:/root/.m3 " + dest + " -c \"rsync -tr /root/.m2/repository /root/.m3\""
@@ -247,7 +247,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 
-		log.Println(" -----> copied content")
+		log.Println(" -----> copied content")*/
 
 	}
 	return dest, nil
