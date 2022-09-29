@@ -80,8 +80,6 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag)
 	}
 	out, err := exec.Command("/bin/sh", "-c", dockerdstart).Output()
-	log.Println(string(out))
-	log.Println("err in docker start", err)
 	waitForDockerDaemon(util.RETRYCOUNT)
 }
 
@@ -455,16 +453,13 @@ func StopDocker() error {
 
 func waitForDockerDaemon(retryCount int) {
 	err := DockerdUpCheck()
-	log.Println("err check", err)
 	retry := 0
 	for err != nil {
 		if retry == retryCount {
-			time.Sleep(800 * time.Second)
 			break
 		}
 		time.Sleep(1 * time.Second)
 		err = DockerdUpCheck()
-		log.Println("err check internal", err)
 		retry++
 	}
 }
