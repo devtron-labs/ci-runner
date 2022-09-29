@@ -45,7 +45,7 @@ func main() {
 	}
 
 	if ciCdRequest.Type == util.CIEVENT {
-		ciRequest := ciCdRequest.CiRequest
+		//ciRequest := ciCdRequest.CiRequest
 		artifactUploaded, err := runCIStages(ciCdRequest)
 		log.Println(util.DEVTRON, artifactUploaded, err)
 		var artifactUploadErr error
@@ -58,14 +58,14 @@ func main() {
 			os.Exit(1)
 		}
 
-		// sync cache
+		/*// sync cache
 		log.Println(util.DEVTRON, " cache-push")
 		err = helper.SyncCache(ciRequest)
 		if err != nil {
 			log.Println(err)
 			os.Exit(1)
 		}
-		log.Println(util.DEVTRON, " /cache-push")
+		log.Println(util.DEVTRON, " /cache-push")*/
 	} else {
 		err = runCDStages(ciCdRequest)
 		artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CdRequest)
@@ -144,13 +144,13 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		_ = os.Mkdir(util.WORKINGDIR, os.ModeDir)
 	}
 
-	// Get ci cache
+	/*// Get ci cache
 	log.Println(util.DEVTRON, " cache-pull")
 	err = helper.GetCache(ciCdRequest.CiRequest)
 	if err != nil {
 		return artifactUploaded, err
 	}
-	log.Println(util.DEVTRON, " /cache-pull")
+	log.Println(util.DEVTRON, " /cache-pull")*/
 
 	err = os.Chdir(util.WORKINGDIR)
 	if err != nil {
