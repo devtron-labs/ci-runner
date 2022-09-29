@@ -79,7 +79,7 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 		}
 		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag)
 	}
-	out, err := exec.Command("/bin/sh", "-c", dockerdstart).Output()
+	exec.Command("/bin/sh", "-c", dockerdstart).Output()
 	waitForDockerDaemon(util.RETRYCOUNT)
 }
 
