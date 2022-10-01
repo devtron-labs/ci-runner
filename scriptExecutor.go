@@ -16,7 +16,7 @@ func RunScriptsV1(outputPath string, bashScript string, script string, envVars m
 	log.Println("running script commands")
 	scriptTemplate := `#!/bin/sh
 {{ range $key, $value := .envVr }}
-export {{ $key }}={{ $value }} ;
+export {{ $key }}='{{ $value }}' ;
 {{ end }}
 {{.script}}
 `
@@ -110,7 +110,7 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 	return envMap, nil
 }
 
-//prepare final shell script to be executed
+// prepare final shell script to be executed
 func prepareFinaleScript(script string, outputVars []string, envOutFileName string) (string, error) {
 	scriptTemplate := `{{.script}}
 > {{.envOutFileName}}
