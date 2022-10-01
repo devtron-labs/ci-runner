@@ -190,7 +190,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		for k, v := range dockerBuildArgsMap {
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuild = dockerBuild + " --build-arg " + k + "=" + valueFromEnv
+				dockerBuild = dockerBuild + " --build-arg " + k + "=\"" + valueFromEnv + "\""
 			} else {
 				dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
 			}
