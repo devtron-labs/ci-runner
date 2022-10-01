@@ -226,7 +226,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	} else {
 		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
 	}
-	log.Println("docker build running")
+	log.Println("------->", dockerBuild)
 
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
 	err = util.RunCommand(dockerBuildCMD)
