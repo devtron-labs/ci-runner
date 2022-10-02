@@ -167,31 +167,34 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	if ciRequest.DockerImageTag == "" {
 		ciRequest.DockerImageTag = "latest"
 	}
+	ciBuildConfig := ciRequest.CiBuildConfig
 	// Docker build, tag image and push
-	dockerFileLocationDir := ciRequest.DockerFileLocation[:strings.LastIndex(ciRequest.DockerFileLocation, "/")+1]
+	dockerFileLocationDir := ciRequest.CheckoutPath
 	log.Println(util.DEVTRON, " docker file location: ", dockerFileLocationDir)
 
 	dest, err := BuildDockerImagePath(ciRequest)
 	if err != nil {
 		return "", err
 	}
-	if ciRequest.BuildType == util.DOCKER_BUILD_TYPE {
+	if ciBuildConfig.CiBuildType == SELF_DOCKERFILE_BUILD_TYPE || ciBuildConfig.CiBuildType == MANAGED_DOCKERFILE_BUILD_TYPE {
 		dockerBuild := "docker build "
-		useBuildx := ciRequest.DockerBuildTargetPlatform != ""
+		dockerBuildConfig := ciBuildConfig.DockerBuildConfig
+		useBuildx := dockerBuildConfig.TargetPlatform != ""
 		if useBuildx {
-			dockerBuild = "docker buildx build --platform " + ciRequest.DockerBuildTargetPlatform + " "
+			dockerBuild = "docker buildx build --platform " + dockerBuildConfig.TargetPlatform + " "
 		}
-		if ciRequest.DockerBuildArgs != "" {
-			dockerBuildArgsMap := make(map[string]string)
-			err = json.Unmarshal([]byte(ciRequest.DockerBuildArgs), &dockerBuildArgsMap)
-			if err != nil {
-				log.Println("err", err)
-				return "", err
-			}
-			for k, v := range dockerBuildArgsMap {
-				dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
-			}
+		dockerBuildArgsMap := dockerBuildConfig.Args
+		//if ciRequest.DockerBuildArgs != "" {
+		//	dockerBuildArgsMap := make(map[string]string)
+		//	err = json.Unmarshal([]byte(ciRequest.DockerBuildArgs), &dockerBuildArgsMap)
+		//	if err != nil {
+		//		log.Println("err", err)
+		//		return "", err
+		//	}
+		for k, v := range dockerBuildArgsMap {
+			dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
 		}
+		//}
 		if useBuildx {
 			err = installAllSupportedPlatforms()
 			if err != nil {
@@ -212,9 +215,9 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			}
 			oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
 			manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s --allow network.host --allow security.insecure --metadata-file %s", dockerBuild, ciRequest.DockerFileLocation, dest, localCachePath, oldCacheBuildxPath, manifestLocation)
+			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s --allow network.host --allow security.insecure --metadata-file %s", dockerBuild, dockerBuildConfig.DockerfilePath, dest, localCachePath, oldCacheBuildxPath, manifestLocation)
 		} else {
-			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
+			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, dockerBuildConfig.DockerfilePath, ciRequest.DockerRepository)
 		}
 		log.Println(" -----> " + dockerBuild)
 		err = executeCmd(dockerBuild)
@@ -228,24 +231,25 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 				return "", err
 			}
 		}
-	} else if ciRequest.BuildType == util.BUILDPACK_BUILD_TYPE {
-		buildPackParams := ciRequest.BuildPackParams
+	} else if ciBuildConfig.CiBuildType == BUILDPACK_BUILD_TYPE {
+		buildPackParams := ciRequest.CiBuildConfig.BuildPackConfig
 		buildPackCmd := fmt.Sprintf("pack build %s --path ./ --builder %s", dest, buildPackParams.BuilderId)
-		if buildPackParams.EnvParams != "" {
-			BuildPackArgsMap := make(map[string]string)
-			err = json.Unmarshal([]byte(buildPackParams.EnvParams), &BuildPackArgsMap)
-			if err != nil {
-				log.Println("err", err)
-				return "", err
-			} else {
-				for k, v := range BuildPackArgsMap {
-					buildPackCmd = buildPackCmd + " --env " + k + "=" + v
-				}
-			}
+		BuildPackArgsMap := buildPackParams.Args
+		//if buildPackParams.Args != "" {
+		//	BuildPackArgsMap := make(map[string]string)
+		//	err = json.Unmarshal([]byte(buildPackParams.EnvParams), &BuildPackArgsMap)
+		//	if err != nil {
+		//		log.Println("err", err)
+		//		return "", err
+		//	} else {
+		for k, v := range BuildPackArgsMap {
+			buildPackCmd = buildPackCmd + " --env " + k + "=" + v
 		}
-		if buildPackParams.Volume != "" {
-			buildPackCmd = buildPackCmd + " --volume " + buildPackParams.Volume
-		}
+		//}
+		//}
+		//if buildPackParams.Volume != "" {
+		//	buildPackCmd = buildPackCmd + " --volume " + buildPackParams.Volume
+		//}
 		if len(buildPackParams.BuildPacks) > 0 {
 			for _, buildPack := range buildPackParams.BuildPacks {
 				buildPackCmd = buildPackCmd + " --buildpack " + buildPack

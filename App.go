@@ -20,14 +20,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
-	"os"
-	"os/exec"
-	"strings"
-
 	_ "github.com/aws/aws-sdk-go/aws"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
+	"log"
+	"os"
+	"os/exec"
 )
 
 func main() {
@@ -127,7 +125,8 @@ func handleDryRunRequest(dryRunRequest *helper.DryRunRequest) error {
 	}
 
 	buildCommand := ""
-	if dryRunRequest.ProjectDockerfile != "" {
+	ciBuildConfig := dryRunRequest.CiBuildConfig
+	if ciBuildConfig.CiBuildType == helper.MANAGED_DOCKERFILE_BUILD_TYPE {
 		util.LogStage("Docker build")
 		//paste content in Dockerfile
 		buildCommand = "docker build -t " + dryRunRequest.DockerRepository + " --network host ."
@@ -144,28 +143,28 @@ func handleDryRunRequest(dryRunRequest *helper.DryRunRequest) error {
 				}
 			}
 		}
-	} else {
+	} else if ciBuildConfig.CiBuildType == helper.BUILDPACK_BUILD_TYPE {
 		util.LogStage("Pack build")
 		//dockerFileLocationDir := dryRunRequest.DockerFileLocation[:strings.LastIndex(dryRunRequest.DockerFileLocation, "/")+1]
 		//log.Println(util.DEVTRON, " docker file location: ", dockerFileLocationDir)
-		buildPackParams := dryRunRequest.BuildPackParams
+		buildPackParams := dryRunRequest.CiBuildConfig.BuildPackConfig
 		sampleAppName := "dry-run-sample-app"
 		buildCommand = "pack build " + sampleAppName + " --path ./ --builder " + buildPackParams.BuilderId
-		if buildPackParams.EnvParams != "" {
-			BuildPackArgsMap := make(map[string]string)
-			err := json.Unmarshal([]byte(buildPackParams.EnvParams), &BuildPackArgsMap)
-			if err != nil {
-				log.Println("err", err)
-				os.Exit(1)
-			} else {
-				for k, v := range BuildPackArgsMap {
-					buildCommand = buildCommand + " --env " + k + "=" + v
-				}
-			}
+		//if buildPackParams.Args != "" {
+		BuildPackArgsMap := buildPackParams.Args
+		//err := json.Unmarshal([]byte(buildPackParams.EnvParams), &BuildPackArgsMap)
+		//if err != nil {
+		//	log.Println("err", err)
+		//	os.Exit(1)
+		//} else {
+		for k, v := range BuildPackArgsMap {
+			buildCommand = buildCommand + " --env " + k + "=" + v
 		}
-		if buildPackParams.Volume != "" {
-			buildCommand = buildCommand + " --volume " + buildPackParams.Volume
-		}
+		//}
+		//}
+		//if buildPackParams.Volume != "" {
+		//	buildCommand = buildCommand + " --volume " + buildPackParams.Volume
+		//}
 	}
 	log.Println(" -----> " + buildCommand)
 
@@ -276,7 +275,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		return artifactUploaded, err
 	}
 	// Get devtron-ci yaml
-	yamlLocation := ciCdRequest.CiRequest.DockerFileLocation[:strings.LastIndex(ciCdRequest.CiRequest.DockerFileLocation, "/")+1]
+	yamlLocation := ciCdRequest.CiRequest.CheckoutPath
 	log.Println(util.DEVTRON, "devtron-ci yaml location ", yamlLocation)
 	taskYaml, err := helper.GetTaskYaml(yamlLocation)
 	if err != nil {
@@ -317,7 +316,8 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 
 	var digest string
-	if ciCdRequest.CiRequest.DockerBuildTargetPlatform == "" {
+	ciBuildConfig := ciCdRequest.CiRequest.CiBuildConfig
+	if ciBuildConfig == nil || ciBuildConfig.CiBuildType != helper.SELF_DOCKERFILE_BUILD_TYPE || ciBuildConfig.DockerBuildConfig.TargetPlatform == "" {
 		util.LogStage("docker push")
 		// push to dest
 		log.Println(util.DEVTRON, " docker-push")

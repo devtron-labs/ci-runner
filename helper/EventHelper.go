@@ -55,20 +55,49 @@ type DryRunRequest struct {
 	SecretKey                  string             `json:"secretKey"`
 	DefaultAddressPoolBaseCidr string             `json:"defaultAddressPoolBaseCidr"`
 	DefaultAddressPoolSize     int                `json:"defaultAddressPoolSize"`
-	BuildPackParams            *BuildPackParams   `json:"buildPackParams"`
 	ProjectDockerfile          string             `json:"projectDockerfile"`
+	CiBuildConfig              *CiBuildConfigBean `json:"ciBuildConfig"`
 }
 
-type BuildPackParams struct {
-	BuilderId  string   `json:"builderId"`
-	EnvParams  string   `json:"envParams"`
-	BuildPacks []string `json:"buildPacks"`
-	Volume     string   `json:"volume"`
+type CiBuildType string
+
+const (
+	SELF_DOCKERFILE_BUILD_TYPE    CiBuildType = "self-dockerfile-build"
+	MANAGED_DOCKERFILE_BUILD_TYPE CiBuildType = "managed-dockerfile-build"
+	SKIP_BUILD_BUILD_TYPE         CiBuildType = "skip-build"
+	BUILDPACK_BUILD_TYPE          CiBuildType = "buildpack-build"
+)
+
+type CiBuildConfigBean struct {
+	CiBuildType       CiBuildType        `json:"ciBuildType"`
+	DockerBuildConfig *DockerBuildConfig `json:"dockerBuildConfig,omitempty"`
+	BuildPackConfig   *BuildPackConfig   `json:"buildPackConfig"`
 }
+
+type DockerBuildConfig struct {
+	DockerfilePath    string            `json:"dockerfileRelativePath,omitempty" validate:"required"`
+	DockerfileContent string            `json:"DockerfileContent"`
+	Args              map[string]string `json:"args,omitempty"`
+	TargetPlatform    string            `json:"targetPlatform,omitempty"`
+}
+
+type BuildPackConfig struct {
+	BuilderId       string            `json:"builderId"`
+	Language        string            `json:"language"`
+	LanguageVersion string            `json:"languageVersion"`
+	BuildPacks      []string          `json:"buildPacks"`
+	Args            map[string]string `json:"args"`
+}
+
+//type BuildPackParams struct {
+//	BuilderId  string   `json:"builderId"`
+//	EnvParams  string   `json:"envParams"`
+//	BuildPacks []string `json:"buildPacks"`
+//	Volume     string   `json:"volume"`
+//}
 
 type CiRequest struct {
 	CiProjectDetails            []CiProjectDetails                `json:"ciProjectDetails"`
-	BuildType                   string                            `json:"buildType"`
 	DockerImageTag              string                            `json:"dockerImageTag"`
 	DockerRegistryId            string                            `json:"dockerRegistryId"`
 	DockerRegistryType          string                            `json:"dockerRegistryType"`
@@ -76,9 +105,7 @@ type CiRequest struct {
 	DockerConnection            string                            `json:"dockerConnection"`
 	DockerCert                  string                            `json:"dockerCert"`
 	DockerRepository            string                            `json:"dockerRepository"`
-	DockerBuildArgs             string                            `json:"dockerBuildArgs"`
-	DockerBuildTargetPlatform   string                            `json:"dockerBuildTargetPlatform"`
-	DockerFileLocation          string                            `json:"dockerfileLocation"`
+	CheckoutPath                string                            `json:"checkoutPath"`
 	DockerUsername              string                            `json:"dockerUsername"`
 	DockerPassword              string                            `json:"dockerPassword"`
 	AwsRegion                   string                            `json:"awsRegion"`
@@ -116,8 +143,7 @@ type CiRequest struct {
 	RefPlugins                  []*RefPluginObject                `json:"refPlugins"`
 	AppName                     string                            `json:"appName"`
 	TriggerByAuthor             string                            `json:"triggerByAuthor"`
-	BuildPackParams             *BuildPackParams                  `json:"buildPackParams"`
-	ProjectDockerfile           string                            `json:"projectDockerfile"`
+	CiBuildConfig               *CiBuildConfigBean                `json:"ciBuildConfig"`
 }
 
 type CdRequest struct {
