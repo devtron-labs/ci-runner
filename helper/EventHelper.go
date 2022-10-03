@@ -86,6 +86,7 @@ type CiRequest struct {
 	RefPlugins                  []*RefPluginObject                `json:"refPlugins"`
 	AppName                     string                            `json:"appName"`
 	TriggerByAuthor             string                            `json:"triggerByAuthor"`
+	DockerBuildOptions          string                            `json:"dockerBuildOptions"`
 }
 
 type CdRequest struct {

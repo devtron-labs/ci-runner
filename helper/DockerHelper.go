@@ -197,6 +197,22 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		}
 	}
 
+	if ciRequest.DockerBuildOptions != "" {
+		dockerBuildOptionsMap := make(map[string]string)
+		err := json.Unmarshal([]byte(ciRequest.DockerBuildOptions), &dockerBuildOptionsMap)
+		if err != nil {
+			log.Println("err", err)
+			return "", err
+		}
+		for k, v := range dockerBuildOptionsMap {
+			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
+				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
+				dockerBuild = dockerBuild + " --" + k + " " + valueFromEnv
+			} else {
+				dockerBuild = dockerBuild + " --" + k + v
+			}
+		}
+	}
 	if useBuildx {
 		err := installAllSupportedPlatforms(err)
 		if err != nil {
