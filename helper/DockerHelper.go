@@ -180,6 +180,8 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	if useBuildx {
 		dockerBuild = "docker buildx build --platform " + ciRequest.DockerBuildTargetPlatform + " "
 	}
+
+	dockerBuildFlags := make(map[string]string)
 	if ciRequest.DockerBuildArgs != "" {
 		dockerBuildArgsMap := make(map[string]string)
 		err := json.Unmarshal([]byte(ciRequest.DockerBuildArgs), &dockerBuildArgsMap)
@@ -190,9 +192,9 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		for k, v := range dockerBuildArgsMap {
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuild = dockerBuild + " --build-arg " + k + "=\"" + valueFromEnv + "\""
+				dockerBuildFlags["--build-arg"] = k + "=\"" + valueFromEnv + "\""
 			} else {
-				dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
+				dockerBuildFlags["--build-arg"] = k + "=" + v
 			}
 		}
 	}
@@ -207,11 +209,14 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		for k, v := range dockerBuildOptionsMap {
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuild = dockerBuild + " --" + k + " " + valueFromEnv
+				dockerBuildFlags["--"+k] = valueFromEnv
 			} else {
-				dockerBuild = dockerBuild + " --" + k + v
+				dockerBuildFlags["--"+k] = v
 			}
 		}
+	}
+	for key, value := range dockerBuildFlags {
+		dockerBuild = dockerBuild + " " + key + " " + value
 	}
 	if useBuildx {
 		err := installAllSupportedPlatforms(err)
@@ -242,7 +247,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	} else {
 		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
 	}
-	log.Println("docker build running")
+	log.Println("docker build running : ", dockerBuild)
 
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
 	err = util.RunCommand(dockerBuildCMD)
