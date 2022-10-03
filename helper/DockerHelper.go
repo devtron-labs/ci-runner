@@ -192,9 +192,9 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		for k, v := range dockerBuildArgsMap {
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuildFlags["--build-arg"] = k + "=\"" + valueFromEnv + "\""
+				dockerBuildFlags["--build-arg"] = " " + k + "=\"" + valueFromEnv + "\""
 			} else {
-				dockerBuildFlags["--build-arg"] = k + "=" + v
+				dockerBuildFlags["--build-arg"] = " " + k + "=" + v
 			}
 		}
 	}
@@ -216,7 +216,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		}
 	}
 	for key, value := range dockerBuildFlags {
-		dockerBuild = dockerBuild + " " + key + " " + value
+		dockerBuild = dockerBuild + " " + key + value
 	}
 	if useBuildx {
 		err := installAllSupportedPlatforms(err)
