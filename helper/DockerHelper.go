@@ -191,11 +191,12 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 		for k, v := range dockerBuildArgsMap {
+			flagKey := fmt.Sprintf("%s %s", BUILD_ARG_FLAG, k)
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuildFlags[BUILD_ARG_FLAG] = fmt.Sprintf(" %s=\"%s\"", k, valueFromEnv)
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=\"%s\"", valueFromEnv)
 			} else {
-				dockerBuildFlags[BUILD_ARG_FLAG] = fmt.Sprintf(" %s=%s", k, v)
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", v)
 			}
 		}
 	}
@@ -208,11 +209,12 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 		for k, v := range dockerBuildOptionsMap {
+			flagKey := "--" + k
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuildFlags["--"+k] = fmt.Sprintf("=%s", valueFromEnv)
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", valueFromEnv)
 			} else {
-				dockerBuildFlags["--"+k] = fmt.Sprintf("=%s", v)
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", v)
 			}
 		}
 	}
