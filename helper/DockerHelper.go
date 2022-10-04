@@ -44,6 +44,7 @@ import (
 
 const (
 	DEVTRON_ENV_VAR_PREFIX = "$devtron_env_"
+	BUILD_ARG_FLAG         = "--build-arg"
 )
 
 func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int) {
@@ -180,6 +181,8 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	if useBuildx {
 		dockerBuild = "docker buildx build --platform " + ciRequest.DockerBuildTargetPlatform + " "
 	}
+
+	dockerBuildFlags := make(map[string]string)
 	if ciRequest.DockerBuildArgs != "" {
 		dockerBuildArgsMap := make(map[string]string)
 		err := json.Unmarshal([]byte(ciRequest.DockerBuildArgs), &dockerBuildArgsMap)
@@ -188,15 +191,36 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 		for k, v := range dockerBuildArgsMap {
+			flagKey := fmt.Sprintf("%s %s", BUILD_ARG_FLAG, k)
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuild = dockerBuild + " --build-arg " + k + "=\"" + valueFromEnv + "\""
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=\"%s\"", valueFromEnv)
 			} else {
-				dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", v)
 			}
 		}
 	}
 
+	if ciRequest.DockerBuildOptions != "" {
+		dockerBuildOptionsMap := make(map[string]string)
+		err := json.Unmarshal([]byte(ciRequest.DockerBuildOptions), &dockerBuildOptionsMap)
+		if err != nil {
+			log.Println("err", err)
+			return "", err
+		}
+		for k, v := range dockerBuildOptionsMap {
+			flagKey := "--" + k
+			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
+				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", valueFromEnv)
+			} else {
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", v)
+			}
+		}
+	}
+	for key, value := range dockerBuildFlags {
+		dockerBuild = dockerBuild + " " + key + value
+	}
 	if useBuildx {
 		err := installAllSupportedPlatforms(err)
 		if err != nil {
