@@ -26,6 +26,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 func main() {
@@ -283,6 +284,14 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 	ciCdRequest.CiRequest.TaskYaml = taskYaml
 
+	ciBuildConfigBean := ciCdRequest.CiRequest.CiBuildConfig
+	if ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.MANAGED_DOCKERFILE_BUILD_TYPE {
+		err = makeDockerfile(ciBuildConfigBean.DockerBuildConfig)
+		if err != nil {
+			return artifactUploaded, err
+		}
+	}
+
 	refStageMap := make(map[int][]*helper.StepObject)
 	for _, ref := range ciCdRequest.CiRequest.RefPlugins {
 		refStageMap[ref.Id] = ref.Steps
@@ -298,13 +307,13 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 			return artifactUploaded, err
 		}
 	}
-	util.LogStage("docker build")
+	util.LogStage("Build")
 	// build
 	dest, err := helper.BuildArtifact(ciCdRequest.CiRequest) //TODO make it skipable
 	if err != nil {
 		return artifactUploaded, err
 	}
-	log.Println(util.DEVTRON, " /docker-build")
+	log.Println(util.DEVTRON, " /Build")
 
 	if len(ciCdRequest.CiRequest.PostCiSteps) > 0 {
 		util.LogStage("running POST-CI steps")
@@ -316,7 +325,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 
 	var digest string
-	ciBuildConfig := ciCdRequest.CiRequest.CiBuildConfig
+	ciBuildConfig := ciBuildConfigBean
 	if ciBuildConfig == nil || ciBuildConfig.CiBuildType != helper.SELF_DOCKERFILE_BUILD_TYPE || ciBuildConfig.DockerBuildConfig.TargetPlatform == "" {
 		util.LogStage("docker push")
 		// push to dest
@@ -372,6 +381,18 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		return artifactUploaded, err
 	}
 	return artifactUploaded, nil
+}
+
+func makeDockerfile(config *helper.DockerBuildConfig) error {
+	dockerfileContent := config.DockerfileContent
+	dockerfilePath := filepath.Join(util.WORKINGDIR, "./Dockerfile")
+	f, err := os.Create(dockerfilePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.WriteString(dockerfileContent)
+	return err
 }
 
 func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
