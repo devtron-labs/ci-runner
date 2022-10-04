@@ -42,6 +42,10 @@ import (
 	"github.com/devtron-labs/ci-runner/util"
 )
 
+const (
+	DEVTRON_ENV_VAR_PREFIX = "$devtron_env_"
+)
+
 func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int) {
 	connection := dockerConnection
 	u, err := url.Parse(dockerRegistryUrl)
@@ -184,7 +188,12 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 		for k, v := range dockerBuildArgsMap {
-			dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
+			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
+				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
+				dockerBuild = dockerBuild + " --build-arg " + k + "=\"" + valueFromEnv + "\""
+			} else {
+				dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
+			}
 		}
 	}
 
@@ -217,7 +226,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	} else {
 		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
 	}
-	log.Println(" -----> " + dockerBuild)
+	log.Println("docker build running")
 
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
 	err = util.RunCommand(dockerBuildCMD)
