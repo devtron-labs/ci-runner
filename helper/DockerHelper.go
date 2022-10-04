@@ -261,8 +261,10 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 		//log.Println(util.DEVTRON, "removing builder image to prevent it from getting cached")
-		builderRmCmd := "docker image rm " + buildPackParams.BuilderId
-		err = executeCmd(builderRmCmd)
+		builderRmCmdString := "docker image rm " + buildPackParams.BuilderId
+		builderRmCmd := exec.Command("/bin/sh", "-c", builderRmCmdString)
+		//err = executeCmd(builderRmCmd)
+		err := builderRmCmd.Run()
 		if err != nil {
 			return "", err
 		}
@@ -273,8 +275,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 
 func executeCmd(dockerBuild string) error {
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
-	//err := util.RunCommand(dockerBuildCMD)
-	err := dockerBuildCMD.Run()
+	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
 	}
