@@ -44,6 +44,7 @@ import (
 
 const (
 	DEVTRON_ENV_VAR_PREFIX = "$devtron_env_"
+	BUILD_ARG_FLAG         = "--build-arg"
 )
 
 func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int) {
@@ -192,9 +193,9 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		for k, v := range dockerBuildArgsMap {
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuildFlags["--build-arg"] = " " + k + "=\"" + valueFromEnv + "\""
+				dockerBuildFlags[BUILD_ARG_FLAG] = fmt.Sprintf(" %s=\"%s\"", k, valueFromEnv)
 			} else {
-				dockerBuildFlags["--build-arg"] = " " + k + "=" + v
+				dockerBuildFlags[BUILD_ARG_FLAG] = fmt.Sprintf(" %s=%s", k, v)
 			}
 		}
 	}
@@ -209,9 +210,9 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		for k, v := range dockerBuildOptionsMap {
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuildFlags["--"+k] = "=" + valueFromEnv
+				dockerBuildFlags["--"+k] = fmt.Sprintf("=%s", valueFromEnv)
 			} else {
-				dockerBuildFlags["--"+k] = "=" + v
+				dockerBuildFlags["--"+k] = fmt.Sprintf("=%s", v)
 			}
 		}
 	}
