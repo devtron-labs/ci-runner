@@ -42,6 +42,11 @@ import (
 	"github.com/devtron-labs/ci-runner/util"
 )
 
+const (
+	DEVTRON_ENV_VAR_PREFIX = "$devtron_env_"
+	BUILD_ARG_FLAG         = "--build-arg"
+)
+
 func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int) {
 	connection := dockerConnection
 	u, err := url.Parse(dockerRegistryUrl)
@@ -183,9 +188,29 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		if useBuildx {
 			dockerBuild = "docker buildx build --platform " + dockerBuildConfig.TargetPlatform + " "
 		}
+		dockerBuildFlags := make(map[string]string)
 		dockerBuildArgsMap := dockerBuildConfig.Args
 		for k, v := range dockerBuildArgsMap {
-			dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
+			flagKey := fmt.Sprintf("%s %s", BUILD_ARG_FLAG, k)
+			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
+				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=\"%s\"", valueFromEnv)
+			} else {
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", v)
+			}
+		}
+		dockerBuildOptionsMap := dockerBuildConfig.DockerBuildOptions
+		for k, v := range dockerBuildOptionsMap {
+			flagKey := "--" + k
+			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
+				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", valueFromEnv)
+			} else {
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", v)
+			}
+		}
+		for key, value := range dockerBuildFlags {
+			dockerBuild = dockerBuild + " " + key + value
 		}
 		if useBuildx {
 			err = installAllSupportedPlatforms()
