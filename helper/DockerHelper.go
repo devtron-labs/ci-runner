@@ -184,17 +184,9 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			dockerBuild = "docker buildx build --platform " + dockerBuildConfig.TargetPlatform + " "
 		}
 		dockerBuildArgsMap := dockerBuildConfig.Args
-		//if ciRequest.DockerBuildArgs != "" {
-		//	dockerBuildArgsMap := make(map[string]string)
-		//	err = json.Unmarshal([]byte(ciRequest.DockerBuildArgs), &dockerBuildArgsMap)
-		//	if err != nil {
-		//		log.Println("err", err)
-		//		return "", err
-		//	}
 		for k, v := range dockerBuildArgsMap {
 			dockerBuild = dockerBuild + " --build-arg " + k + "=" + v
 		}
-		//}
 		if useBuildx {
 			err = installAllSupportedPlatforms()
 			if err != nil {
@@ -235,21 +227,10 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		buildPackParams := ciRequest.CiBuildConfig.BuildPackConfig
 		buildPackCmd := fmt.Sprintf("pack build %s --path ./ --builder %s", dest, buildPackParams.BuilderId)
 		BuildPackArgsMap := buildPackParams.Args
-		//if buildPackParams.Args != "" {
-		//	BuildPackArgsMap := make(map[string]string)
-		//	err = json.Unmarshal([]byte(buildPackParams.EnvParams), &BuildPackArgsMap)
-		//	if err != nil {
-		//		log.Println("err", err)
-		//		return "", err
-		//	} else {
 		for k, v := range BuildPackArgsMap {
 			buildPackCmd = buildPackCmd + " --env " + k + "=" + v
 		}
-		//}
-		//}
-		//if buildPackParams.Volume != "" {
-		//	buildPackCmd = buildPackCmd + " --volume " + buildPackParams.Volume
-		//}
+
 		if len(buildPackParams.BuildPacks) > 0 {
 			for _, buildPack := range buildPackParams.BuildPacks {
 				buildPackCmd = buildPackCmd + " --buildpack " + buildPack
@@ -260,10 +241,8 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		//log.Println(util.DEVTRON, "removing builder image to prevent it from getting cached")
 		builderRmCmdString := "docker image rm " + buildPackParams.BuilderId
 		builderRmCmd := exec.Command("/bin/sh", "-c", builderRmCmdString)
-		//err = executeCmd(builderRmCmd)
 		err := builderRmCmd.Run()
 		if err != nil {
 			return "", err

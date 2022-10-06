@@ -19,13 +19,11 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	_ "github.com/aws/aws-sdk-go/aws"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 )
 
@@ -45,11 +43,7 @@ func main() {
 		log.Println(util.DEVTRON, " ci-cd request details -----> ", args)
 	}
 
-	if ciCdRequest.Type == util.DRY_RUN {
-
-		dryRunRequest := ciCdRequest.DryRunRequest
-		err = handleDryRunRequest(dryRunRequest)
-	} else if ciCdRequest.Type == util.CIEVENT {
+	if ciCdRequest.Type == util.CIEVENT {
 
 		ciRequest := ciCdRequest.CiRequest
 		artifactUploaded, err := runCIStages(ciCdRequest)
@@ -80,102 +74,6 @@ func main() {
 			os.Exit(1)
 		}
 	}
-}
-
-func handleDryRunRequest(dryRunRequest *helper.DryRunRequest) error {
-	log.Println(util.DEVTRON, "Dry Run")
-
-	err := os.Chdir("/")
-	if err != nil {
-		os.Exit(1)
-	}
-	if _, err := os.Stat(util.WORKINGDIR); os.IsNotExist(err) {
-		_ = os.Mkdir(util.WORKINGDIR, os.ModeDir)
-	}
-	err = os.Chdir(util.WORKINGDIR)
-	if err != nil {
-		os.Exit(1)
-	}
-	// git handling
-	log.Println(util.DEVTRON, " git")
-	err = helper.CloneAndCheckout(dryRunRequest.CiProjectDetails)
-	if err != nil {
-		log.Println(util.DEVTRON, "clone err: ", err)
-		os.Exit(1)
-	}
-	log.Println(util.DEVTRON, " /git")
-
-	// Start docker daemon
-	log.Println(util.DEVTRON, " Starting Docker Daemon")
-	defaultAddressPoolFlag := ""
-	defaultAddressPoolSize := dryRunRequest.DefaultAddressPoolSize
-	defaultAddressPoolBaseCidr := dryRunRequest.DefaultAddressPoolBaseCidr
-	if len(defaultAddressPoolBaseCidr) > 0 {
-		if defaultAddressPoolSize <= 0 {
-			defaultAddressPoolSize = 24
-		}
-		defaultAddressPoolFlag = fmt.Sprintf("--default-address-pool base=%s,size=%d", defaultAddressPoolBaseCidr, defaultAddressPoolSize)
-	}
-	dockerdstart := fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag)
-	//helper.StartDockerDaemon(dryRunRequest.DockerConnection, dryRunRequest.DockerRegistryURL, dryRunRequest.DockerCert, dryRunRequest.DefaultAddressPoolBaseCidr, dryRunRequest.DefaultAddressPoolSize)
-	dockerdstartCMD := exec.Command("/bin/sh", "-c", dockerdstart)
-	err = util.RunCommand(dockerdstartCMD)
-	if err != nil {
-		log.Println(err)
-		os.Exit(1)
-	}
-
-	buildCommand := ""
-	ciBuildConfig := dryRunRequest.CiBuildConfig
-	if ciBuildConfig.CiBuildType == helper.MANAGED_DOCKERFILE_BUILD_TYPE {
-		util.LogStage("Docker build")
-		//paste content in Dockerfile
-		buildCommand = "docker build -t " + dryRunRequest.DockerRepository + " --network host ."
-
-		if dryRunRequest.DockerBuildArgs != "" {
-			dockerBuildArgsMap := make(map[string]string)
-			err := json.Unmarshal([]byte(dryRunRequest.DockerBuildArgs), &dockerBuildArgsMap)
-			if err != nil {
-				log.Println("err", err)
-				os.Exit(1)
-			} else {
-				for k, v := range dockerBuildArgsMap {
-					buildCommand = buildCommand + " --build-arg " + k + "=" + v
-				}
-			}
-		}
-	} else if ciBuildConfig.CiBuildType == helper.BUILDPACK_BUILD_TYPE {
-		util.LogStage("Pack build")
-		//dockerFileLocationDir := dryRunRequest.DockerFileLocation[:strings.LastIndex(dryRunRequest.DockerFileLocation, "/")+1]
-		//log.Println(util.DEVTRON, " docker file location: ", dockerFileLocationDir)
-		buildPackParams := dryRunRequest.CiBuildConfig.BuildPackConfig
-		sampleAppName := "dry-run-sample-app"
-		buildCommand = "pack build " + sampleAppName + " --path ./ --builder " + buildPackParams.BuilderId
-		//if buildPackParams.Args != "" {
-		BuildPackArgsMap := buildPackParams.Args
-		//err := json.Unmarshal([]byte(buildPackParams.EnvParams), &BuildPackArgsMap)
-		//if err != nil {
-		//	log.Println("err", err)
-		//	os.Exit(1)
-		//} else {
-		for k, v := range BuildPackArgsMap {
-			buildCommand = buildCommand + " --env " + k + "=" + v
-		}
-		//}
-		//}
-		//if buildPackParams.Volume != "" {
-		//	buildCommand = buildCommand + " --volume " + buildPackParams.Volume
-		//}
-	}
-	log.Println(" -----> " + buildCommand)
-
-	dockerBuildCMD := exec.Command("/bin/sh", "-c", buildCommand)
-	err = util.RunCommand(dockerBuildCMD)
-	if err != nil {
-		log.Println(err)
-		os.Exit(1)
-	}
-	return err
 }
 
 func collectAndUploadCDArtifacts(cdRequest *helper.CdRequest) error {

@@ -37,28 +37,6 @@ type TestExecutorImageProperties struct {
 	Arg       string `json:"arg,omitempty"`
 }
 
-type DryRunRequest struct {
-	CiProjectDetails           []CiProjectDetails `json:"ciProjectDetails"`
-	DockerRegistryId           string             `json:"dockerRegistryId"`
-	DockerRegistryType         string             `json:"dockerRegistryType"`
-	DockerRegistryURL          string             `json:"dockerRegistryURL"`
-	DockerConnection           string             `json:"dockerConnection"`
-	DockerCert                 string             `json:"dockerCert"`
-	DockerRepository           string             `json:"dockerRepository"`
-	DockerBuildArgs            string             `json:"dockerBuildArgs"`
-	DockerBuildTargetPlatform  string             `json:"dockerBuildTargetPlatform"`
-	DockerFileLocation         string             `json:"dockerfileLocation"`
-	DockerUsername             string             `json:"dockerUsername"`
-	DockerPassword             string             `json:"dockerPassword"`
-	AwsRegion                  string             `json:"awsRegion"`
-	AccessKey                  string             `json:"accessKey"`
-	SecretKey                  string             `json:"secretKey"`
-	DefaultAddressPoolBaseCidr string             `json:"defaultAddressPoolBaseCidr"`
-	DefaultAddressPoolSize     int                `json:"defaultAddressPoolSize"`
-	ProjectDockerfile          string             `json:"projectDockerfile"`
-	CiBuildConfig              *CiBuildConfigBean `json:"ciBuildConfig"`
-}
-
 type CiBuildType string
 
 const (
@@ -88,13 +66,6 @@ type BuildPackConfig struct {
 	BuildPacks      []string          `json:"buildPacks"`
 	Args            map[string]string `json:"args"`
 }
-
-//type BuildPackParams struct {
-//	BuilderId  string   `json:"builderId"`
-//	EnvParams  string   `json:"envParams"`
-//	BuildPacks []string `json:"buildPacks"`
-//	Volume     string   `json:"volume"`
-//}
 
 type CiRequest struct {
 	CiProjectDetails            []CiProjectDetails                `json:"ciProjectDetails"`
@@ -185,10 +156,9 @@ type CdRequest struct {
 }
 
 type CiCdTriggerEvent struct {
-	Type          string         `json:"type"`
-	DryRunRequest *DryRunRequest `json:"dryRunRequest"`
-	CiRequest     *CiRequest     `json:"ciRequest"`
-	CdRequest     *CdRequest     `json:"cdRequest"`
+	Type      string     `json:"type"`
+	CiRequest *CiRequest `json:"ciRequest"`
+	CdRequest *CdRequest `json:"cdRequest"`
 }
 
 type CiArtifactDTO struct {
