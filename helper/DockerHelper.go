@@ -99,7 +99,7 @@ type DockerCredentials struct {
 }
 
 type EnvironmentVariables struct {
-	showDockerBuildCmdInLogs bool `env:"SHOW_DOCKER_BUILD_ARGS" envDefault:"true"`
+	ShowDockerBuildCmdInLogs bool `env:"SHOW_DOCKER_BUILD_ARGS" envDefault:"true"`
 }
 
 func DockerLogin(dockerCredentials *DockerCredentials) error {
@@ -261,7 +261,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	} else {
 		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
 	}
-	if envVars.showDockerBuildCmdInLogs {
+	if envVars.ShowDockerBuildCmdInLogs {
 		log.Println("Starting docker build : ", dockerBuild)
 	} else {
 		log.Println("Docker build started..")
