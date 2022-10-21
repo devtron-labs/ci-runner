@@ -250,7 +250,11 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		}
 	} else if ciBuildConfig.CiBuildType == BUILDPACK_BUILD_TYPE {
 		buildPackParams := ciRequest.CiBuildConfig.BuildPackConfig
-		buildPackCmd := fmt.Sprintf("pack build %s --path ./ --builder %s", dest, buildPackParams.BuilderId)
+		projectPath := buildPackParams.ProjectPath
+		if projectPath == "" || !strings.HasPrefix(projectPath, "./") {
+			projectPath = "./" + projectPath
+		}
+		buildPackCmd := fmt.Sprintf("pack build %s --path %s --builder %s", dest, projectPath,buildPackParams.BuilderId)
 		BuildPackArgsMap := buildPackParams.Args
 		for k, v := range BuildPackArgsMap {
 			buildPackCmd = buildPackCmd + " --env " + k + "=" + v

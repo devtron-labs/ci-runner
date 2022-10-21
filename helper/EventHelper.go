@@ -66,6 +66,7 @@ type BuildPackConfig struct {
 	LanguageVersion string            `json:"languageVersion"`
 	BuildPacks      []string          `json:"buildPacks"`
 	Args            map[string]string `json:"args"`
+	ProjectPath     string            `json:"projectPath"`
 }
 
 type CiRequest struct {
