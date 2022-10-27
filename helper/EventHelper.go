@@ -29,6 +29,7 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/ci-runner/pubsub"
 	"github.com/devtron-labs/ci-runner/util"
+	pubsub1 "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -237,7 +238,7 @@ func SendCiCompleteEvent(event CiCompleteEvent) error {
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	err = PublishEvent(jsonBody, pubsub.CI_COMPLETE_TOPIC)
+	err = PublishEvent(jsonBody, pubsub1.CI_COMPLETE_TOPIC)
 	log.Println(util.DEVTRON, "ci complete event notification done")
 	return err
 }
@@ -248,7 +249,7 @@ func SendCdCompleteEvent(cdRequest *CdRequest, event CdStageCompleteEvent) error
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	err = PublishCDEvent(jsonBody, pubsub.CD_STAGE_COMPLETE_TOPIC, cdRequest)
+	err = PublishCDEvent(jsonBody, pubsub1.CD_STAGE_COMPLETE_TOPIC, cdRequest)
 	log.Println(util.DEVTRON, "cd stage complete event notification done")
 	return err
 }

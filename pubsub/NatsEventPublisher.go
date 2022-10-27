@@ -19,8 +19,8 @@ package pubsub
 
 import (
 	"github.com/devtron-labs/ci-runner/util"
-	"github.com/nats-io/nats.go"
-
+	pubsub1 "github.com/devtron-labs/common-lib/pubsub-lib"
+	"github.com/devtron-labs/common-lib/utils"
 	//"go.uber.org/zap"
 	"log"
 	"os"
@@ -70,29 +70,21 @@ import (
 // }
 
 func PublishEventsOnNats(jsonBody []byte, topic string) error {
-	client, err := NewPubSubClient()
+	logger, err := utils.NewSugardLogger()
 	if err != nil {
 		log.Fatal(util.DEVTRON, "err", err)
 		os.Exit(1)
 	}
+	client := pubsub1.NewPubSubClientServiceImpl(logger)
 
-	err = AddStream(client.JetStrCtxt, CI_RUNNER_STREAM)
-
+	err = client.Publish(topic, string(jsonBody))
 	if err != nil {
-		log.Fatal("Error while adding stream", "error", err)
+		log.Print(util.DEVTRON, "error in publishing event to pubsub client", "topic", topic, "body", string(jsonBody))
+	} else {
+		log.Print(util.DEVTRON, "ci complete event notification done")
 	}
-	//Generate random string for passing as Header Id in message
-	randString := "MsgHeaderId-" + util.Generate(10)
-	_, err = client.JetStrCtxt.Publish(topic, jsonBody, nats.MsgId(randString))
-	if err != nil {
-		log.Fatal("Error while publishing Request", "topic", topic, "body", string(jsonBody), "err", err)
-	}
-
-	log.Print(util.DEVTRON, "ci complete event notification done")
-
 	//Drain the connection
-	err = client.Conn.Drain()
-
+	err = client.NatsClient.Conn.Drain()
 	if err != nil {
 		log.Fatal("Error while draining the connection", "error", err)
 	}
