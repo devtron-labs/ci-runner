@@ -87,9 +87,11 @@ func PublishEventsOnNats(jsonBody []byte, topic string) error {
 		log.Print(util.DEVTRON, "ci complete event notification done")
 	}
 	//Drain the connection
-	err = client.NatsClient.Conn.Drain()
-	if err != nil {
-		log.Fatal("Error while draining the connection", "error", err)
+	if client.NatsClient != nil {
+		err = client.NatsClient.Conn.Drain()
+		if err != nil {
+			log.Fatal("Error while draining the connection", "error", err)
+		}
 	}
 
 	log.Print(util.DEVTRON, " housekeeping done. exiting now")
