@@ -76,7 +76,10 @@ func PublishEventsOnNats(jsonBody []byte, topic string) error {
 		os.Exit(1)
 	}
 	client := pubsub1.NewPubSubClientServiceImpl(logger)
-
+	if client == nil {
+		log.Fatal(util.DEVTRON, "err", err)
+		os.Exit(1)
+	}
 	err = client.Publish(topic, string(jsonBody))
 	if err != nil {
 		log.Print(util.DEVTRON, "error in publishing event to pubsub client", "topic", topic, "body", string(jsonBody))
