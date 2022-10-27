@@ -233,6 +233,7 @@ func SendEvents(ciRequest *CiRequest, digest string, image string) error {
 }
 
 func SendCiCompleteEvent(event CiCompleteEvent) error {
+	log.Print("in SendCiCompleteEvent method")
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
@@ -255,6 +256,7 @@ func SendCdCompleteEvent(cdRequest *CdRequest, event CdStageCompleteEvent) error
 }
 
 func PublishCDEvent(jsonBody []byte, topic string, cdRequest *CdRequest) error {
+	log.Print("in PublishCDEvent method")
 	if cdRequest.IsExtRun {
 		return PublishEventsOnRest(jsonBody, topic, cdRequest)
 	}
@@ -262,6 +264,7 @@ func PublishCDEvent(jsonBody []byte, topic string, cdRequest *CdRequest) error {
 }
 
 func PublishEvent(jsonBody []byte, topic string) error {
+	log.Print("in PublishEvent method")
 	return pubsub.PublishEventsOnNats(jsonBody, topic)
 }
 
