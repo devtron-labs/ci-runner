@@ -23,7 +23,6 @@ import (
 	"github.com/devtron-labs/common-lib/utils"
 	//"go.uber.org/zap"
 	"log"
-	"os"
 )
 
 // type NatsEventPublisher interface {
@@ -71,14 +70,16 @@ import (
 
 func PublishEventsOnNats(jsonBody []byte, topic string) error {
 	logger, err := utils.NewSugardLogger()
-	if err != nil {
-		log.Fatal(util.DEVTRON, "err", err)
-		os.Exit(1)
+	if err != nil || logger == nil {
+		log.Print(util.DEVTRON, "err", err)
+		return err
+		//os.Exit(1)
 	}
 	client := pubsub1.NewPubSubClientServiceImpl(logger)
 	if client == nil {
-		log.Fatal(util.DEVTRON, "err", err)
-		os.Exit(1)
+		log.Print(util.DEVTRON, "err", err)
+		return err
+		//os.Exit(1)
 	}
 	err = client.Publish(topic, string(jsonBody))
 	if err != nil {
