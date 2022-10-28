@@ -91,6 +91,7 @@ func PublishEventsOnNats(jsonBody []byte, topic string) error {
 		log.Print(util.DEVTRON, "ci complete event notification done")
 	}
 	//Drain the connection
+	time.Sleep(time.Second * 200)
 	if client.NatsClient != nil {
 		err = client.NatsClient.Conn.Drain()
 		if err != nil {
