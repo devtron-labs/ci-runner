@@ -21,8 +21,6 @@ import (
 	"github.com/devtron-labs/ci-runner/util"
 	pubsub1 "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/common-lib/utils"
-	"time"
-
 	//"go.uber.org/zap"
 	"log"
 )
@@ -69,41 +67,23 @@ import (
 // 	impl.logger.Info(util.DEVTRON, " housekeeping done. exiting now")
 // 	return nil
 // }
-const SleepTime = 5 * time.Second
 
 func PublishEventsOnNats(jsonBody []byte, topic string) error {
 	logger, err := utils.NewSugardLogger()
 	if err != nil || logger == nil {
 		log.Print(util.DEVTRON, "err", err)
 		return err
-		//os.Exit(1)
 	}
 	client := pubsub1.NewPubSubClientServiceImpl(logger)
 	if client == nil {
 		log.Print(util.DEVTRON, "err", err)
 		return err
-		//os.Exit(1)
 	}
 	err = client.Publish(topic, string(jsonBody))
 	if err != nil {
 		log.Print(util.DEVTRON, "error in publishing event to pubsub client", "topic", topic, "body", string(jsonBody))
 	} else {
 		log.Print(util.DEVTRON, "ci complete event notification done")
-	}
-	//Drain the connection
-	time.Sleep(time.Second * 200)
-	if client.NatsClient != nil {
-		err = client.NatsClient.Conn.Drain()
-		if err != nil {
-			log.Fatal("Error while draining the connection", "error", err)
-		}
-		if client.NatsClient.Conn.IsDraining() {
-			log.Println(util.DEVTRON, "pubSub client Connection is draining......")
-			time.Sleep(SleepTime)
-		}
-		if !client.NatsClient.Conn.IsClosed() {
-			log.Println(util.DEVTRON, "pubSub client Connection drained")
-		}
 	}
 
 	log.Print(util.DEVTRON, " housekeeping done. exiting now")
