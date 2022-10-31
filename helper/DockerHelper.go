@@ -47,7 +47,7 @@ const (
 	BUILD_ARG_FLAG         = "--build-arg"
 )
 
-func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int) {
+func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int, ciRunnerDockerMtuValue int) {
 	connection := dockerConnection
 	u, err := url.Parse(dockerRegistryUrl)
 	if err != nil {
@@ -55,14 +55,18 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 	}
 	dockerdstart := ""
 	defaultAddressPoolFlag := ""
+	dockerMtuValueFlag := ""
 	if len(defaultAddressPoolBaseCidr) > 0 {
 		if defaultAddressPoolSize <= 0 {
 			defaultAddressPoolSize = 24
 		}
 		defaultAddressPoolFlag = fmt.Sprintf("--default-address-pool base=%s,size=%d", defaultAddressPoolBaseCidr, defaultAddressPoolSize)
 	}
+	if ciRunnerDockerMtuValue > 0 {
+		dockerMtuValueFlag = fmt.Sprintf("--mtu=%d", ciRunnerDockerMtuValue)
+	}
 	if connection == util.INSECURE {
-		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock --mtu=1440 --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, u.Host)
+		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, u.Host, dockerMtuValueFlag)
 		util.LogStage("Insecure Registry")
 	} else {
 		if connection == util.SECUREWITHCERT {
@@ -82,7 +86,7 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 			}
 			util.LogStage("Secure with Cert")
 		}
-		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock --mtu=1440 --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag)
+		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 	}
 	out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
 	log.Println(string(out))
@@ -254,7 +258,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		if projectPath == "" || !strings.HasPrefix(projectPath, "./") {
 			projectPath = "./" + projectPath
 		}
-		buildPackCmd := fmt.Sprintf("pack build %s --path %s --builder %s", dest, projectPath,buildPackParams.BuilderId)
+		buildPackCmd := fmt.Sprintf("pack build %s --path %s --builder %s", dest, projectPath, buildPackParams.BuilderId)
 		BuildPackArgsMap := buildPackParams.Args
 		for k, v := range BuildPackArgsMap {
 			buildPackCmd = buildPackCmd + " --env " + k + "=" + v
