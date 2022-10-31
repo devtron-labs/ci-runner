@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,6 +30,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -258,6 +260,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		if projectPath == "" || !strings.HasPrefix(projectPath, "./") {
 			projectPath = "./" + projectPath
 		}
+		handleLanguageVersion(projectPath, buildPackParams)
 		buildPackCmd := fmt.Sprintf("pack build %s --path %s --builder %s", dest, projectPath, buildPackParams.BuilderId)
 		BuildPackArgsMap := buildPackParams.Args
 		for k, v := range BuildPackArgsMap {
@@ -283,6 +286,80 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	}
 
 	return dest, nil
+}
+
+func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig) {
+	fileData, err := os.ReadFile("/buildpack.json")
+	if err != nil {
+		fmt.Println("error occurred while reading buildpack json", err)
+		return
+	}
+	var buildpackDataArray []*BuildpackVersionConfig
+	err = json.Unmarshal(fileData, &buildpackDataArray)
+	if err != nil {
+		fmt.Println("error occurred while reading buildpack json", string(fileData))
+		return
+	}
+	language := buildpackConfig.Language
+	//languageVersion := buildpackConfig.LanguageVersion
+	buildpackEnvArgs := buildpackConfig.Args
+	languageVersion := buildpackEnvArgs["DEVTRON_LANG_VERSION"]
+	var matchedBuildpackConfig *BuildpackVersionConfig
+	for _, versionConfig := range buildpackDataArray {
+		builderPrefix := versionConfig.BuilderPrefix
+		configLanguage := versionConfig.Language
+		builderId := buildpackConfig.BuilderId
+		if strings.HasPrefix(builderId, builderPrefix) && strings.ToLower(language) == configLanguage {
+			matchedBuildpackConfig = versionConfig
+			break
+		}
+	}
+	if matchedBuildpackConfig != nil {
+		fileName := matchedBuildpackConfig.FileName
+		finalPath := filepath.Join(projectPath, "./"+fileName)
+		_, err := os.Stat(finalPath)
+		fileNotExists := errors.Is(err, os.ErrNotExist)
+		if fileNotExists {
+			file, err := os.Create(finalPath)
+			if err != nil {
+				fmt.Println("error occurred while creating file at path" + finalPath)
+				return
+			}
+			entryRegex := matchedBuildpackConfig.EntryRegex
+			languageEntry := fmt.Sprintf(entryRegex, languageVersion)
+			_, err = file.WriteString(languageEntry)
+			fmt.Println(util.DEVTRON, fmt.Sprintf("file %s created for language %s with version %s", finalPath, language, languageVersion))
+		} else if matchedBuildpackConfig.FileOverride {
+			ext := filepath.Ext(finalPath)
+			if ext == ".json" {
+				jqCmd := fmt.Sprintf("jq '.engines.node' %s", finalPath)
+				outputBytes, err := exec.Command("/bin/sh", "-c", jqCmd).Output()
+				if err != nil {
+					fmt.Println("error occurred while fetching node version", "err", err)
+					return
+				}
+				if string(outputBytes) == "null" {
+					TmpJsonFile := "./tmp.json"
+					versionUpdateCmd := fmt.Sprintf("jq '.engines.node = %s' %s >%s", languageVersion, finalPath, TmpJsonFile)
+					err := executeCmd(versionUpdateCmd)
+					if err != nil {
+						fmt.Println("error occurred while inserting node version", "err", err)
+						return
+					}
+					fileReplaceCmd := fmt.Sprintf("mv  %s %s", TmpJsonFile, finalPath)
+					err = executeCmd(fileReplaceCmd)
+					if err != nil {
+						fmt.Println("error occurred while executing cmd ", fileReplaceCmd, "err", err)
+						return
+					}
+				}
+
+			}
+		} else {
+			fmt.Println("file already exists, so ignoring version override!!", finalPath)
+		}
+	}
+
 }
 
 func executeCmd(dockerBuild string) error {

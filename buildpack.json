@@ -18,6 +18,6 @@
     "language": "node",
     "fileName": "package.json",
     "fileOverride": true,
-    "entryRegex": "engine.node="
+    "entryRegex": "engine.node=v%s"
   }
 ]

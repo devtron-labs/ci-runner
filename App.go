@@ -167,7 +167,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-build")
-	helper.StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert, ciCdRequest.CiRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CiRequest.DefaultAddressPoolSize)
+	helper.StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert, ciCdRequest.CiRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CiRequest.DefaultAddressPoolSize, ciCdRequest.CiRequest.CiBuildDockerMtuValue)
 
 	scriptEnvs, err := getGlobalEnvVariables(ciCdRequest)
 	if err != nil {
@@ -317,7 +317,7 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
-	helper.StartDockerDaemon(cicdRequest.CdRequest.DockerConnection, cicdRequest.CdRequest.DockerRegistryURL, cicdRequest.CdRequest.DockerCert, cicdRequest.CdRequest.DefaultAddressPoolBaseCidr, cicdRequest.CdRequest.DefaultAddressPoolSize)
+	helper.StartDockerDaemon(cicdRequest.CdRequest.DockerConnection, cicdRequest.CdRequest.DockerRegistryURL, cicdRequest.CdRequest.DockerCert, cicdRequest.CdRequest.DefaultAddressPoolBaseCidr, cicdRequest.CdRequest.DefaultAddressPoolSize, -1)
 
 	err = helper.DockerLogin(&helper.DockerCredentials{
 		DockerUsername:     cicdRequest.CdRequest.DockerUsername,

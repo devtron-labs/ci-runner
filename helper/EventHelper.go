@@ -69,6 +69,14 @@ type BuildPackConfig struct {
 	ProjectPath     string            `json:"projectPath"`
 }
 
+type BuildpackVersionConfig struct {
+	BuilderPrefix string `json:"builderPrefix"`
+	Language      string `json:"language"`
+	FileName      string `json:"fileName"`
+	FileOverride  bool   `json:"fileOverride"`
+	EntryRegex    string `json:"entryRegex"`
+}
+
 type CiRequest struct {
 	CiProjectDetails            []CiProjectDetails                `json:"ciProjectDetails"`
 	DockerImageTag              string                            `json:"dockerImageTag"`
@@ -117,6 +125,7 @@ type CiRequest struct {
 	AppName                     string                            `json:"appName"`
 	TriggerByAuthor             string                            `json:"triggerByAuthor"`
 	CiBuildConfig               *CiBuildConfigBean                `json:"ciBuildConfig"`
+	CiBuildDockerMtuValue       int                               `json:"ciBuildDockerMtuValue"`
 }
 
 type CdRequest struct {
