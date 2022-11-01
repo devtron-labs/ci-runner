@@ -111,7 +111,8 @@ type CiRequest struct {
 	TaskYaml                    *TaskYaml                         `json:"-"`
 	TestExecutorImageProperties *TestExecutorImageProperties      `json:"testExecutorImageProperties"`
 	BlobStorageConfigured       bool                              `json:"blobStorageConfigured"`
-	InvalidateCache             bool                              `json:"invalidateCache"`
+	IgnoreDockerCachePull       bool                              `json:"ignoreDockerCachePull"`
+	IgnoreDockerCachePush       bool                              `json:"ignoreDockerCachePush"`
 	ScanEnabled                 bool                              `json:"scanEnabled"`
 	CloudProvider               blob_storage.BlobStorageType      `json:"cloudProvider"`
 	AzureBlobConfig             *blob_storage.AzureBlobConfig     `json:"azureBlobConfig"`
