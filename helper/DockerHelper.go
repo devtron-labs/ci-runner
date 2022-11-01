@@ -272,7 +272,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 				buildPackCmd = buildPackCmd + " --buildpack " + buildPack
 			}
 		}
-		log.Println(util.DEVTRON, " -----> "+buildPackCmd)
+		log.Println(util.DEVTRON, buildPackCmd)
 		err = executeCmd(buildPackCmd)
 		if err != nil {
 			return "", err
@@ -291,13 +291,13 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig) {
 	fileData, err := os.ReadFile("/buildpack.json")
 	if err != nil {
-		fmt.Println("error occurred while reading buildpack json", err)
+		log.Println("error occurred while reading buildpack json", err)
 		return
 	}
 	var buildpackDataArray []*BuildpackVersionConfig
 	err = json.Unmarshal(fileData, &buildpackDataArray)
 	if err != nil {
-		fmt.Println("error occurred while reading buildpack json", string(fileData))
+		log.Println("error occurred while reading buildpack json", string(fileData))
 		return
 	}
 	language := buildpackConfig.Language
@@ -322,41 +322,41 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 		if fileNotExists {
 			file, err := os.Create(finalPath)
 			if err != nil {
-				fmt.Println("error occurred while creating file at path" + finalPath)
+				fmt.Println("error occurred while creating file at path " + finalPath)
 				return
 			}
 			entryRegex := matchedBuildpackConfig.EntryRegex
 			languageEntry := fmt.Sprintf(entryRegex, languageVersion)
 			_, err = file.WriteString(languageEntry)
-			fmt.Println(util.DEVTRON, fmt.Sprintf("file %s created for language %s with version %s", finalPath, language, languageVersion))
+			log.Println(util.DEVTRON, fmt.Sprintf("file %s created for language %s with version %s", finalPath, language, languageVersion))
 		} else if matchedBuildpackConfig.FileOverride {
 			ext := filepath.Ext(finalPath)
 			if ext == ".json" {
 				jqCmd := fmt.Sprintf("jq '.engines.node' %s", finalPath)
 				outputBytes, err := exec.Command("/bin/sh", "-c", jqCmd).Output()
 				if err != nil {
-					fmt.Println("error occurred while fetching node version", "err", err)
+					log.Println("error occurred while fetching node version", "err", err)
 					return
 				}
 				if string(outputBytes) == "null" {
-					TmpJsonFile := "./tmp.json"
-					versionUpdateCmd := fmt.Sprintf("jq '.engines.node = %s' %s >%s", languageVersion, finalPath, TmpJsonFile)
+					tmpJsonFile := "./tmp.json"
+					versionUpdateCmd := fmt.Sprintf("jq '.engines.node = %s' %s >%s", languageVersion, finalPath, tmpJsonFile)
 					err := executeCmd(versionUpdateCmd)
 					if err != nil {
-						fmt.Println("error occurred while inserting node version", "err", err)
+						log.Println("error occurred while inserting node version", "err", err)
 						return
 					}
-					fileReplaceCmd := fmt.Sprintf("mv  %s %s", TmpJsonFile, finalPath)
+					fileReplaceCmd := fmt.Sprintf("mv %s %s", tmpJsonFile, finalPath)
 					err = executeCmd(fileReplaceCmd)
 					if err != nil {
-						fmt.Println("error occurred while executing cmd ", fileReplaceCmd, "err", err)
+						log.Println("error occurred while executing cmd ", fileReplaceCmd, "err", err)
 						return
 					}
 				}
 
 			}
 		} else {
-			fmt.Println("file already exists, so ignoring version override!!", finalPath)
+			log.Println("file already exists, so ignoring version override!!", finalPath)
 		}
 	}
 
