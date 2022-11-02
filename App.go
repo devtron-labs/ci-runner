@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	_ "github.com/aws/aws-sdk-go/aws"
@@ -115,6 +116,8 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["DOCKER_IMAGE"] = image
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
+		envs["DEPLOYMENT_RELEASE_ID"] = strconv.Itoa(cicdRequest.CdRequest.DeploymentReleaseCounter)
+		envs["DEPLOYMENT_UNIQUE_ID"] = strconv.Itoa(cicdRequest.CdRequest.WorkflowRunnerId)
 		envs["DEVTRON_CD_TRIGGERED_BY"] = cicdRequest.CdRequest.DeploymentTriggeredBy
 		envs["DEVTRON_CD_TRIGGER_TIME"] = cicdRequest.CdRequest.DeploymentTriggerTime.String()
 		for k, v := range cicdRequest.CdRequest.ExtraEnvironmentVariables {
