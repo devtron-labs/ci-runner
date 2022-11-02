@@ -166,6 +166,7 @@ type CdRequest struct {
 	DeploymentTriggeredBy      string                            `json:"deploymentTriggeredBy"`
 	DeploymentTriggerTime      time.Time                         `json:"deploymentTriggerTime"`
 	CiRunnerDockerMtuValue     int                               `json:"ciRunnerDockerMtuValue"`
+	DeploymentReleaseCounter   int                               `json:"deploymentReleaseCounter,omitempty"`
 }
 
 type CiCdTriggerEvent struct {
