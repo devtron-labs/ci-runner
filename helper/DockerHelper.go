@@ -332,45 +332,28 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 		} else if matchedBuildpackConfig.FileOverride {
 			ext := filepath.Ext(finalPath)
 			if ext == ".json" {
-				packageJsonFileContent, err := os.ReadFile(finalPath)
+				jqCmd := fmt.Sprintf("jq '.engines.node' %s", finalPath)
+				outputBytes, err := exec.Command("/bin/sh", "-c", jqCmd).Output()
 				if err != nil {
-					log.Println("error occurred while reading package json", "finalPath", finalPath, "err", err)
+					log.Println("error occurred while fetching node version", "err", err)
 					return
 				}
-				var packageJsonMap map[string]interface{}
-				err = json.Unmarshal(packageJsonFileContent, &packageJsonMap)
-				if err != nil {
-					log.Println("error occurred while reading package json content ", "packageJsonFileContent", string(packageJsonFileContent), "err", err)
-					return
-				}
-				entryRegex := matchedBuildpackConfig.EntryRegex
-				languageEntry := fmt.Sprintf(entryRegex, languageVersion)
-				enginesValue, present := packageJsonMap["engines"]
-				if present {
-					engineValueMap := enginesValue.(map[string]interface{})
-					_, present = engineValueMap["node"]
-					if !present {
-						engineValueMap["node"] = languageEntry
+				if string(outputBytes) == "null" {
+					tmpJsonFile := "./tmp.json"
+					versionUpdateCmd := fmt.Sprintf("jq '.engines.node = %s' %s >%s", languageVersion, finalPath, tmpJsonFile)
+					err := executeCmd(versionUpdateCmd)
+					if err != nil {
+						log.Println("error occurred while inserting node version", "err", err)
+						return
 					}
-				} else {
-					packageJsonMap["engines"] = map[string]string{"node": languageEntry}
+					fileReplaceCmd := fmt.Sprintf("mv %s %s", tmpJsonFile, finalPath)
+					err = executeCmd(fileReplaceCmd)
+					if err != nil {
+						log.Println("error occurred while executing cmd ", fileReplaceCmd, "err", err)
+						return
+					}
 				}
-				tmpJsonFileName := "./tmp.json"
-				tmpJsonFile, err := os.Create(tmpJsonFileName)
-				if err != nil {
-					log.Println("error occurred while creating tmp json file", "err", err)
-				}
-				updatedPackageJson, err := json.Marshal(packageJsonMap)
-				_, err = tmpJsonFile.WriteString(string(updatedPackageJson))
-				if err != nil {
-					log.Println("error occurred while writing json to tmp json file", "err", err)
-				}
-				fileReplaceCmd := fmt.Sprintf("mv %s %s", tmpJsonFileName, finalPath)
-				err = executeCmd(fileReplaceCmd)
-				if err != nil {
-					log.Println("error occurred while executing cmd ", fileReplaceCmd, "err", err)
-					return
-				}
+
 			}
 		} else {
 			log.Println("file already exists, so ignoring version override!!", finalPath)
