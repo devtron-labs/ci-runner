@@ -330,6 +330,7 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 			_, err = file.WriteString(languageEntry)
 			log.Println(util.DEVTRON, fmt.Sprintf("file %s created for language %s with version %s", finalPath, language, languageVersion))
 		} else if matchedBuildpackConfig.FileOverride {
+			log.Println("final Path is ", finalPath)
 			ext := filepath.Ext(finalPath)
 			if ext == ".json" {
 				jqCmd := fmt.Sprintf("jq '.engines.node' %s", finalPath)
@@ -338,7 +339,7 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 					log.Println("error occurred while fetching node version", "err", err)
 					return
 				}
-				if string(outputBytes) == "null" {
+				if strings.TrimSpace(string(outputBytes)) == "null" {
 					tmpJsonFile := "./tmp.json"
 					versionUpdateCmd := fmt.Sprintf("jq '.engines.node = %s' %s >%s", languageVersion, finalPath, tmpJsonFile)
 					err := executeCmd(versionUpdateCmd)
@@ -353,7 +354,6 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 						return
 					}
 				}
-
 			}
 		} else {
 			log.Println("file already exists, so ignoring version override!!", finalPath)
