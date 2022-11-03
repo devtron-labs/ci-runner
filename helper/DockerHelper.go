@@ -341,7 +341,7 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 				}
 				if strings.TrimSpace(string(outputBytes)) == "null" {
 					tmpJsonFile := "./tmp.json"
-					versionUpdateCmd := fmt.Sprintf("jq '.engines.node = %s' %s >%s", languageVersion, finalPath, tmpJsonFile)
+					versionUpdateCmd := fmt.Sprintf("jq '.engines.node = \"%s\"' %s >%s", languageVersion, finalPath, tmpJsonFile)
 					err := executeCmd(versionUpdateCmd)
 					if err != nil {
 						log.Println("error occurred while inserting node version", "err", err)
