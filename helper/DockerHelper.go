@@ -272,7 +272,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 				buildPackCmd = buildPackCmd + " --buildpack " + buildPack
 			}
 		}
-		log.Println(util.DEVTRON, buildPackCmd)
+		log.Println(" -----> " + buildPackCmd)
 		err = executeCmd(buildPackCmd)
 		if err != nil {
 			return "", err
@@ -331,7 +331,7 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 			entryRegex := matchedBuildpackConfig.EntryRegex
 			languageEntry := fmt.Sprintf(entryRegex, languageVersion)
 			_, err = file.WriteString(languageEntry)
-			log.Println(util.DEVTRON, fmt.Sprintf("file %s created for language %s with version %s", finalPath, language, languageVersion))
+			log.Println(util.DEVTRON, fmt.Sprintf(" file %s created for language %s with version %s", finalPath, language, languageVersion))
 		} else if matchedBuildpackConfig.FileOverride {
 			log.Println("final Path is ", finalPath)
 			ext := filepath.Ext(finalPath)
