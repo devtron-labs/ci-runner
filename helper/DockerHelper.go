@@ -303,7 +303,10 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 	language := buildpackConfig.Language
 	//languageVersion := buildpackConfig.LanguageVersion
 	buildpackEnvArgs := buildpackConfig.Args
-	languageVersion := buildpackEnvArgs["DEVTRON_LANG_VERSION"]
+	languageVersion, present := buildpackEnvArgs["DEVTRON_LANG_VERSION"]
+	if !present {
+		return
+	}
 	var matchedBuildpackConfig *BuildpackVersionConfig
 	for _, versionConfig := range buildpackDataArray {
 		builderPrefix := versionConfig.BuilderPrefix
