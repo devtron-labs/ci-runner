@@ -37,6 +37,46 @@ type TestExecutorImageProperties struct {
 	Arg       string `json:"arg,omitempty"`
 }
 
+type CiBuildType string
+
+const (
+	SELF_DOCKERFILE_BUILD_TYPE    CiBuildType = "self-dockerfile-build"
+	MANAGED_DOCKERFILE_BUILD_TYPE CiBuildType = "managed-dockerfile-build"
+	SKIP_BUILD_BUILD_TYPE         CiBuildType = "skip-build"
+	BUILDPACK_BUILD_TYPE          CiBuildType = "buildpack-build"
+)
+
+type CiBuildConfigBean struct {
+	CiBuildType       CiBuildType        `json:"ciBuildType"`
+	DockerBuildConfig *DockerBuildConfig `json:"dockerBuildConfig,omitempty"`
+	BuildPackConfig   *BuildPackConfig   `json:"buildPackConfig"`
+}
+
+type DockerBuildConfig struct {
+	DockerfilePath     string            `json:"dockerfileRelativePath,omitempty" validate:"required"`
+	DockerfileContent  string            `json:"DockerfileContent"`
+	Args               map[string]string `json:"args,omitempty"`
+	DockerBuildOptions map[string]string `json:"dockerBuildOptions"`
+	TargetPlatform     string            `json:"targetPlatform,omitempty"`
+}
+
+type BuildPackConfig struct {
+	BuilderId       string            `json:"builderId"`
+	Language        string            `json:"language"`
+	LanguageVersion string            `json:"languageVersion"`
+	BuildPacks      []string          `json:"buildPacks"`
+	Args            map[string]string `json:"args"`
+	ProjectPath     string            `json:"projectPath"`
+}
+
+type BuildpackVersionConfig struct {
+	BuilderPrefix string `json:"builderPrefix"`
+	Language      string `json:"language"`
+	FileName      string `json:"fileName"`
+	FileOverride  bool   `json:"fileOverride"`
+	EntryRegex    string `json:"entryRegex"`
+}
+
 type CiRequest struct {
 	CiProjectDetails            []CiProjectDetails                `json:"ciProjectDetails"`
 	DockerImageTag              string                            `json:"dockerImageTag"`
@@ -46,9 +86,7 @@ type CiRequest struct {
 	DockerConnection            string                            `json:"dockerConnection"`
 	DockerCert                  string                            `json:"dockerCert"`
 	DockerRepository            string                            `json:"dockerRepository"`
-	DockerBuildArgs             string                            `json:"dockerBuildArgs"`
-	DockerBuildTargetPlatform   string                            `json:"dockerBuildTargetPlatform"`
-	DockerFileLocation          string                            `json:"dockerfileLocation"`
+	CheckoutPath                string                            `json:"checkoutPath"`
 	DockerUsername              string                            `json:"dockerUsername"`
 	DockerPassword              string                            `json:"dockerPassword"`
 	AwsRegion                   string                            `json:"awsRegion"`
@@ -87,7 +125,8 @@ type CiRequest struct {
 	RefPlugins                  []*RefPluginObject                `json:"refPlugins"`
 	AppName                     string                            `json:"appName"`
 	TriggerByAuthor             string                            `json:"triggerByAuthor"`
-	DockerBuildOptions          string                            `json:"dockerBuildOptions"`
+	CiBuildConfig               *CiBuildConfigBean                `json:"ciBuildConfig"`
+	CiBuildDockerMtuValue       int                               `json:"ciBuildDockerMtuValue"`
 }
 
 type CdRequest struct {
@@ -126,6 +165,7 @@ type CdRequest struct {
 	DefaultAddressPoolSize     int                               `json:"defaultAddressPoolSize"`
 	DeploymentTriggeredBy      string                            `json:"deploymentTriggeredBy"`
 	DeploymentTriggerTime      time.Time                         `json:"deploymentTriggerTime"`
+	CiRunnerDockerMtuValue     int                               `json:"ciRunnerDockerMtuValue"`
 	DeploymentReleaseCounter   int                               `json:"deploymentReleaseCounter,omitempty"`
 }
 

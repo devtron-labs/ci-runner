@@ -30,6 +30,7 @@ const LOCAL_BUILDX_CACHE_LOCATION = LOCAL_BUILDX_LOCATION + "/cache"
 
 const CIEVENT = "CI"
 const CDSTAGE = "CD"
+const DRY_RUN = "DryRun"
 
 var TmpArtifactLocation = "./job-artifact"
 

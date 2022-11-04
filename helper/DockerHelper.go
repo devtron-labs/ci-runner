@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,6 +30,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -47,7 +49,7 @@ const (
 	BUILD_ARG_FLAG         = "--build-arg"
 )
 
-func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int) {
+func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int, ciRunnerDockerMtuValue int) {
 	connection := dockerConnection
 	u, err := url.Parse(dockerRegistryUrl)
 	if err != nil {
@@ -55,14 +57,18 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 	}
 	dockerdstart := ""
 	defaultAddressPoolFlag := ""
+	dockerMtuValueFlag := ""
 	if len(defaultAddressPoolBaseCidr) > 0 {
 		if defaultAddressPoolSize <= 0 {
 			defaultAddressPoolSize = 24
 		}
 		defaultAddressPoolFlag = fmt.Sprintf("--default-address-pool base=%s,size=%d", defaultAddressPoolBaseCidr, defaultAddressPoolSize)
 	}
+	if ciRunnerDockerMtuValue > 0 {
+		dockerMtuValueFlag = fmt.Sprintf("--mtu=%d", ciRunnerDockerMtuValue)
+	}
 	if connection == util.INSECURE {
-		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, u.Host)
+		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, u.Host, dockerMtuValueFlag)
 		util.LogStage("Insecure Registry")
 	} else {
 		if connection == util.SECUREWITHCERT {
@@ -82,7 +88,7 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 			}
 			util.LogStage("Secure with Cert")
 		}
-		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag)
+		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 	}
 	out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
 	log.Println(string(out))
@@ -172,24 +178,24 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	if ciRequest.DockerImageTag == "" {
 		ciRequest.DockerImageTag = "latest"
 	}
+	ciBuildConfig := ciRequest.CiBuildConfig
 	// Docker build, tag image and push
-	dockerFileLocationDir := ciRequest.DockerFileLocation[:strings.LastIndex(ciRequest.DockerFileLocation, "/")+1]
+	dockerFileLocationDir := ciRequest.CheckoutPath
 	log.Println(util.DEVTRON, " docker file location: ", dockerFileLocationDir)
 
-	dockerBuild := "docker build "
-	useBuildx := ciRequest.DockerBuildTargetPlatform != ""
-	if useBuildx {
-		dockerBuild = "docker buildx build --platform " + ciRequest.DockerBuildTargetPlatform + " "
+	dest, err := BuildDockerImagePath(ciRequest)
+	if err != nil {
+		return "", err
 	}
-
-	dockerBuildFlags := make(map[string]string)
-	if ciRequest.DockerBuildArgs != "" {
-		dockerBuildArgsMap := make(map[string]string)
-		err := json.Unmarshal([]byte(ciRequest.DockerBuildArgs), &dockerBuildArgsMap)
-		if err != nil {
-			log.Println("err", err)
-			return "", err
+	if ciBuildConfig.CiBuildType == SELF_DOCKERFILE_BUILD_TYPE || ciBuildConfig.CiBuildType == MANAGED_DOCKERFILE_BUILD_TYPE {
+		dockerBuild := "docker build "
+		dockerBuildConfig := ciBuildConfig.DockerBuildConfig
+		useBuildx := dockerBuildConfig.TargetPlatform != ""
+		if useBuildx {
+			dockerBuild = "docker buildx build --platform " + dockerBuildConfig.TargetPlatform + " "
 		}
+		dockerBuildFlags := make(map[string]string)
+		dockerBuildArgsMap := dockerBuildConfig.Args
 		for k, v := range dockerBuildArgsMap {
 			flagKey := fmt.Sprintf("%s %s", BUILD_ARG_FLAG, k)
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
@@ -199,15 +205,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", v)
 			}
 		}
-	}
-
-	if ciRequest.DockerBuildOptions != "" {
-		dockerBuildOptionsMap := make(map[string]string)
-		err := json.Unmarshal([]byte(ciRequest.DockerBuildOptions), &dockerBuildOptionsMap)
-		if err != nil {
-			log.Println("err", err)
-			return "", err
-		}
+		dockerBuildOptionsMap := dockerBuildConfig.DockerBuildOptions
 		for k, v := range dockerBuildOptionsMap {
 			flagKey := "--" + k
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
@@ -217,59 +215,175 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", v)
 			}
 		}
-	}
-	for key, value := range dockerBuildFlags {
-		dockerBuild = dockerBuild + " " + key + value
-	}
-	if useBuildx {
-		err := installAllSupportedPlatforms(err)
+		for key, value := range dockerBuildFlags {
+			dockerBuild = dockerBuild + " " + key + value
+		}
+		if useBuildx {
+			err = installAllSupportedPlatforms()
+			if err != nil {
+				return "", err
+			}
+
+			err = createBuildxBuilder()
+			if err != nil {
+				return "", err
+			}
+
+			log.Println(" -----> Setting up cache directory for Buildx")
+			oldCacheBuildxPath := util.LOCAL_BUILDX_LOCATION + "/old"
+			localCachePath := util.LOCAL_BUILDX_CACHE_LOCATION
+			err = setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
+			if err != nil {
+				return "", err
+			}
+			oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
+			manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
+			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s --allow network.host --allow security.insecure --metadata-file %s", dockerBuild, dockerBuildConfig.DockerfilePath, dest, localCachePath, oldCacheBuildxPath, manifestLocation)
+		} else {
+			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, dockerBuildConfig.DockerfilePath, ciRequest.DockerRepository)
+		}
+		log.Println(" -----> " + dockerBuild)
+		err = executeCmd(dockerBuild)
 		if err != nil {
 			return "", err
 		}
 
-		err2 := createBuildxBuilder()
-		if err2 != nil {
-			return "", err2
+		if !useBuildx {
+			err = tagDockerBuild(ciRequest.DockerRepository, dest)
+			if err != nil {
+				return "", err
+			}
+		}
+	} else if ciBuildConfig.CiBuildType == BUILDPACK_BUILD_TYPE {
+		buildPackParams := ciRequest.CiBuildConfig.BuildPackConfig
+		projectPath := buildPackParams.ProjectPath
+		if projectPath == "" || !strings.HasPrefix(projectPath, "./") {
+			projectPath = "./" + projectPath
+		}
+		handleLanguageVersion(projectPath, buildPackParams)
+		buildPackCmd := fmt.Sprintf("pack build %s --path %s --builder %s", dest, projectPath, buildPackParams.BuilderId)
+		BuildPackArgsMap := buildPackParams.Args
+		for k, v := range BuildPackArgsMap {
+			buildPackCmd = buildPackCmd + " --env " + k + "=" + v
+		}
+
+		if len(buildPackParams.BuildPacks) > 0 {
+			for _, buildPack := range buildPackParams.BuildPacks {
+				buildPackCmd = buildPackCmd + " --buildpack " + buildPack
+			}
+		}
+		log.Println(" -----> " + buildPackCmd)
+		err = executeCmd(buildPackCmd)
+		if err != nil {
+			return "", err
+		}
+		builderRmCmdString := "docker image rm " + buildPackParams.BuilderId
+		builderRmCmd := exec.Command("/bin/sh", "-c", builderRmCmdString)
+		err := builderRmCmd.Run()
+		if err != nil {
+			return "", err
 		}
 	}
-	dest, err := BuildDockerImagePath(ciRequest)
+
+	return dest, nil
+}
+
+func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig) {
+	fileData, err := os.ReadFile("/buildpack.json")
 	if err != nil {
-		return "", err
+		log.Println("error occurred while reading buildpack json", err)
+		return
 	}
-	if useBuildx {
-		log.Println(" -----> Setting up cache directory for Buildx")
-		oldCacheBuildxPath := util.LOCAL_BUILDX_LOCATION + "/old"
-		localCachePath := util.LOCAL_BUILDX_CACHE_LOCATION
-		err := setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
-		if err != nil {
-			return "", err
+	var buildpackDataArray []*BuildpackVersionConfig
+	err = json.Unmarshal(fileData, &buildpackDataArray)
+	if err != nil {
+		log.Println("error occurred while reading buildpack json", string(fileData))
+		return
+	}
+	language := buildpackConfig.Language
+	//languageVersion := buildpackConfig.LanguageVersion
+	buildpackEnvArgs := buildpackConfig.Args
+	languageVersion, present := buildpackEnvArgs["DEVTRON_LANG_VERSION"]
+	if !present {
+		return
+	}
+	var matchedBuildpackConfig *BuildpackVersionConfig
+	for _, versionConfig := range buildpackDataArray {
+		builderPrefix := versionConfig.BuilderPrefix
+		configLanguage := versionConfig.Language
+		builderId := buildpackConfig.BuilderId
+		if strings.HasPrefix(builderId, builderPrefix) && strings.ToLower(language) == configLanguage {
+			matchedBuildpackConfig = versionConfig
+			break
 		}
-		oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
-		manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s --allow network.host --allow security.insecure --metadata-file %s", dockerBuild, ciRequest.DockerFileLocation, dest, localCachePath, oldCacheBuildxPath, manifestLocation)
-	} else {
-		dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, ciRequest.DockerFileLocation, ciRequest.DockerRepository)
 	}
-	log.Println("docker build running")
+	if matchedBuildpackConfig != nil {
+		fileName := matchedBuildpackConfig.FileName
+		finalPath := filepath.Join(projectPath, "./"+fileName)
+		_, err := os.Stat(finalPath)
+		fileNotExists := errors.Is(err, os.ErrNotExist)
+		if fileNotExists {
+			file, err := os.Create(finalPath)
+			if err != nil {
+				fmt.Println("error occurred while creating file at path " + finalPath)
+				return
+			}
+			entryRegex := matchedBuildpackConfig.EntryRegex
+			languageEntry := fmt.Sprintf(entryRegex, languageVersion)
+			_, err = file.WriteString(languageEntry)
+			log.Println(util.DEVTRON, fmt.Sprintf(" file %s created for language %s with version %s", finalPath, language, languageVersion))
+		} else if matchedBuildpackConfig.FileOverride {
+			log.Println("final Path is ", finalPath)
+			ext := filepath.Ext(finalPath)
+			if ext == ".json" {
+				jqCmd := fmt.Sprintf("jq '.engines.node' %s", finalPath)
+				outputBytes, err := exec.Command("/bin/sh", "-c", jqCmd).Output()
+				if err != nil {
+					log.Println("error occurred while fetching node version", "err", err)
+					return
+				}
+				if strings.TrimSpace(string(outputBytes)) == "null" {
+					tmpJsonFile := "./tmp.json"
+					versionUpdateCmd := fmt.Sprintf("jq '.engines.node = \"%s\"' %s >%s", languageVersion, finalPath, tmpJsonFile)
+					err := executeCmd(versionUpdateCmd)
+					if err != nil {
+						log.Println("error occurred while inserting node version", "err", err)
+						return
+					}
+					fileReplaceCmd := fmt.Sprintf("mv %s %s", tmpJsonFile, finalPath)
+					err = executeCmd(fileReplaceCmd)
+					if err != nil {
+						log.Println("error occurred while executing cmd ", fileReplaceCmd, "err", err)
+						return
+					}
+				}
+			}
+		} else {
+			log.Println("file already exists, so ignoring version override!!", finalPath)
+		}
+	}
 
+}
+
+func executeCmd(dockerBuild string) error {
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
-	err = util.RunCommand(dockerBuildCMD)
+	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
-		return "", err
 	}
+	return err
+}
 
-	if !useBuildx {
-		dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
-		log.Println(" -----> " + dockerTag)
-		dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
-		err = util.RunCommand(dockerTagCMD)
-		if err != nil {
-			log.Println(err)
-			return "", err
-		}
+func tagDockerBuild(dockerRepository string, dest string) error {
+	dockerTag := "docker tag " + dockerRepository + ":latest" + " " + dest
+	log.Println(" -----> " + dockerTag)
+	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
+	err := util.RunCommand(dockerTagCMD)
+	if err != nil {
+		log.Println(err)
+		return err
 	}
-	return dest, nil
+	return nil
 }
 
 func setupCacheForBuildx(localCachePath string, oldCacheBuildxPath string) error {
@@ -311,11 +425,11 @@ func createBuildxBuilder() error {
 	return nil
 }
 
-func installAllSupportedPlatforms(err error) error {
+func installAllSupportedPlatforms() error {
 	multiPlatformCmd := "docker run --privileged --rm tonistiigi/binfmt --install all"
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
-	err = util.RunCommand(dockerBuildCMD)
+	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
 		return err
