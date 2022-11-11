@@ -59,12 +59,19 @@ const (
 	NEW_CI_MATERIAL_TOPIC_GROUP       string = "NEW-CI-MATERIAL_GROUP-1"
 	NEW_CI_MATERIAL_TOPIC_DURABLE     string = "NEW-CI-MATERIAL_DURABLE-1"
 	CD_SUCCESS                        string = "CD.TRIGGER"
+	CD_TRIGGER_GROUP                  string = "CD_TRIGGER_GROUP-1"
+	CD_TRIGGER_DURABLE                string = "CD_TRIGGER_DURABLE-1"
 	WEBHOOK_EVENT_TOPIC               string = "WEBHOOK_EVENT"
-
-	DEVTRON_TEST_TOPIC    string = "Test_Topic"
-	DEVTRON_TEST_STREAM   string = "Devtron_Test_Stream"
-	DEVTRON_TEST_QUEUE    string = "Test_Topic_Queue"
-	DEVTRON_TEST_CONSUMER string = "Test_Topic_Consumer"
+	WEBHOOK_EVENT_GROUP               string = "WEBHOOK_EVENT_GROUP-1"
+	WEBHOOK_EVENT_DURABLE             string = "WEBHOOK_EVENT_DURABLE-1"
+	DEVTRON_TEST_TOPIC                string = "Test_Topic"
+	DEVTRON_TEST_STREAM               string = "Devtron_Test_Stream"
+	DEVTRON_TEST_QUEUE                string = "Test_Topic_Queue"
+	DEVTRON_TEST_CONSUMER             string = "Test_Topic_Consumer"
+	TOPIC_CI_SCAN                     string = "CI-SCAN"
+	TOPIC_CI_SCAN_GRP                 string = "CI-SCAN-GRP-1"
+	TOPIC_CI_SCAN_DURABLE             string = "CI-SCAN-DURABLE-1"
+	IMAGE_SCANNER_STREAM              string = "IMAGE-SCANNER"
 )
 
 type NatsTopic struct {
@@ -79,8 +86,8 @@ var natsTopicMapping = map[string]NatsTopic{
 	BULK_APPSTORE_DEPLOY_TOPIC: {topicName: BULK_APPSTORE_DEPLOY_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: BULK_APPSTORE_DEPLOY_GROUP, consumerName: BULK_APPSTORE_DEPLOY_DURABLE},
 	BULK_DEPLOY_TOPIC:          {topicName: BULK_DEPLOY_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: BULK_DEPLOY_GROUP, consumerName: BULK_DEPLOY_DURABLE},
 	BULK_HIBERNATE_TOPIC:       {topicName: BULK_HIBERNATE_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: BULK_HIBERNATE_GROUP, consumerName: BULK_HIBERNATE_DURABLE},
-	CD_SUCCESS:                 {topicName: CD_SUCCESS, streamName: ORCHESTRATOR_STREAM},
-	WEBHOOK_EVENT_TOPIC:        {topicName: WEBHOOK_EVENT_TOPIC, streamName: ORCHESTRATOR_STREAM},
+	CD_SUCCESS:                 {topicName: CD_SUCCESS, streamName: ORCHESTRATOR_STREAM, queueName: CD_TRIGGER_GROUP, consumerName: CD_TRIGGER_DURABLE},
+	WEBHOOK_EVENT_TOPIC:        {topicName: WEBHOOK_EVENT_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: WEBHOOK_EVENT_GROUP, consumerName: WEBHOOK_EVENT_DURABLE},
 
 	CI_COMPLETE_TOPIC:       {topicName: CI_COMPLETE_TOPIC, streamName: CI_RUNNER_STREAM, queueName: CI_COMPLETE_GROUP, consumerName: CI_COMPLETE_DURABLE},
 	CD_STAGE_COMPLETE_TOPIC: {topicName: CD_STAGE_COMPLETE_TOPIC, streamName: CI_RUNNER_STREAM, queueName: CD_COMPLETE_GROUP, consumerName: CD_COMPLETE_DURABLE},
@@ -93,6 +100,7 @@ var natsTopicMapping = map[string]NatsTopic{
 	NEW_CI_MATERIAL_TOPIC: {topicName: NEW_CI_MATERIAL_TOPIC, streamName: GIT_SENSOR_STREAM, queueName: NEW_CI_MATERIAL_TOPIC_GROUP, consumerName: NEW_CI_MATERIAL_TOPIC_DURABLE},
 
 	DEVTRON_TEST_TOPIC: {topicName: DEVTRON_TEST_TOPIC, streamName: DEVTRON_TEST_STREAM, queueName: DEVTRON_TEST_QUEUE, consumerName: DEVTRON_TEST_CONSUMER},
+	TOPIC_CI_SCAN:      {topicName: TOPIC_CI_SCAN, streamName: IMAGE_SCANNER_STREAM, queueName: TOPIC_CI_SCAN_GRP, consumerName: TOPIC_CI_SCAN_DURABLE},
 }
 
 func GetNatsTopic(topicName string) NatsTopic {
