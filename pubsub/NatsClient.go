@@ -17,55 +17,45 @@
 
 package pubsub
 
-import (
-	"log"
-	"os"
-	"time"
-
-	"github.com/caarlos0/env"
-	"github.com/devtron-labs/ci-runner/util"
-	"github.com/nats-io/nats.go"
-)
-
 const ImageScannerEndpoint string = "http://image-scanner-new-demo-devtroncd-service.devtroncd:80"
 
-type PubSubClient struct {
-	JetStrCtxt nats.JetStreamContext
-	Conn       *nats.Conn
-}
+//type PubSubClient struct {
+//	JetStrCtxt nats.JetStreamContext
+//	Conn       *nats.Conn
+//}
 
 type PubSubConfig struct {
-	NatsServerHost       string `env:"NATS_SERVER_HOST" envDefault:"nats://devtron-nats.devtroncd:4222"`
+	//NatsServerHost       string `env:"NATS_SERVER_HOST" envDefault:"nats://devtron-nats.devtroncd:4222"`
 	ImageScannerEndpoint string `env:"IMAGE_SCANNER_ENDPOINT" envDefault:"http://image-scanner-new-demo-devtroncd-service.devtroncd:80"`
 }
 
-func NewPubSubClient() (*PubSubClient, error) {
-	cfg := &PubSubConfig{}
-	err := env.Parse(cfg)
-	if err != nil {
-		return &PubSubClient{}, err
-	}
-	nc, err := nats.Connect(cfg.NatsServerHost,
-		nats.ReconnectWait(10*time.Second), nats.MaxReconnects(100),
-		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
-			log.Println("Nats Connection got disconnected!", "Reason", err)
-		}),
-		nats.ReconnectHandler(func(nc *nats.Conn) {
-			log.Println("Nats Connection got reconnected", "url", nc.ConnectedUrl())
-		}),
-		nats.ClosedHandler(func(nc *nats.Conn) {
-			log.Println("Nats Client Connection closed!", "Reason", nc.LastError())
-		}))
-	if err != nil {
-		log.Println(util.DEVTRON, "err", err)
-		os.Exit(1)
-	}
-
-	//Create a jetstream context
-	js, _ := nc.JetStream()
-	natsClient := &PubSubClient{
-		Conn:       nc,
-		JetStrCtxt: js,
-	}
-	return natsClient, nil
-}
+//func NewPubSubClient() (*PubSubClient, error) {
+//	cfg := &PubSubConfig{}
+//	err := env.Parse(cfg)
+//	if err != nil {
+//		return &PubSubClient{}, err
+//	}
+//	nc, err := nats.Connect(cfg.NatsServerHost,
+//		nats.ReconnectWait(10*time.Second), nats.MaxReconnects(100),
+//		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
+//			log.Println("Nats Connection got disconnected!", "Reason", err)
+//		}),
+//		nats.ReconnectHandler(func(nc *nats.Conn) {
+//			log.Println("Nats Connection got reconnected", "url", nc.ConnectedUrl())
+//		}),
+//		nats.ClosedHandler(func(nc *nats.Conn) {
+//			log.Println("Nats Client Connection closed!", "Reason", nc.LastError())
+//		}))
+//	if err != nil {
+//		log.Println(util.DEVTRON, "err", err)
+//		os.Exit(1)
+//	}
+//
+//	//Create a jetstream context
+//	js, _ := nc.JetStream()
+//	natsClient := &PubSubClient{
+//		Conn:       nc,
+//		JetStrCtxt: js,
+//	}
+//	return natsClient, nil
+//}
