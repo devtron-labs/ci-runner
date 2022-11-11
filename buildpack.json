@@ -1,0 +1,23 @@
+[
+  {
+  "builderPrefix": "heroku",
+  "language": "java",
+  "fileName": "system.properties",
+  "fileOverride": false,
+  "entryRegex": "java.runtime.version=%s"
+  },
+  {
+    "builderPrefix": "heroku",
+    "language": "python",
+    "fileName": "runtime.txt",
+    "fileOverride": false,
+    "entryRegex": "python-%s"
+  },
+  {
+    "builderPrefix": "heroku",
+    "language": "node",
+    "fileName": "package.json",
+    "fileOverride": true,
+    "entryRegex": "v%s"
+  }
+]
