@@ -31,7 +31,7 @@ func GetCache(ciRequest *CiRequest) error {
 		log.Println("ignoring cache as storage module not configured ... ") //TODO not needed
 		return nil
 	}
-	if ciRequest.InvalidateCache {
+	if ciRequest.IgnoreDockerCachePull {
 		log.Println("ignoring cache ... ")
 		return nil
 	}
@@ -65,6 +65,10 @@ func SyncCache(ciRequest *CiRequest) error {
 		log.Println("ignoring cache as storage module not configured... ")
 		return nil
 	}
+	if ciRequest.IgnoreDockerCachePush {
+		log.Println("ignoring cache as cache push is disabled... ")
+		return nil
+	}
 	err := os.Chdir("/")
 	if err != nil {
 		log.Println(err)
@@ -74,7 +78,9 @@ func SyncCache(ciRequest *CiRequest) error {
 	// Generate new cache
 	log.Println("Generating new cache")
 	var cachePath string
-	if ciRequest.DockerBuildTargetPlatform != "" {
+	ciBuildConfig := ciRequest.CiBuildConfig
+	if (ciBuildConfig.CiBuildType == SELF_DOCKERFILE_BUILD_TYPE || ciBuildConfig.CiBuildType == MANAGED_DOCKERFILE_BUILD_TYPE) &&
+		ciBuildConfig.DockerBuildConfig.TargetPlatform != "" {
 		cachePath = util.LOCAL_BUILDX_CACHE_LOCATION
 	} else {
 		cachePath = "/var/lib/docker"
