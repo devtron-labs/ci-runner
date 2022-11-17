@@ -41,6 +41,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/caarlos0/env"
 	"github.com/devtron-labs/ci-runner/util"
 )
 
@@ -101,6 +102,10 @@ const DOCKER_REGISTRY_TYPE_OTHER = "other"
 
 type DockerCredentials struct {
 	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType string
+}
+
+type EnvironmentVariables struct {
+	ShowDockerBuildCmdInLogs bool `env:"SHOW_DOCKER_BUILD_ARGS" envDefault:"true"`
 }
 
 func DockerLogin(dockerCredentials *DockerCredentials) error {
@@ -175,6 +180,12 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	envVars := &EnvironmentVariables{}
+	err = env.Parse(envVars)
+	if err != nil {
+		log.Println("Error while parsing environment variables", err)
+	}
 	if ciRequest.DockerImageTag == "" {
 		ciRequest.DockerImageTag = "latest"
 	}
@@ -242,7 +253,11 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, dockerBuildConfig.DockerfilePath, ciRequest.DockerRepository)
 		}
-		log.Println(" -----> " + dockerBuild)
+		if envVars.ShowDockerBuildCmdInLogs {
+			log.Println("Starting docker build : ", dockerBuild)
+		} else {
+			log.Println("Docker build started..")
+		}
 		err = executeCmd(dockerBuild)
 		if err != nil {
 			return "", err
