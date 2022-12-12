@@ -259,6 +259,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			log.Println("Docker build started..")
 		}
 		err = executeCmd(dockerBuild)
+		log.Println("docker build ended", err)
 		if err != nil {
 			return "", err
 		}
