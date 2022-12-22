@@ -227,19 +227,21 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 
 	var digest string
-	ciBuildConfig := ciBuildConfigBean
-	isBuildX := ciBuildConfig != nil && ciBuildConfig.DockerBuildConfig != nil && ciBuildConfig.DockerBuildConfig.TargetPlatform != ""
-	if isBuildX {
-		digest, err = helper.ExtractDigestForBuildx(dest)
-	} else {
-		util.LogStage("docker push")
-		// push to dest
-		log.Println(util.DEVTRON, " docker-push")
-		err = helper.PushArtifact(dest)
-		if err != nil {
-			return artifactUploaded, err
+	ciBuildType := ciBuildConfigBean.CiBuildType
+	if ciBuildType != helper.SKIP_BUILD_BUILD_TYPE {
+		isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && ciBuildConfigBean.DockerBuildConfig.TargetPlatform != ""
+		if isBuildX {
+			digest, err = helper.ExtractDigestForBuildx(dest)
+		} else {
+			util.LogStage("docker push")
+			// push to dest
+			log.Println(util.DEVTRON, " docker-push")
+			err = helper.PushArtifact(dest)
+			if err != nil {
+				return artifactUploaded, err
+			}
+			digest, err = helper.ExtractDigestUsingPull(dest)
 		}
-		digest, err = helper.ExtractDigestUsingPull(dest)
 	}
 
 	if err != nil {
