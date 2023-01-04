@@ -25,48 +25,10 @@ import (
 	"log"
 )
 
-// type NatsEventPublisher interface {
-// 	PublishEventsOnNats(jsonBody []byte, topic string) error
-// }
-
-// func NewNatsEventPublisherImpl(logger *zap.SugaredLogger, pubSubClient *PubSubClient) *NatsEventPublisherImpl {
-// 	return &NatsEventPublisherImpl{
-// 		logger:       logger,
-// 		pubSubClient: pubSubClient,
-// 	}
-// }
-
-// type NatsEventPublisherImpl struct {
-// 	logger       *zap.SugaredLogger
-// 	pubSubClient *PubSubClient
-// }
-
-// func (impl *NatsEventPublisherImpl) PublishEventsOnNats(jsonBody []byte, topic string) error {
-
-// 	err := AddStream(impl.pubSubClient.JetStrCtxt, CI_RUNNER_STREAM)
-
-// 	if err != nil {
-// 		impl.logger.Errorw("Error while adding stream", "error", err)
-// 	}
-// 	//Generate random string for passing as Header Id in message
-// 	randString := "MsgHeaderId-" + util.Generate(10)
-// 	_, err = impl.pubSubClient.JetStrCtxt.Publish(topic, jsonBody, nats.MsgId(randString))
-// 	if err != nil {
-// 		impl.logger.Errorw("Error while publishing Request", "topic", topic, "body", string(jsonBody), "err", err)
-// 	}
-
-// 	impl.logger.Info(util.DEVTRON, "ci complete event notification done")
-
-// 	//Drain the connection
-// 	err = impl.pubSubClient.Conn.Drain()
-
-// 	if err != nil {
-// 		impl.logger.Errorw("Error while draining the connection", "error", err)
-// 	}
-
-// 	impl.logger.Info(util.DEVTRON, " housekeeping done. exiting now")
-// 	return nil
-// }
+type PubSubConfig struct {
+	//NatsServerHost       string `env:"NATS_SERVER_HOST" envDefault:"nats://devtron-nats.devtroncd:4222"`
+	ImageScannerEndpoint string `env:"IMAGE_SCANNER_ENDPOINT" envDefault:"http://image-scanner-new-demo-devtroncd-service.devtroncd:80"`
+}
 
 func PublishEventsOnNats(jsonBody []byte, topic string) error {
 	logger, err := utils.NewSugardLogger()
