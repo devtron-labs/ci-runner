@@ -26,7 +26,6 @@ import (
 )
 
 type PubSubConfig struct {
-	//NatsServerHost       string `env:"NATS_SERVER_HOST" envDefault:"nats://devtron-nats.devtroncd:4222"`
 	ImageScannerEndpoint string `env:"IMAGE_SCANNER_ENDPOINT" envDefault:"http://image-scanner-new-demo-devtroncd-service.devtroncd:80"`
 }
 
