@@ -21,7 +21,6 @@ import (
 	"github.com/devtron-labs/ci-runner/util"
 	pubsub1 "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/common-lib/utils"
-	//"go.uber.org/zap"
 	"log"
 )
 
