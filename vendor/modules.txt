@@ -106,7 +106,7 @@ github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/caarlos0/env v3.5.0+incompatible
 ## explicit
 github.com/caarlos0/env
-# github.com/devtron-labs/common-lib v0.0.0-20230103095259-3544830c2919
+# github.com/devtron-labs/common-lib v0.0.0-20230109070754-ff4dca200a2c
 ## explicit; go 1.18
 github.com/devtron-labs/common-lib/blob-storage
 github.com/devtron-labs/common-lib/pubsub-lib
