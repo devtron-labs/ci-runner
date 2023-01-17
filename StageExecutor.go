@@ -98,7 +98,7 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 			return nil, err
 		}
 
-		var stepOutputVarsFinal map[string]string
+		 stepOutputVarsFinal := make(map[string]string)
 		//---------------------------------------------------------------------------------------------------
 		if ciStep.StepType == helper.STEP_TYPE_INLINE {
 			if ciStep.ExecutorType == helper.SHELL {
