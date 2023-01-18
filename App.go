@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 func main() {
@@ -119,20 +120,17 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		if len(cicdRequest.CiRequest.CiProjectDetails) > 1 {
 			envs["MULTI_GIT"] = "true"
 		}
-		gitHashArr := ""
-		CheckoutPathArr := ""
-		SourceValueArr := ""
+
+		CiMaterialRequestArr := ""
+
 		for _, ciProjectDetail := range cicdRequest.CiRequest.CiProjectDetails {
-			gitHashArr = gitHashArr + fmt.Sprintf("%s,", ciProjectDetail.CommitHash)
-			CheckoutPathArr = CheckoutPathArr + fmt.Sprintf("%s,", ciProjectDetail.CheckoutPath)
-			SourceValueArr = SourceValueArr + fmt.Sprintf("%s,", ciProjectDetail.SourceValue)
+			GitRepoSplit := strings.Split(ciProjectDetail.GitRepository, "/")
+			GitRepoName := GitRepoSplit[len(GitRepoSplit)-1]
+			CiMaterialRequestArr = CiMaterialRequestArr +
+				fmt.Sprintf("%s|%s|%s|%s||", GitRepoName, ciProjectDetail.CheckoutPath, ciProjectDetail.SourceValue, ciProjectDetail.CommitHash)
 		}
-		envs["GIT_HASHES"] = gitHashArr
-		envs["CHECKOUT_PATHS"] = CheckoutPathArr
-		envs["SOURCE_VALUES"] = SourceValueArr
-
-		log.Println("ci runner envs", envs) //TODO: remove before merging
-
+		envs["GIT_MATERIAL_REQUEST"] = CiMaterialRequestArr
+		log.Println("git material request", envs["GIT_MATERIAL_REQUEST"])
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
 		envs["DEPLOYMENT_RELEASE_ID"] = strconv.Itoa(cicdRequest.CdRequest.DeploymentReleaseCounter)

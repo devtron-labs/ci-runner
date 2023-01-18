@@ -103,12 +103,10 @@ func (impl *GitUtil) Init(rootDir string, remoteUrl string, isBare bool) error {
 }
 
 func (impl *GitUtil) Clone(rootDir string, remoteUrl string, username string, password string) (response, errMsg string, err error) {
-	//err = impl.Init(rootDir, remoteUrl, false)
-	err = impl.InitCLI(rootDir, remoteUrl)
+	err = impl.Init(rootDir, remoteUrl, false)
 	if err != nil {
 		return "", "", err
 	}
-
 	response, errMsg, err = impl.Fetch(rootDir, username, password)
 	return response, errMsg, err
 }
