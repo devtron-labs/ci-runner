@@ -19,14 +19,13 @@ package main
 
 import (
 	"encoding/json"
-	"strconv"
-
 	_ "github.com/aws/aws-sdk-go/aws"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 func main() {
@@ -115,6 +114,9 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["APP_NAME"] = cicdRequest.CiRequest.AppName
 		envs["TRIGGER_BY_AUTHOR"] = cicdRequest.CiRequest.TriggerByAuthor
 		envs["DOCKER_IMAGE"] = image
+		envs["PIPELINE_NAME"] = cicdRequest.CiRequest.PipelineName
+		envs["APP_NAME"] = cicdRequest.CiRequest.AppName
+		envs["GIT_HASH"] = cicdRequest.CiRequest.CiProjectDetails[0].CommitHash
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
 		envs["DEPLOYMENT_RELEASE_ID"] = strconv.Itoa(cicdRequest.CdRequest.DeploymentReleaseCounter)
