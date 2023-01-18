@@ -19,6 +19,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	_ "github.com/aws/aws-sdk-go/aws"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
@@ -115,8 +116,21 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["TRIGGER_BY_AUTHOR"] = cicdRequest.CiRequest.TriggerByAuthor
 		envs["DOCKER_IMAGE"] = image
 		envs["PIPELINE_NAME"] = cicdRequest.CiRequest.PipelineName
-		envs["APP_NAME"] = cicdRequest.CiRequest.AppName
-		envs["GIT_HASH"] = cicdRequest.CiRequest.CiProjectDetails[0].CommitHash
+		if len(cicdRequest.CiRequest.CiProjectDetails) > 1 {
+			envs["MULTI_GIT"] = "true"
+		}
+		gitHashArr := ""
+		CheckoutPathArr := ""
+		SourceValueArr := ""
+		for _, ciProjectDetail := range cicdRequest.CiRequest.CiProjectDetails {
+			gitHashArr = gitHashArr + fmt.Sprintf("%s,", ciProjectDetail.CommitHash)
+			CheckoutPathArr = CheckoutPathArr + fmt.Sprintf("%s,", ciProjectDetail.CheckoutPath)
+			SourceValueArr = SourceValueArr + fmt.Sprintf("%s,", ciProjectDetail.SourceValue)
+		}
+		envs["GIT_HASHES"] = gitHashArr
+		envs["CHECKOUT_PATHS"] = CheckoutPathArr
+		envs["SOURCE_VALUES"] = SourceValueArr
+
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
 		envs["DEPLOYMENT_RELEASE_ID"] = strconv.Itoa(cicdRequest.CdRequest.DeploymentReleaseCounter)
