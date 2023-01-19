@@ -127,7 +127,7 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 			GitRepoSplit := strings.Split(ciProjectDetail.GitRepository, "/")
 			GitRepoName := GitRepoSplit[len(GitRepoSplit)-1]
 			CiMaterialRequestArr = CiMaterialRequestArr +
-				fmt.Sprintf("%s|%s|%s|%s||", GitRepoName, ciProjectDetail.CheckoutPath, ciProjectDetail.SourceValue, ciProjectDetail.CommitHash)
+				fmt.Sprintf("%s,%s,%s,%s|", GitRepoName, ciProjectDetail.CheckoutPath, ciProjectDetail.SourceValue, ciProjectDetail.CommitHash)
 		}
 		envs["GIT_MATERIAL_REQUEST"] = CiMaterialRequestArr
 		log.Println("git material request", envs["GIT_MATERIAL_REQUEST"])
