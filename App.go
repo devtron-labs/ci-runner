@@ -124,8 +124,8 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		CiMaterialRequestArr := ""
 
 		for _, ciProjectDetail := range cicdRequest.CiRequest.CiProjectDetails {
-			GitRepoSplit := strings.Split(ciProjectDetail.GitRepository, "/")
-			GitRepoName := GitRepoSplit[len(GitRepoSplit)-1]
+			GitRepoSplit := strings.Split(ciProjectDetail.GitRepository, "/")       //  ciProjectDetail.GitRepository = "https://github.com/devtron-labs/devtron.git"
+			GitRepoName := strings.Split(GitRepoSplit[len(GitRepoSplit)-1], ".")[0] // GitRepoSplit = devtron.git, GitRepoName=devtron
 			CiMaterialRequestArr = CiMaterialRequestArr +
 				fmt.Sprintf("%s,%s,%s,%s|", GitRepoName, ciProjectDetail.CheckoutPath, ciProjectDetail.SourceValue, ciProjectDetail.CommitHash)
 		}
