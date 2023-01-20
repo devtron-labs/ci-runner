@@ -116,10 +116,6 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["APP_NAME"] = cicdRequest.CiRequest.AppName
 		envs["TRIGGER_BY_AUTHOR"] = cicdRequest.CiRequest.TriggerByAuthor
 		envs["DOCKER_IMAGE"] = image
-		envs["PIPELINE_NAME"] = cicdRequest.CiRequest.PipelineName
-		if len(cicdRequest.CiRequest.CiProjectDetails) > 1 {
-			envs["MULTI_GIT"] = "true"
-		}
 
 		CiMaterialRequestArr := ""
 
