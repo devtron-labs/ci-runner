@@ -227,8 +227,8 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 
 	var digest string
-	skipBuildEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.SKIP_BUILD_BUILD_TYPE
-	if !skipBuildEnabled {
+	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
+	if !buildSkipEnabled {
 		isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && ciBuildConfigBean.DockerBuildConfig.TargetPlatform != ""
 		if isBuildX {
 			digest, err = helper.ExtractDigestForBuildx(dest)
