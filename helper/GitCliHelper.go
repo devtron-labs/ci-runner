@@ -69,20 +69,6 @@ func (impl *GitUtil) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnv
 	}
 	return output, "", nil
 }
-
-func (impl *GitUtil) InitCLI(rootDir string, remoteUrl string) error {
-
-	err := os.MkdirAll(rootDir, 0755)
-	if err != nil {
-		return err
-	}
-	command := "cd " + rootDir + " && git init && git remote add " + git.DefaultRemoteName + " " + remoteUrl
-	cmd := exec.Command("/bin/sh", "-c", command)
-	output, errMsg, err := impl.runCommand(cmd)
-	log.Println(util.DEVTRON, "git init output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
-	return err
-}
-
 func (impl *GitUtil) Init(rootDir string, remoteUrl string, isBare bool) error {
 
 	//-----------------
