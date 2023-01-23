@@ -69,6 +69,7 @@ func (impl *GitUtil) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnv
 	}
 	return output, "", nil
 }
+
 func (impl *GitUtil) Init(rootDir string, remoteUrl string, isBare bool) error {
 
 	//-----------------
@@ -93,6 +94,7 @@ func (impl *GitUtil) Clone(rootDir string, remoteUrl string, username string, pa
 	if err != nil {
 		return "", "", err
 	}
+
 	response, errMsg, err = impl.Fetch(rootDir, username, password)
 	return response, errMsg, err
 }
