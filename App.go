@@ -146,10 +146,17 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 }
 
 func getSystemEnvVariables() map[string]string {
-	envKeys := []string{"HOME", "PATH", "DOCKER_VERSION", "DOCKER_TLS_CERTDIR", "HOSTNAME", "KUBERNETES_PORT", "KUBERNETES_SERVICE_PORT"}
 	envs := make(map[string]string)
-	for _, key := range envKeys {
-		envs[key] = os.Getenv(key)
+	//envKeys := []string{"HOME", "PATH", "DOCKER_VERSION", "DOCKER_TLS_CERTDIR", "HOSTNAME", "KUBERNETES_PORT", "KUBERNETES_SERVICE_PORT"}
+	//for _, key := range envKeys {
+	//	envs[key] = os.Getenv(key)
+	//}
+
+	//get all environment variables
+	envVars := os.Environ()
+	for _, envVar := range envVars {
+		a := strings.Split(envVar, "=")
+		envs[a[0]] = a[1]
 	}
 	return envs
 }
@@ -244,19 +251,21 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 
 	var digest string
-	ciBuildConfig := ciBuildConfigBean
-	isBuildX := ciBuildConfig != nil && ciBuildConfig.DockerBuildConfig != nil && ciBuildConfig.DockerBuildConfig.TargetPlatform != ""
-	if isBuildX {
-		digest, err = helper.ExtractDigestForBuildx(dest)
-	} else {
-		util.LogStage("docker push")
-		// push to dest
-		log.Println(util.DEVTRON, " docker-push")
-		err = helper.PushArtifact(dest)
-		if err != nil {
-			return artifactUploaded, err
+	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
+	if !buildSkipEnabled {
+		isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && ciBuildConfigBean.DockerBuildConfig.TargetPlatform != ""
+		if isBuildX {
+			digest, err = helper.ExtractDigestForBuildx(dest)
+		} else {
+			util.LogStage("docker push")
+			// push to dest
+			log.Println(util.DEVTRON, " docker-push")
+			err = helper.PushArtifact(dest)
+			if err != nil {
+				return artifactUploaded, err
+			}
+			digest, err = helper.ExtractDigestUsingPull(dest)
 		}
-		digest, err = helper.ExtractDigestUsingPull(dest)
 	}
 
 	if err != nil {
