@@ -117,15 +117,20 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["TRIGGER_BY_AUTHOR"] = cicdRequest.CiRequest.TriggerByAuthor
 		envs["DOCKER_IMAGE"] = image
 
+		//adding GIT_MATERIAL_REQUEST in env for semgrep plugin
 		CiMaterialRequestArr := ""
-
-		for _, ciProjectDetail := range cicdRequest.CiRequest.CiProjectDetails {
-			GitRepoSplit := strings.Split(ciProjectDetail.GitRepository, "/")       //  ciProjectDetail.GitRepository = "https://github.com/devtron-labs/devtron.git"
-			GitRepoName := strings.Split(GitRepoSplit[len(GitRepoSplit)-1], ".")[0] // GitRepoSplit = devtron.git, GitRepoName=devtron
-			CiMaterialRequestArr = CiMaterialRequestArr +
-				fmt.Sprintf("%s,%s,%s,%s|", GitRepoName, ciProjectDetail.CheckoutPath, ciProjectDetail.SourceValue, ciProjectDetail.CommitHash)
+		if cicdRequest.CiRequest.CiProjectDetails != nil {
+			for _, ciProjectDetail := range cicdRequest.CiRequest.CiProjectDetails {
+				GitRepoSplit := strings.Split(ciProjectDetail.GitRepository, "/")
+				GitRepoName := ""
+				if len(GitRepoSplit) > 0 {
+					GitRepoName = strings.Split(GitRepoSplit[len(GitRepoSplit)-1], ".")[0]
+				}
+				CiMaterialRequestArr = CiMaterialRequestArr +
+					fmt.Sprintf("%s,%s,%s,%s|", GitRepoName, ciProjectDetail.CheckoutPath, ciProjectDetail.SourceValue, ciProjectDetail.CommitHash)
+			}
 		}
-		envs["GIT_MATERIAL_REQUEST"] = CiMaterialRequestArr
+		envs["GIT_MATERIAL_REQUEST"] = CiMaterialRequestArr // GIT_MATERIAL_REQUEST will be of form "<repoName>/<checkoutPath>/<BranchName>/<CommitHash>"
 
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
