@@ -131,7 +131,7 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 			}
 		}
 		envs["GIT_MATERIAL_REQUEST"] = CiMaterialRequestArr // GIT_MATERIAL_REQUEST will be of form "<repoName>/<checkoutPath>/<BranchName>/<CommitHash>"
-
+		fmt.Println(envs["GIT_MATERIAL_REQUEST"])
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
 		envs["DEPLOYMENT_RELEASE_ID"] = strconv.Itoa(cicdRequest.CdRequest.DeploymentReleaseCounter)
