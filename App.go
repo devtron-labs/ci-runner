@@ -147,11 +147,6 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 
 func getSystemEnvVariables() map[string]string {
 	envs := make(map[string]string)
-	//envKeys := []string{"HOME", "PATH", "DOCKER_VERSION", "DOCKER_TLS_CERTDIR", "HOSTNAME", "KUBERNETES_PORT", "KUBERNETES_SERVICE_PORT"}
-	//for _, key := range envKeys {
-	//	envs[key] = os.Getenv(key)
-	//}
-
 	//get all environment variables
 	envVars := os.Environ()
 	for _, envVar := range envVars {
