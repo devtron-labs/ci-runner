@@ -43,7 +43,7 @@ type CiBuildType string
 const (
 	SELF_DOCKERFILE_BUILD_TYPE    CiBuildType = "self-dockerfile-build"
 	MANAGED_DOCKERFILE_BUILD_TYPE CiBuildType = "managed-dockerfile-build"
-	SKIP_BUILD_BUILD_TYPE         CiBuildType = "skip-build"
+	BUILD_SKIP_BUILD_TYPE         CiBuildType = "skip-build"
 	BUILDPACK_BUILD_TYPE          CiBuildType = "buildpack-build"
 )
 

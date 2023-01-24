@@ -19,14 +19,15 @@ package main
 
 import (
 	"encoding/json"
-	"strconv"
-
+	"fmt"
 	_ "github.com/aws/aws-sdk-go/aws"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 func main() {
@@ -115,6 +116,22 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["APP_NAME"] = cicdRequest.CiRequest.AppName
 		envs["TRIGGER_BY_AUTHOR"] = cicdRequest.CiRequest.TriggerByAuthor
 		envs["DOCKER_IMAGE"] = image
+
+		//adding GIT_MATERIAL_REQUEST in env for semgrep plugin
+		CiMaterialRequestArr := ""
+		if cicdRequest.CiRequest.CiProjectDetails != nil {
+			for _, ciProjectDetail := range cicdRequest.CiRequest.CiProjectDetails {
+				GitRepoSplit := strings.Split(ciProjectDetail.GitRepository, "/")
+				GitRepoName := ""
+				if len(GitRepoSplit) > 0 {
+					GitRepoName = strings.Split(GitRepoSplit[len(GitRepoSplit)-1], ".")[0]
+				}
+				CiMaterialRequestArr = CiMaterialRequestArr +
+					fmt.Sprintf("%s,%s,%s,%s|", GitRepoName, ciProjectDetail.CheckoutPath, ciProjectDetail.SourceValue, ciProjectDetail.CommitHash)
+			}
+		}
+		envs["GIT_MATERIAL_REQUEST"] = CiMaterialRequestArr // GIT_MATERIAL_REQUEST will be of form "<repoName>/<checkoutPath>/<BranchName>/<CommitHash>"
+		fmt.Println(envs["GIT_MATERIAL_REQUEST"])
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
 		envs["DEPLOYMENT_RELEASE_ID"] = strconv.Itoa(cicdRequest.CdRequest.DeploymentReleaseCounter)
@@ -129,10 +146,12 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 }
 
 func getSystemEnvVariables() map[string]string {
-	envKeys := []string{"HOME", "PATH", "DOCKER_VERSION", "DOCKER_TLS_CERTDIR", "HOSTNAME", "KUBERNETES_PORT", "KUBERNETES_SERVICE_PORT"}
 	envs := make(map[string]string)
-	for _, key := range envKeys {
-		envs[key] = os.Getenv(key)
+	//get all environment variables
+	envVars := os.Environ()
+	for _, envVar := range envVars {
+		a := strings.Split(envVar, "=")
+		envs[a[0]] = a[1]
 	}
 	return envs
 }
@@ -227,19 +246,21 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 
 	var digest string
-	ciBuildConfig := ciBuildConfigBean
-	isBuildX := ciBuildConfig != nil && ciBuildConfig.DockerBuildConfig != nil && ciBuildConfig.DockerBuildConfig.TargetPlatform != ""
-	if isBuildX {
-		digest, err = helper.ExtractDigestForBuildx(dest)
-	} else {
-		util.LogStage("docker push")
-		// push to dest
-		log.Println(util.DEVTRON, " docker-push")
-		err = helper.PushArtifact(dest)
-		if err != nil {
-			return artifactUploaded, err
+	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
+	if !buildSkipEnabled {
+		isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && ciBuildConfigBean.DockerBuildConfig.TargetPlatform != ""
+		if isBuildX {
+			digest, err = helper.ExtractDigestForBuildx(dest)
+		} else {
+			util.LogStage("docker push")
+			// push to dest
+			log.Println(util.DEVTRON, " docker-push")
+			err = helper.PushArtifact(dest)
+			if err != nil {
+				return artifactUploaded, err
+			}
+			digest, err = helper.ExtractDigestUsingPull(dest)
 		}
-		digest, err = helper.ExtractDigestUsingPull(dest)
 	}
 
 	if err != nil {
