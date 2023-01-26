@@ -429,7 +429,7 @@ func setupCacheForBuildx(localCachePath string, oldCacheBuildxPath string) error
 }
 
 func createBuildxBuilder() error {
-	multiPlatformCmd := "docker buildx create --driver remote --driver-opt cacert=/devtroncd/certs/client/ca.pem,cert=/devtroncd/certs/client/cert.pem,key=/devtroncd/certs/client/key.pem  tcp://buildkitd.default:1234 --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'"
+	multiPlatformCmd := "docker buildx create --driver remote --driver-opt cacert=/devtroncd/certs/client/ca.pem,cert=/devtroncd/certs/client/cert.pem,key=/devtroncd/certs/client/key.pem  tcp://buildkitd.default:1234 --use"
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
 	err := util.RunCommand(dockerBuildCMD)
