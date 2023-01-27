@@ -18,6 +18,7 @@
 package helper
 
 import (
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -50,6 +51,7 @@ func GetCache(ciRequest *CiRequest) error {
 		}
 		if buildxConfigured {
 			cachePath = util.LOCAL_BUILDX_CACHE_LOCATION
+			os.MkdirAll(cachePath, fs.ModeDir)
 		}
 		pvcPath := util.BUILD_CACHE_SUB_FOLDER_PVC
 		copyContent := "cp -R " + pvcPath + " " + cachePath
