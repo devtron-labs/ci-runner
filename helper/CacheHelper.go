@@ -39,8 +39,8 @@ func GetCache(ciRequest *CiRequest) error {
 
 	// if pvc enabled, no need to download, copy content from pvc to var/lib/docker else flow continues
 	if ciRequest.IsPvcMounted {
-		cachePath := "/var/lib/docker/"
-		pvcPath := "/devtroncd-cache/"
+		cachePath := "/var/lib/docker"
+		pvcPath := "/devtroncd-cache/*"
 		copyContent := "cp -R " + pvcPath + " " + cachePath
 		copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
 		err := util.RunCommand(copyContentCmd)
@@ -105,8 +105,8 @@ func SyncCache(ciRequest *CiRequest) error {
 
 	// if cache is disabled then copy contents from var/lib/docker into pvc else the flow continues
 	if ciRequest.IsPvcMounted {
-		pvcPath := "/devtroncd-cache/"
-		srcPath := "/var/lib/docker/"
+		pvcPath := "/devtroncd-cache"
+		srcPath := "/var/lib/docker/*"
 		copyContent := "cp -R " + srcPath + " " + pvcPath
 		copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
 		err = util.RunCommand(copyContentCmd)
