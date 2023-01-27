@@ -128,6 +128,7 @@ type CiRequest struct {
 	CiBuildConfig               *CiBuildConfigBean                `json:"ciBuildConfig"`
 	CiBuildDockerMtuValue       int                               `json:"ciBuildDockerMtuValue"`
 	IsPvcMounted                bool                              `json:"IsPvcMounted"`
+	CacheInvalidate             bool                              `json:"cacheInvalidate"`
 }
 
 type CdRequest struct {

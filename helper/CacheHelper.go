@@ -31,7 +31,7 @@ func GetCache(ciRequest *CiRequest) error {
 		log.Println("ignoring cache as storage module not configured ... ") //TODO not needed
 		return nil
 	}
-	if ciRequest.IgnoreDockerCachePull {
+	if ciRequest.CacheInvalidate {
 		log.Println("ignoring cache ... ")
 		return nil
 	}
@@ -49,6 +49,10 @@ func GetCache(ciRequest *CiRequest) error {
 			return err
 		}
 	} else {
+		if ciRequest.IgnoreDockerCachePull {
+			log.Println("ignoring cache ... ")
+			return nil
+		}
 		//----------download file
 		blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
 		request := createBlobStorageRequestForCache(ciRequest.CloudProvider, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName, ciRequest.BlobStorageS3Config, ciRequest.AzureBlobConfig, ciRequest.GcpBlobConfig)
