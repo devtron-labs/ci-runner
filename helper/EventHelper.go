@@ -127,6 +127,7 @@ type CiRequest struct {
 	TriggerByAuthor             string                            `json:"triggerByAuthor"`
 	CiBuildConfig               *CiBuildConfigBean                `json:"ciBuildConfig"`
 	CiBuildDockerMtuValue       int                               `json:"ciBuildDockerMtuValue"`
+	IsPvcMounted                bool                              `json:"IsPvcMounted"`
 }
 
 type CdRequest struct {

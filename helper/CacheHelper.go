@@ -37,25 +37,38 @@ func GetCache(ciRequest *CiRequest) error {
 	}
 	log.Println("setting build cache ...............")
 
-	//----------download file
-	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
-	request := createBlobStorageRequestForCache(ciRequest.CloudProvider, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName, ciRequest.BlobStorageS3Config, ciRequest.AzureBlobConfig, ciRequest.GcpBlobConfig)
-	downloadSuccess, bytesSize, err := blobStorageService.Get(request)
-	if bytesSize >= ciRequest.CacheLimit {
-		log.Println(util.DEVTRON, " cache upper limit exceeded, ignoring old cache")
-		downloadSuccess = false
-	}
-
-	// Extract cache
-	if err == nil && downloadSuccess {
-		extractCmd := exec.Command("tar", "-xvzf", ciRequest.CiCacheFileName)
-		extractCmd.Dir = "/"
-		err = extractCmd.Run()
+	// if pvc enabled, no need to download, copy content from pvc to var/lib/docker else flow continues
+	if ciRequest.IsPvcMounted {
+		cachePath := "/var/lib/docker"
+		pvcPath := "/devtroncd-cache"
+		copyContent := "cp -R " + pvcPath + " " + cachePath
+		copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
+		err := util.RunCommand(copyContentCmd)
 		if err != nil {
-			log.Fatal(" Could not extract cache blob ", err)
+			log.Println(err)
+			return err
 		}
-	} else if err != nil {
-		log.Println(util.DEVTRON, "build cache error", err.Error())
+	} else {
+		//----------download file
+		blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
+		request := createBlobStorageRequestForCache(ciRequest.CloudProvider, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName, ciRequest.BlobStorageS3Config, ciRequest.AzureBlobConfig, ciRequest.GcpBlobConfig)
+		downloadSuccess, bytesSize, err := blobStorageService.Get(request)
+		if bytesSize >= ciRequest.CacheLimit {
+			log.Println(util.DEVTRON, " cache upper limit exceeded, ignoring old cache")
+			downloadSuccess = false
+		}
+
+		// Extract cache
+		if err == nil && downloadSuccess {
+			extractCmd := exec.Command("tar", "-xvzf", ciRequest.CiCacheFileName)
+			extractCmd.Dir = "/"
+			err = extractCmd.Run()
+			if err != nil {
+				log.Fatal(" Could not extract cache blob ", err)
+			}
+		} else if err != nil {
+			log.Println(util.DEVTRON, "build cache error", err.Error())
+		}
 	}
 	return nil
 }
@@ -65,7 +78,7 @@ func SyncCache(ciRequest *CiRequest) error {
 		log.Println("ignoring cache as storage module not configured... ")
 		return nil
 	}
-	if ciRequest.IgnoreDockerCachePush {
+	if ciRequest.IgnoreDockerCachePush && !ciRequest.IsPvcMounted {
 		log.Println("ignoring cache as cache push is disabled... ")
 		return nil
 	}
@@ -86,24 +99,38 @@ func SyncCache(ciRequest *CiRequest) error {
 		cachePath = "/var/lib/docker"
 	}
 
-	tarCmd := exec.Command("tar", "-cvzf", ciRequest.CiCacheFileName, cachePath)
-	tarCmd.Dir = "/"
-	err = tarCmd.Run()
-	if err != nil {
-		log.Fatal("Could not compress cache", err)
+	// if cache is disabled then copy contents from var/lib/docker into pvc else the flow continues
+	if ciRequest.IsPvcMounted {
+		pvcPath := "/devtroncd-cache"
+		copyContent := "cp -R " + cachePath + " " + pvcPath
+		copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
+		err = util.RunCommand(copyContentCmd)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		return nil
+	} else {
+		tarCmd := exec.Command("tar", "-cvzf", ciRequest.CiCacheFileName, cachePath)
+		tarCmd.Dir = "/"
+		err = tarCmd.Run()
+		if err != nil {
+			log.Fatal("Could not compress cache", err)
+		}
+
+		//aws s3 cp cache.tar.gz s3://ci-caching/
+		//----------upload file
+
+		log.Println(util.DEVTRON, " -----> pushing new cache")
+		blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
+		request := createBlobStorageRequestForCache(ciRequest.CloudProvider, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName, ciRequest.BlobStorageS3Config, ciRequest.AzureBlobConfig, ciRequest.GcpBlobConfig)
+		err = blobStorageService.PutWithCommand(request)
+		if err != nil {
+			log.Println(util.DEVTRON, " -----> push err", err)
+		}
+		return err
 	}
 
-	//aws s3 cp cache.tar.gz s3://ci-caching/
-	//----------upload file
-
-	log.Println(util.DEVTRON, " -----> pushing new cache")
-	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
-	request := createBlobStorageRequestForCache(ciRequest.CloudProvider, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName, ciRequest.BlobStorageS3Config, ciRequest.AzureBlobConfig, ciRequest.GcpBlobConfig)
-	err = blobStorageService.PutWithCommand(request)
-	if err != nil {
-		log.Println(util.DEVTRON, " -----> push err", err)
-	}
-	return err
 }
 
 func createBlobStorageRequestForCache(cloudProvider blob_storage.BlobStorageType, sourceKey string, destinationKey string, blobStorageS3Config *blob_storage.BlobStorageS3Config, azureBlobConfig *blob_storage.AzureBlobConfig, gcpBlobConfig *blob_storage.GcpBlobConfig) *blob_storage.BlobStorageRequest {
