@@ -40,6 +40,9 @@ func GetCache(ciRequest *CiRequest) error {
 	// if pvc enabled, no need to download, copy content from pvc to var/lib/docker else flow continues
 	if ciRequest.IsPvcMounted {
 		cachePath := "/var/lib/docker"
+		if isBuildxConfigured(ciRequest) {
+			cachePath = util.LOCAL_BUILDX_CACHE_LOCATION
+		}
 		pvcPath := "/devtroncd-cache/*"
 		copyContent := "cp -R " + pvcPath + " " + cachePath
 		copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
@@ -95,9 +98,7 @@ func SyncCache(ciRequest *CiRequest) error {
 	// Generate new cache
 	log.Println("Generating new cache")
 	var cachePath string
-	ciBuildConfig := ciRequest.CiBuildConfig
-	if (ciBuildConfig.CiBuildType == SELF_DOCKERFILE_BUILD_TYPE || ciBuildConfig.CiBuildType == MANAGED_DOCKERFILE_BUILD_TYPE) &&
-		ciBuildConfig.DockerBuildConfig.TargetPlatform != "" {
+	if isBuildxConfigured(ciRequest) {
 		cachePath = util.LOCAL_BUILDX_CACHE_LOCATION
 	} else {
 		cachePath = "/var/lib/docker"
@@ -106,7 +107,7 @@ func SyncCache(ciRequest *CiRequest) error {
 	// if cache is disabled then copy contents from var/lib/docker into pvc else the flow continues
 	if ciRequest.IsPvcMounted {
 		pvcPath := "/devtroncd-cache"
-		srcPath := "/var/lib/docker/*"
+		srcPath := cachePath + "/*"
 		copyContent := "cp -R " + srcPath + " " + pvcPath
 		copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
 		err = util.RunCommand(copyContentCmd)
@@ -136,6 +137,16 @@ func SyncCache(ciRequest *CiRequest) error {
 		return err
 	}
 
+}
+
+func isBuildxConfigured(ciRequest *CiRequest) bool {
+	isBuildxConfig := false
+	ciBuildConfig := ciRequest.CiBuildConfig
+	ciBuildType := ciBuildConfig.CiBuildType
+	if ciBuildType == SELF_DOCKERFILE_BUILD_TYPE || ciBuildType == MANAGED_DOCKERFILE_BUILD_TYPE {
+		isBuildxConfig = ciBuildConfig.DockerBuildConfig.TargetPlatform != ""
+	}
+	return isBuildxConfig
 }
 
 func createBlobStorageRequestForCache(cloudProvider blob_storage.BlobStorageType, sourceKey string, destinationKey string, blobStorageS3Config *blob_storage.BlobStorageS3Config, azureBlobConfig *blob_storage.AzureBlobConfig, gcpBlobConfig *blob_storage.GcpBlobConfig) *blob_storage.BlobStorageRequest {
