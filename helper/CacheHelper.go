@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 
 	"github.com/devtron-labs/ci-runner/util"
 	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
@@ -40,10 +41,17 @@ func GetCache(ciRequest *CiRequest) error {
 	// if pvc enabled, no need to download, copy content from pvc to var/lib/docker else flow continues
 	if ciRequest.IsPvcMounted {
 		cachePath := "/var/lib/docker"
-		if isBuildxConfigured(ciRequest) {
+		buildxConfigured := isBuildxConfigured(ciRequest)
+		// check last build with buildx or not, if not matching then can ignore cache
+		matches := lastAndCurrentBuildTypeSame(buildxConfigured)
+		if !matches {
+			log.Println("ignoring cache as build type changed... ")
+			return nil
+		}
+		if buildxConfigured {
 			cachePath = util.LOCAL_BUILDX_CACHE_LOCATION
 		}
-		pvcPath := "/devtroncd-cache/*"
+		pvcPath := util.BUILD_CACHE_SUB_FOLDER_PVC
 		copyContent := "cp -R " + pvcPath + " " + cachePath
 		copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
 		err := util.RunCommand(copyContentCmd)
@@ -80,6 +88,29 @@ func GetCache(ciRequest *CiRequest) error {
 	return nil
 }
 
+func lastAndCurrentBuildTypeSame(buildxConfigured bool) bool {
+	_, err := os.Stat(util.BUILDX_CONFIGURED_FILE)
+	if err != nil {
+		return !buildxConfigured
+	}
+	return buildxConfigured
+}
+
+func setCurrentBuildTypeSignature(buildxConfigured bool) {
+	currentBuildTypeSame := lastAndCurrentBuildTypeSame(buildxConfigured)
+	if !currentBuildTypeSame {
+		dir, err := os.ReadDir(util.BUILD_CACHE_FOLDER_PVC)
+		if err == nil {
+			for _, d := range dir {
+				os.RemoveAll(path.Join([]string{util.BUILD_CACHE_FOLDER_PVC, d.Name()}...))
+			}
+		}
+	}
+	if buildxConfigured {
+		os.Create(util.BUILDX_CONFIGURED_FILE)
+	}
+}
+
 func SyncCache(ciRequest *CiRequest) error {
 	if !ciRequest.BlobStorageConfigured {
 		log.Println("ignoring cache as storage module not configured... ")
@@ -98,15 +129,18 @@ func SyncCache(ciRequest *CiRequest) error {
 	// Generate new cache
 	log.Println("Generating new cache")
 	var cachePath string
-	if isBuildxConfigured(ciRequest) {
+	buildxConfigured := isBuildxConfigured(ciRequest)
+	if buildxConfigured {
 		cachePath = util.LOCAL_BUILDX_CACHE_LOCATION
 	} else {
 		cachePath = "/var/lib/docker"
 	}
 
-	// if cache is disabled then copy contents from var/lib/docker into pvc else the flow continues
+	// if cache is disabled then copy contents from cache path into pvc else the flow continues
 	if ciRequest.IsPvcMounted {
-		pvcPath := "/devtroncd-cache"
+		//set last build with buildx or not, if not matches then remove the content
+		setCurrentBuildTypeSignature(buildxConfigured)
+		pvcPath := util.BUILD_CACHE_FOLDER_PVC
 		srcPath := cachePath + "/*"
 		copyContent := "cp -R " + srcPath + " " + pvcPath
 		copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
