@@ -32,11 +32,7 @@ func GetCache(ciRequest *CiRequest) error {
 		return nil
 	}
 	if ciRequest.IgnoreDockerCachePull || ciRequest.CacheInvalidate {
-		if ciRequest.IgnoreDockerCachePull && ciRequest.IsPvcMounted {
-			log.Println("setting cache from mounted pvc ... ")
-		} else {
-			log.Println("ignoring cache ... ")
-		}
+		log.Println("ignoring cache ... ")
 		return nil
 	}
 	log.Println("setting build cache ...............")
