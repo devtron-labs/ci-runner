@@ -31,7 +31,7 @@ func GetCache(ciRequest *CiRequest) error {
 		log.Println("ignoring cache as storage module not configured ... ") //TODO not needed
 		return nil
 	}
-	if ciRequest.IgnoreDockerCachePull {
+	if ciRequest.IgnoreDockerCachePull || ciRequest.CacheInvalidate {
 		log.Println("ignoring cache ... ")
 		return nil
 	}
