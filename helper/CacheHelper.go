@@ -35,7 +35,7 @@ func GetCache(ciRequest *CiRequest) error {
 		if ciRequest.CacheInvalidate {
 			log.Println("ignoring cache ... ")
 		} else if ciRequest.IsPvcMounted {
-			log.Println("setting cache from mounted pvc... ")
+			log.Println("setting pvc... ")
 		} else {
 			log.Println("ignoring cache ... ")
 		}
