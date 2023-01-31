@@ -27,8 +27,6 @@ const RETRYCOUNT = 10
 const WORKINGDIR = "/devtroncd"
 const LOCAL_BUILDX_LOCATION = "/var/lib/devtron/buildx"
 const LOCAL_BUILDX_CACHE_LOCATION = LOCAL_BUILDX_LOCATION + "/cache"
-const BUILD_CACHE_FOLDER_PVC = "/devtroncd-cache"
-const BUILD_CACHE_SUB_FOLDER_PVC = BUILD_CACHE_FOLDER_PVC + "/*"
 
 const CIEVENT = "CI"
 const CDSTAGE = "CD"
