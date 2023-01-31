@@ -130,7 +130,6 @@ type CiRequest struct {
 	CiBuildDockerMtuValue       int                               `json:"ciBuildDockerMtuValue"`
 	CacheInvalidate             bool                              `json:"cacheInvalidate"`
 	IsPvcMounted                bool                              `json:"IsPvcMounted"`
-	PvcCachePath                string                            `json:"pvcCachePath"`
 }
 
 type CdRequest struct {
