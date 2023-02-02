@@ -25,6 +25,7 @@ COPY ./git-ask-pass.sh /git-ask-pass.sh
 RUN chmod +x /git-ask-pass.sh
 RUN rm -rf ./.docker
 RUN mkdir -p /devtroncd
+RUN chown -R podman /devtroncd
 
 RUN cd /usr/bin \
     && ln -s podman docker
