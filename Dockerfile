@@ -23,7 +23,7 @@ COPY ./podman/registeries.conf /etc/containers/registries.conf
 COPY ./buildpack.json /buildpack.json
 COPY ./git-ask-pass.sh /git-ask-pass.sh
 RUN chmod +x /git-ask-pass.sh
-RUN chown rm -rf ./.docker
+RUN rm -rf ./.docker
 
 RUN cd /usr/bin \
     && ln -s podman docker
