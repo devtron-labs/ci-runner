@@ -99,7 +99,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 
 		_, msgMsg, cErr := gitCli.Clone(filepath.Join(util.WORKINGDIR, prj.CheckoutPath), prj.GitRepository, auth.Username, auth.Password)
 		if cErr != nil {
-			log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
+			log.Fatal("could not clone repo ", "msgMsg", msgMsg, " err ", cErr)
 		}
 
 		// checkout code
@@ -117,7 +117,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			log.Println("checkout commit in branch fix : ", checkoutSource)
 			msgMsg, cErr = Checkout(gitCli, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, auth.Username, auth.Password, prj.GitRepository)
 			if cErr != nil {
-				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
+				log.Fatal("could not checkout hash ", "msgMsg", msgMsg, " err ", cErr)
 			}
 
 		} else if prj.SourceType == SOURCE_TYPE_WEBHOOK {
@@ -135,7 +135,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			// checkout target hash
 			msgMsg, cErr = Checkout(gitCli, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, auth.Username, auth.Password, prj.GitRepository)
 			if cErr != nil {
-				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
+				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " msgMsg", msgMsg, " err ", cErr)
 				return cErr
 			}
 
@@ -153,7 +153,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 				// merge source
 				_, msgMsg, cErr = gitCli.Merge(filepath.Join(util.WORKINGDIR, prj.CheckoutPath), sourceCheckout)
 				if cErr != nil {
-					log.Fatal("could not merge ", "sourceCheckout ", sourceCheckout, " err ", cErr, " msgMsg", msgMsg)
+					log.Fatal("could not merge ", "sourceCheckout ", sourceCheckout, " msgMsg", msgMsg, " err ", cErr)
 					return cErr
 				}
 

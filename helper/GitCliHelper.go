@@ -24,7 +24,11 @@ func (impl *GitUtil) Fetch(rootDir string, username string, password string) (re
 	log.Println(util.DEVTRON, "git fetch ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
 	output, errMsg, err := impl.runCommandWithCred(cmd, username, password)
-	log.Println(util.DEVTRON, "fetch output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
+	log.Println(util.DEVTRON, "fetch output", "root", rootDir, "opt", output)
+	if len(errMsg) > 0 || err != nil {
+		log.Println("fetch output err, MSG: ", errMsg, " , err:", err)
+		return output, errMsg, err
+	}
 	return output, "", nil
 }
 
@@ -32,7 +36,11 @@ func (impl *GitUtil) Checkout(rootDir string, checkout string) (response, errMsg
 	log.Println(util.DEVTRON, "git checkout ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "checkout", checkout, "--force")
 	output, errMsg, err := impl.runCommand(cmd)
-	log.Println(util.DEVTRON, "checkout output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
+	log.Println(util.DEVTRON, "checkout output", "root", rootDir, "opt", output)
+	if len(errMsg) > 0 || err != nil {
+		log.Println("checkout output err, MSG: ", errMsg, " , err:", err)
+		return output, errMsg, err
+	}
 	return output, "", nil
 }
 
@@ -105,7 +113,11 @@ func (impl *GitUtil) Merge(rootDir string, commit string) (response, errMsg stri
 	command := "cd " + rootDir + " && git config user.email git@devtron.com && git config user.name Devtron && git merge " + commit + " --no-commit"
 	cmd := exec.Command("/bin/sh", "-c", command)
 	output, errMsg, err := impl.runCommand(cmd)
-	log.Println(util.DEVTRON, "merge output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
+	log.Println(util.DEVTRON, "merge output", "root", rootDir, "opt", output)
+	if len(errMsg) > 0 || err != nil {
+		log.Println("merge output error, MSG: ", errMsg, " , err:", err)
+		return output, errMsg, err
+	}
 	return output, errMsg, err
 }
 
@@ -113,7 +125,11 @@ func (impl *GitUtil) RecursiveFetchSubmodules(rootDir string) (response, errMsg 
 	log.Println(util.DEVTRON, "git recursive fetch submodules ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "submodule", "update", "--init", "--recursive")
 	output, eMsg, err := impl.runCommandForSuppliedNullifiedEnv(cmd, false)
-	log.Println(util.DEVTRON, "recursive fetch submodules output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
+	log.Println(util.DEVTRON, "recursive fetch submodules output", "root", rootDir, "opt", output)
+	if len(errMsg) > 0 || err != nil {
+		log.Println("recursive fetch submodules error, MSG: ", errMsg, " , err:", err)
+		return output, errMsg, err
+	}
 	return output, eMsg, err
 }
 
@@ -121,7 +137,11 @@ func (impl *GitUtil) UpdateCredentialHelper(rootDir string) (response, errMsg st
 	log.Println(util.DEVTRON, "git credential helper store ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "config", "--global", "credential.helper", "store")
 	output, eMsg, err := impl.runCommandForSuppliedNullifiedEnv(cmd, false)
-	log.Println(util.DEVTRON, "git credential helper store output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
+	log.Println(util.DEVTRON, "git credential helper store output", "root", rootDir, "opt")
+	if len(errMsg) > 0 || err != nil {
+		log.Println("git credential helper store output error, MSG: ", errMsg, " , err:", err)
+		return output, errMsg, err
+	}
 	return output, eMsg, err
 }
 
@@ -129,6 +149,10 @@ func (impl *GitUtil) UnsetCredentialHelper(rootDir string) (response, errMsg str
 	log.Println(util.DEVTRON, "git credential helper unset ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "config", "--global", "--unset", "credential.helper")
 	output, eMsg, err := impl.runCommandForSuppliedNullifiedEnv(cmd, false)
-	log.Println(util.DEVTRON, "git credential helper unset output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
+	log.Println(util.DEVTRON, "git credential helper unset output", "root", rootDir, "opt", output)
+	if len(errMsg) > 0 || err != nil {
+		log.Println("git credential helper unset output error, MSG: ", errMsg, " , err:", err)
+		return output, errMsg, err
+	}
 	return output, eMsg, err
 }
