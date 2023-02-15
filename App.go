@@ -133,6 +133,7 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["GIT_MATERIAL_REQUEST"] = CiMaterialRequestArr // GIT_MATERIAL_REQUEST will be of form "<repoName>/<checkoutPath>/<BranchName>/<CommitHash>"
 		fmt.Println(envs["GIT_MATERIAL_REQUEST"])
 
+		// setting extraEnvironmentVariables
 		for k, v := range cicdRequest.CiRequest.ExtraEnvironmentVariables {
 			envs[k] = v
 		}
