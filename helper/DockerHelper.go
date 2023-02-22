@@ -180,7 +180,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	log.Println("rishab-debugger inside DockerHelper.go:", ciRequest)
 	envVars := &EnvironmentVariables{}
 	err = env.Parse(envVars)
 	if err != nil {
@@ -472,6 +472,7 @@ func checkAndCreateDirectory(localCachePath string) error {
 }
 
 func BuildDockerImagePath(ciRequest *CiRequest) (string, error) {
+	log.Println("rishab-debugger inside DockerHelper.go - 2:", ciRequest)
 	dest := ""
 	if DOCKER_REGISTRY_TYPE_DOCKERHUB == ciRequest.DockerRegistryType {
 		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag

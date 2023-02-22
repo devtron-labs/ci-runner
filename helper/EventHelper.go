@@ -254,7 +254,7 @@ func SendCDEvent(cdRequest *CdRequest) error {
 }
 
 func SendEvents(ciRequest *CiRequest, digest string, image string) error {
-
+	log.Println("rishab-debugger inside EventHelper.go:", ciRequest)
 	event := CiCompleteEvent{
 		CiProjectDetails: ciRequest.CiProjectDetails,
 		DockerImage:      image,
@@ -276,6 +276,7 @@ func SendEvents(ciRequest *CiRequest, digest string, image string) error {
 }
 
 func SendCiCompleteEvent(event CiCompleteEvent) error {
+	log.Println("rishab-debugger inside EventHelper.go - 2:", event)
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
@@ -305,6 +306,7 @@ func PublishCDEvent(jsonBody []byte, topic string, cdRequest *CdRequest) error {
 }
 
 func PublishEvent(jsonBody []byte, topic string) error {
+	log.Println("rishab-debugger inside EventHelper.go - 3:", jsonBody)
 	return pubsub.PublishEventsOnNats(jsonBody, topic)
 }
 

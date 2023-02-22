@@ -39,6 +39,7 @@ func PublishEventsOnNats(jsonBody []byte, topic string) error {
 		log.Print(util.DEVTRON, "err", err)
 		return err
 	}
+	log.Println("rishab-debugger inside NatsEventPublisher.go:", jsonBody)
 	err = client.Publish(topic, string(jsonBody))
 	if err != nil {
 		log.Print(util.DEVTRON, "error in publishing event to pubsub client", "topic", topic, "body", string(jsonBody))
