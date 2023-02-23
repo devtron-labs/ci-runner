@@ -46,7 +46,7 @@ func main() {
 		log.Println(util.DEVTRON, " ci-cd request details -----> ", args)
 	}
 
-	log.Println("rishab-debugger inside app.go:", ciCdRequest)
+	log.Println("rishab-debugger inside app.go:", ciCdRequest.CiRequest.DockerImageTag, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerRegistryId)
 	if ciCdRequest.Type == util.CIEVENT {
 
 		ciRequest := ciCdRequest.CiRequest
@@ -167,7 +167,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	if _, err := os.Stat(util.WORKINGDIR); os.IsNotExist(err) {
 		_ = os.Mkdir(util.WORKINGDIR, os.ModeDir)
 	}
-	log.Println("rishab-debugger inside App.go - 2:", ciCdRequest.CiRequest)
+	log.Println("rishab-debugger inside App.go - 2:", ciCdRequest.CiRequest.DockerImageTag, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerRegistryId)
 	// Get ci cache
 	log.Println(util.DEVTRON, " cache-pull")
 	err = helper.GetCache(ciCdRequest.CiRequest)

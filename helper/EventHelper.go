@@ -254,7 +254,7 @@ func SendCDEvent(cdRequest *CdRequest) error {
 }
 
 func SendEvents(ciRequest *CiRequest, digest string, image string) error {
-	log.Println("rishab-debugger inside EventHelper.go:", ciRequest)
+	log.Println("rishab-debugger inside EventHelper.go:", ciRequest.DockerImageTag, ciRequest.DockerRegistryURL, ciRequest.DockerRegistryId)
 	event := CiCompleteEvent{
 		CiProjectDetails: ciRequest.CiProjectDetails,
 		DockerImage:      image,
