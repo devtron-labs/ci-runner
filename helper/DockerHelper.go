@@ -476,6 +476,7 @@ func BuildDockerImagePath(ciRequest *CiRequest) (string, error) {
 	dest := ""
 	if DOCKER_REGISTRY_TYPE_DOCKERHUB == ciRequest.DockerRegistryType {
 		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
+		log.Println("rishab-debugger inside DockerHelper.go - 3 dest-image:", dest)
 	} else {
 		u, err := url.Parse(ciRequest.DockerRegistryURL)
 		if err != nil {
