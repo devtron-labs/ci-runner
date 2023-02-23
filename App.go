@@ -233,6 +233,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 			return artifactUploaded, err
 		}
 	}
+
 	util.LogStage("Build")
 	// build
 	dest, err := helper.BuildArtifact(ciCdRequest.CiRequest) //TODO make it skipable
