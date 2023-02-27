@@ -51,14 +51,17 @@ func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) error {
 	// create file with content
 	err = ioutil.WriteFile(sshPrivateKeyFilePath, []byte(sshPrivateKeyContent), 0600)
 	if err != nil {
+		log.Println("error in .ssh/id_rsa", err)
 		return err
 	}
 
 	sshConfigFilePath := path.Join(userHomeDirectory, SSH_PRIVATE_KEY_DIR, SSH_CONFIG_FILE_NAME)
 
 	if _, err := os.Stat(sshConfigFilePath); os.IsExist(err) {
+		log.Println(".ssh/config exists", " changing the permission to 644")
 		err = os.Chmod(sshConfigFilePath, 0644)
 		if err != nil {
+			log.Println("error in .ssh/config", err)
 			return err
 		}
 	}
