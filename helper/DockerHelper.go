@@ -200,10 +200,18 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	}
 	if ciBuildConfig.CiBuildType == SELF_DOCKERFILE_BUILD_TYPE || ciBuildConfig.CiBuildType == MANAGED_DOCKERFILE_BUILD_TYPE {
 		dockerBuild := "docker build "
+		if ciRequest.CacheInvalidate && ciRequest.IsPvcMounted {
+			dockerBuild = dockerBuild + "--no-cache"
+		}
 		dockerBuildConfig := ciBuildConfig.DockerBuildConfig
 		useBuildx := dockerBuildConfig.TargetPlatform != ""
+		dockerBuildxBuild := "docker buildx build "
 		if useBuildx {
-			dockerBuild = "docker buildx build --platform " + dockerBuildConfig.TargetPlatform + " "
+			if ciRequest.CacheInvalidate && ciRequest.IsPvcMounted {
+				dockerBuild = dockerBuildxBuild + "--no-cache --platform " + dockerBuildConfig.TargetPlatform + " "
+			} else {
+				dockerBuild = dockerBuildxBuild + "--platform " + dockerBuildConfig.TargetPlatform + " "
+			}
 		}
 		dockerBuildFlags := make(map[string]string)
 		dockerBuildArgsMap := dockerBuildConfig.Args
