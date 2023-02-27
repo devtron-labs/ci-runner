@@ -31,6 +31,7 @@ const (
 	SSH_PRIVATE_KEY_DIR       = ".ssh"
 	SSH_PRIVATE_KEY_FILE_NAME = "id_rsa"
 	GIT_CREDENTIAL_FILE_NAME  = ".git-credentials"
+	SSH_CONFIG_FILE_NAME      = "config"
 )
 
 func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) error {
@@ -53,6 +54,14 @@ func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) error {
 		return err
 	}
 
+	sshConfigFilePath := path.Join(userHomeDirectory, SSH_PRIVATE_KEY_DIR, SSH_CONFIG_FILE_NAME)
+
+	if _, err := os.Stat(sshConfigFilePath); os.IsExist(err) {
+		err = os.Chmod(sshConfigFilePath, 0644)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
