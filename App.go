@@ -238,20 +238,21 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	// build
 	dest, err := helper.BuildArtifact(ciCdRequest.CiRequest) //TODO make it skipable
 	if err != nil {
+
+		if len(ciCdRequest.CiRequest.PostCiSteps) > 0 {
+			util.LogStage("running POST-CI steps after build failed")
+			// sending build success as true always as post-ci triggers only if ci gets success
+			scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
+			// run post artifact processing
+			_, err = RunCiSteps(STEP_TYPE_POST, ciCdRequest.CiRequest.PostCiSteps, refStageMap, scriptEnvs, preeCiStageOutVariable)
+			if err != nil {
+				return artifactUploaded, err
+			}
+		}
+
 		return artifactUploaded, err
 	}
 	log.Println(util.DEVTRON, " /Build")
-
-	if len(ciCdRequest.CiRequest.PostCiSteps) > 0 {
-		util.LogStage("running POST-CI steps")
-		// sending build success as true always as post-ci triggers only if ci gets success
-		scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "true"
-		// run post artifact processing
-		_, err = RunCiSteps(STEP_TYPE_POST, ciCdRequest.CiRequest.PostCiSteps, refStageMap, scriptEnvs, preeCiStageOutVariable)
-		if err != nil {
-			return artifactUploaded, err
-		}
-	}
 
 	var digest string
 	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
