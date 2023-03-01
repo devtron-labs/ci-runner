@@ -238,7 +238,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	// build
 	dest, err := helper.BuildArtifact(ciCdRequest.CiRequest) //TODO make it skipable
 	if err != nil {
-		// code-block starts : run post-ci which to run on ci fail
+		// code-block starts : run post-ci which are enabled to run on ci fail
 		postCiStepsToTriggerOnCiFail := getPostCiStepToRunOnCiFail(ciCdRequest.CiRequest.PostCiSteps)
 		if len(postCiStepsToTriggerOnCiFail) > 0 {
 			util.LogStage("Running POST-CI steps which are enabled to RUN even on CI FAIL")
