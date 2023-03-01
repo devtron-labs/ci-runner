@@ -165,7 +165,7 @@ func getSystemEnvVariables() map[string]string {
 func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
 
 	start := time.Now()
-	var met helper.Metrics
+	var met *helper.Metrics
 	artifactUploaded = false
 	err = os.Chdir("/")
 	if err != nil {
@@ -178,7 +178,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 
 	// Get ci cache
 	log.Println(util.DEVTRON, " cache-pull")
-	err = helper.GetCache(ciCdRequest.CiRequest) ///
+	err = helper.GetCache(ciCdRequest.CiRequest)
 	met.CacheDown = time.Since(start).Seconds()
 	if err != nil {
 		return artifactUploaded, err
@@ -191,7 +191,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 	// git handling
 	log.Println(util.DEVTRON, " git")
-	err = helper.CloneAndCheckout(ciCdRequest.CiRequest.CiProjectDetails) ///
+	err = helper.CloneAndCheckout(ciCdRequest.CiRequest.CiProjectDetails)
 	if err != nil {
 		log.Println(util.DEVTRON, "clone err: ", err)
 		return artifactUploaded, err
@@ -310,6 +310,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 
 	log.Println(util.DEVTRON, " event")
+	met.Total = time.Since(start).Seconds()
 	err = helper.SendEvents(ciCdRequest.CiRequest, digest, dest, met)
 	if err != nil {
 		log.Println(err)
