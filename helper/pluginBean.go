@@ -40,6 +40,7 @@ type StepObject struct {
 	SourceCodeMount          *MountPath         `json:"sourceCodeMount"`   // destination path - mountCodeToContainerPath
 	ExtraVolumeMounts        []*MountPath       `json:"extraVolumeMounts"` // filePathMapping
 	ArtifactPaths            []string           `json:"artifactPaths"`
+	TriggerIfParentStageFail bool               `json:"triggerIfParentStageFail"` // to trigger post-ci if ci fails OR to trigger pre-ci scripts if pre-ci operation fails
 }
 
 type MountPath struct {
