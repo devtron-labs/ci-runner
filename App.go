@@ -241,7 +241,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		// code-block starts : run post-ci which to run on ci fail
 		postCiStepsToTriggerOnCiFail := getPostCiStepToRunOnCiFail(ciCdRequest.CiRequest.PostCiSteps)
 		if len(postCiStepsToTriggerOnCiFail) > 0 {
-			util.LogStage("running POST-CI steps which to run on CI fail")
+			util.LogStage("Running POST-CI steps which are enabled to RUN even on CI FAIL")
 			// build success will always be false
 			scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
 			// run post artifact processing
