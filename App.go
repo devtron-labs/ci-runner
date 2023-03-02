@@ -165,7 +165,14 @@ func getSystemEnvVariables() map[string]string {
 func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
 
 	start := time.Now()
-	var met = helper.Metrics{}
+	var met = helper.Metrics{
+		CacheDown: 0,
+		PreCi:     0,
+		Build:     0,
+		PostCi:    0,
+		CacheUp:   0,
+		Total:     0,
+	}
 	artifactUploaded = false
 	err = os.Chdir("/")
 	if err != nil {
