@@ -199,7 +199,7 @@ type CiCompleteEvent struct {
 	WorkflowId       int                `json:"workflowId"`
 	TriggeredBy      int                `json:"triggeredBy"`
 	MaterialType     string             `json:"materialType"`
-	Metrics          string             `json:"metrics"`
+	Metrics          Metrics            `json:"metrics"`
 }
 
 type CdStageCompleteEvent struct {
@@ -264,7 +264,7 @@ func SendCDEvent(cdRequest *CdRequest) error {
 	return nil
 }
 
-func SendEvents(ciRequest *CiRequest, digest string, image string, met *Metrics) error {
+func SendEvents(ciRequest *CiRequest, digest string, image string, met Metrics) error {
 
 	event := CiCompleteEvent{
 		CiProjectDetails: ciRequest.CiProjectDetails,
@@ -276,7 +276,7 @@ func SendEvents(ciRequest *CiRequest, digest string, image string, met *Metrics)
 		WorkflowId:       ciRequest.WorkflowId,
 		TriggeredBy:      ciRequest.TriggeredBy,
 		MaterialType:     "git",
-		Metrics:          "met",
+		Metrics:          met,
 	}
 	err := SendCiCompleteEvent(event)
 	if err != nil {
