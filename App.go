@@ -228,14 +228,18 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 			return artifactUploaded, err
 		}
 	}
-	util.LogStage("Build")
-	// build
-	dest, err := helper.BuildArtifact(ciCdRequest.CiRequest) //TODO make it skipable
-	if err != nil {
-		return artifactUploaded, err
-	}
-	log.Println(util.DEVTRON, " /Build")
 
+	var dest string
+	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
+	if !buildSkipEnabled {
+		util.LogStage("Build")
+		// build
+		dest, err = helper.BuildArtifact(ciCdRequest.CiRequest) //TODO make it skipable
+		if err != nil {
+			return artifactUploaded, err
+		}
+		log.Println(util.DEVTRON, " /Build")
+	}
 	if len(ciCdRequest.CiRequest.PostCiSteps) > 0 {
 		util.LogStage("running POST-CI steps")
 		// run post artifact processing
@@ -246,7 +250,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 
 	var digest string
-	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
+
 	if !buildSkipEnabled {
 		isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && ciBuildConfigBean.DockerBuildConfig.TargetPlatform != ""
 		if isBuildX {

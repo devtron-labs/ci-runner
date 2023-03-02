@@ -168,26 +168,23 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 	return nil
 }
 func BuildArtifact(ciRequest *CiRequest) (string, error) {
-	if ciRequest.DockerUsername != "" && ciRequest.DockerPassword != "" {
-		err := DockerLogin(&DockerCredentials{
-			DockerUsername:     ciRequest.DockerUsername,
-			DockerPassword:     ciRequest.DockerPassword,
-			AwsRegion:          ciRequest.AwsRegion,
-			AccessKey:          ciRequest.AccessKey,
-			SecretKey:          ciRequest.SecretKey,
-			DockerRegistryURL:  ciRequest.DockerRegistryURL,
-			DockerRegistryType: ciRequest.DockerRegistryType,
-		})
-		if err != nil {
-			return "", err
-		}
+	err := DockerLogin(&DockerCredentials{
+		DockerUsername:     ciRequest.DockerUsername,
+		DockerPassword:     ciRequest.DockerPassword,
+		AwsRegion:          ciRequest.AwsRegion,
+		AccessKey:          ciRequest.AccessKey,
+		SecretKey:          ciRequest.SecretKey,
+		DockerRegistryURL:  ciRequest.DockerRegistryURL,
+		DockerRegistryType: ciRequest.DockerRegistryType,
+	})
+	if err != nil {
+		return "", err
 	}
 	envVars := &EnvironmentVariables{}
-	err := env.Parse(envVars)
+	err = env.Parse(envVars)
 	if err != nil {
 		log.Println("Error while parsing environment variables", err)
 	}
-
 	if ciRequest.DockerImageTag == "" {
 		ciRequest.DockerImageTag = "latest"
 	}
