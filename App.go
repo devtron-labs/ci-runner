@@ -173,6 +173,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		CacheUp:   0,
 		Total:     0,
 	}
+
 	artifactUploaded = false
 	err = os.Chdir("/")
 	if err != nil {
