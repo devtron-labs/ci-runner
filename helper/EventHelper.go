@@ -200,6 +200,7 @@ type CiCompleteEvent struct {
 	TriggeredBy      int                `json:"triggeredBy"`
 	MaterialType     string             `json:"materialType"`
 	Metrics          Metrics            `json:"metrics"`
+	AppName          string             `json:"appName"`
 }
 
 type CdStageCompleteEvent struct {
@@ -277,6 +278,7 @@ func SendEvents(ciRequest *CiRequest, digest string, image string, met Metrics) 
 		TriggeredBy:      ciRequest.TriggeredBy,
 		MaterialType:     "git",
 		Metrics:          met,
+		AppName:          ciRequest.AppName,
 	}
 	err := SendCiCompleteEvent(event)
 	if err != nil {
