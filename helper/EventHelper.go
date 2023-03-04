@@ -239,12 +239,18 @@ type PublishRequest struct {
 }
 
 type Metrics struct {
-	CacheDown float64 `json:"cache_down"`
-	PreCi     float64 `json:"pre_ci"`
-	Build     float64 `json:"build"`
-	PostCi    float64 `json:"post_ci"`
-	CacheUp   float64 `json:"cache_up"`
-	Total     float64 `json:"total"`
+	CacheDownDuration float64   `json:"cache_down_duration"`
+	PreCiDuration     float64   `json:"pre_ci_duration"`
+	BuildDuration     float64   `json:"build_duration"`
+	PostCiDuration    float64   `json:"post_ci_duration"`
+	CacheUpDuration   float64   `json:"cache_up_duration"`
+	TotalDuration     float64   `json:"total_duration"`
+	CacheDownStart    time.Time `json:"cache_down_start"`
+	PreCiStart        time.Time `json:"pre_ci_start"`
+	BuildStart        time.Time `json:"build_start"`
+	PostCiStart       time.Time `json:"post_ci_start"`
+	CacheUpStart      time.Time `json:"cache_up_start"`
+	TotalStart        time.Time `json:"total_start"`
 }
 
 func SendCDEvent(cdRequest *CdRequest) error {
