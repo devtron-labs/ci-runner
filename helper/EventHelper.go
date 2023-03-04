@@ -130,6 +130,7 @@ type CiRequest struct {
 	CiBuildDockerMtuValue       int                               `json:"ciBuildDockerMtuValue"`
 	CacheInvalidate             bool                              `json:"cacheInvalidate"`
 	IsPvcMounted                bool                              `json:"IsPvcMounted"`
+	ExtraEnvironmentVariables   map[string]string                 `json:"extraEnvironmentVariables"`
 }
 
 type CdRequest struct {

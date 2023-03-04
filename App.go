@@ -132,6 +132,11 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		}
 		envs["GIT_MATERIAL_REQUEST"] = CiMaterialRequestArr // GIT_MATERIAL_REQUEST will be of form "<repoName>/<checkoutPath>/<BranchName>/<CommitHash>"
 		fmt.Println(envs["GIT_MATERIAL_REQUEST"])
+
+		// setting extraEnvironmentVariables
+		for k, v := range cicdRequest.CiRequest.ExtraEnvironmentVariables {
+			envs[k] = v
+		}
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
 		envs["DEPLOYMENT_RELEASE_ID"] = strconv.Itoa(cicdRequest.CdRequest.DeploymentReleaseCounter)
@@ -234,7 +239,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	if !buildSkipEnabled {
 		util.LogStage("Build")
 		// build
-		dest, err = helper.BuildArtifact(ciCdRequest.CiRequest) //TODO make it skipable
+		dest, err = helper.BuildArtifact(ciCdRequest.CiRequest)
 		if err != nil {
 			return artifactUploaded, err
 		}
@@ -242,6 +247,8 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 	if len(ciCdRequest.CiRequest.PostCiSteps) > 0 {
 		util.LogStage("running POST-CI steps")
+		// sending build success as true always as post-ci triggers only if ci gets success
+		scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "true"
 		// run post artifact processing
 		_, err = RunCiSteps(STEP_TYPE_POST, ciCdRequest.CiRequest.PostCiSteps, refStageMap, scriptEnvs, preeCiStageOutVariable)
 		if err != nil {
