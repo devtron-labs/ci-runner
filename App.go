@@ -296,7 +296,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 
 	log.Println(util.DEVTRON, " event")
-	err = helper.SendEvents(ciCdRequest.CiRequest, digest, dest)
+	err = helper.SendEvents(ciCdRequest.CiRequest, digest, dest, artifactUploaded)
 	if err != nil {
 		log.Println(err)
 		return artifactUploaded, err
