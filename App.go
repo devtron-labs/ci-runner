@@ -238,6 +238,16 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	// build
 	dest, err := helper.BuildArtifact(ciCdRequest.CiRequest) //TODO make it skipable
 	if err != nil {
+		// code-block starts : run post-ci which are enabled to run on ci fail
+		postCiStepsToTriggerOnCiFail := getPostCiStepToRunOnCiFail(ciCdRequest.CiRequest.PostCiSteps)
+		if len(postCiStepsToTriggerOnCiFail) > 0 {
+			util.LogStage("Running POST-CI steps which are enabled to RUN even on CI FAIL")
+			// build success will always be false
+			scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
+			// run post artifact processing
+			RunCiSteps(STEP_TYPE_POST, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preeCiStageOutVariable)
+		}
+		// code-block ends
 		return artifactUploaded, err
 	}
 	log.Println(util.DEVTRON, " /Build")
@@ -313,6 +323,18 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		return artifactUploaded, err
 	}
 	return artifactUploaded, nil
+}
+
+func getPostCiStepToRunOnCiFail(postCiSteps []*helper.StepObject) []*helper.StepObject {
+	var postCiStepsToTriggerOnCiFail []*helper.StepObject
+	if len(postCiSteps) > 0 {
+		for _, postCiStep := range postCiSteps {
+			if postCiStep.TriggerIfParentStageFail {
+				postCiStepsToTriggerOnCiFail = append(postCiStepsToTriggerOnCiFail, postCiStep)
+			}
+		}
+	}
+	return postCiStepsToTriggerOnCiFail
 }
 
 func makeDockerfile(config *helper.DockerBuildConfig) error {
