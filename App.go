@@ -164,9 +164,9 @@ func getSystemEnvVariables() map[string]string {
 
 func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
 
-	var met helper.Metrics
+	var met helper.CIMetrics
 	start := time.Now()
-	met.TotalStart = start
+	met.TotalStartTime = start
 	artifactUploaded = false
 	err = os.Chdir("/")
 	if err != nil {
@@ -180,7 +180,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	// Get ci cache
 	log.Println(util.DEVTRON, " cache-pull")
 	start = time.Now()
-	met.CacheDownStart = start
+	met.CacheDownStartTime = start
 	err = helper.GetCache(ciCdRequest.CiRequest)
 	met.CacheDownDuration = time.Since(start).Seconds()
 	if err != nil {
@@ -204,7 +204,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-build")
 	start = time.Now()
-	met.BuildStart = start
+	met.BuildStartTime = start
 
 	helper.StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert, ciCdRequest.CiRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CiRequest.DefaultAddressPoolSize, ciCdRequest.CiRequest.CiBuildDockerMtuValue)
 
@@ -238,7 +238,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	var preeCiStageOutVariable map[int]map[string]*helper.VariableObject
 	var PreCi float64
 	start = time.Now()
-	met.PreCiStart = start
+	met.PreCiStartTime = start
 	if len(ciCdRequest.CiRequest.PreCiSteps) > 0 {
 		util.LogStage("running PRE-CI steps")
 		// run pre artifact processing
@@ -259,7 +259,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	log.Println(util.DEVTRON, " /Build")
 	var PostCi float64
 	start = time.Now()
-	met.PostCiStart = start
+	met.PostCiStartTime = start
 	if len(ciCdRequest.CiRequest.PostCiSteps) > 0 {
 		util.LogStage("running POST-CI steps")
 		// sending build success as true always as post-ci triggers only if ci gets success
@@ -297,7 +297,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 
 	log.Println(util.DEVTRON, " artifact-upload")
 	start = time.Now()
-	met.CacheUpStart = start
+	met.CacheUpStartTime = start
 	err = helper.ZipAndUpload(ciCdRequest.CiRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
 	met.CacheUpDuration = time.Since(start).Seconds()
 	if err != nil {
@@ -322,7 +322,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 
 	log.Println(util.DEVTRON, " event")
-	met.TotalDuration = time.Since(met.TotalStart).Seconds()
+	met.TotalDuration = time.Since(met.TotalStartTime).Seconds()
 
 	err = helper.SendEvents(ciCdRequest.CiRequest, digest, dest, met)
 	if err != nil {

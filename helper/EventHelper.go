@@ -199,7 +199,7 @@ type CiCompleteEvent struct {
 	WorkflowId       int                `json:"workflowId"`
 	TriggeredBy      int                `json:"triggeredBy"`
 	MaterialType     string             `json:"materialType"`
-	Metrics          Metrics            `json:"metrics"`
+	Metrics          CIMetrics          `json:"metrics"`
 	AppName          string             `json:"appName"`
 }
 
@@ -238,19 +238,19 @@ type PublishRequest struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
-type Metrics struct {
-	CacheDownDuration float64   `json:"cache_down_duration"`
-	PreCiDuration     float64   `json:"pre_ci_duration"`
-	BuildDuration     float64   `json:"build_duration"`
-	PostCiDuration    float64   `json:"post_ci_duration"`
-	CacheUpDuration   float64   `json:"cache_up_duration"`
-	TotalDuration     float64   `json:"total_duration"`
-	CacheDownStart    time.Time `json:"cache_down_start"`
-	PreCiStart        time.Time `json:"pre_ci_start"`
-	BuildStart        time.Time `json:"build_start"`
-	PostCiStart       time.Time `json:"post_ci_start"`
-	CacheUpStart      time.Time `json:"cache_up_start"`
-	TotalStart        time.Time `json:"total_start"`
+type CIMetrics struct {
+	CacheDownDuration  float64   `json:"CacheDownDuration"`
+	PreCiDuration      float64   `json:"PreCiDuration"`
+	BuildDuration      float64   `json:"BuildDuration"`
+	PostCiDuration     float64   `json:"PostCiDuration"`
+	CacheUpDuration    float64   `json:"CacheUpDuration"`
+	TotalDuration      float64   `json:"TotalDuration"`
+	CacheDownStartTime time.Time `json:"CacheDownStartTime"`
+	PreCiStartTime     time.Time `json:"pre_ci_start"`
+	BuildStartTime     time.Time `json:"BuildStartTime"`
+	PostCiStartTime    time.Time `json:"PostCiStartTime"`
+	CacheUpStartTime   time.Time `json:"CacheUpStartTime"`
+	TotalStartTime     time.Time `json:"TotalStartTime"`
 }
 
 func SendCDEvent(cdRequest *CdRequest) error {
@@ -271,7 +271,7 @@ func SendCDEvent(cdRequest *CdRequest) error {
 	return nil
 }
 
-func SendEvents(ciRequest *CiRequest, digest string, image string, met Metrics) error {
+func SendEvents(ciRequest *CiRequest, digest string, image string, met CIMetrics) error {
 
 	event := CiCompleteEvent{
 		CiProjectDetails: ciRequest.CiProjectDetails,
