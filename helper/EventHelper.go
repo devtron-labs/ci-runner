@@ -199,6 +199,8 @@ type CiCompleteEvent struct {
 	WorkflowId       int                `json:"workflowId"`
 	TriggeredBy      int                `json:"triggeredBy"`
 	MaterialType     string             `json:"materialType"`
+	Metrics          CIMetrics          `json:"metrics"`
+	AppName          string             `json:"appName"`
 }
 
 type CdStageCompleteEvent struct {
@@ -236,6 +238,21 @@ type PublishRequest struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
+type CIMetrics struct {
+	CacheDownDuration  float64   `json:"cacheDownDuration"`
+	PreCiDuration      float64   `json:"preCiDuration"`
+	BuildDuration      float64   `json:"buildDuration"`
+	PostCiDuration     float64   `json:"postCiDuration"`
+	CacheUpDuration    float64   `json:"cacheUpDuration"`
+	TotalDuration      float64   `json:"totalDuration"`
+	CacheDownStartTime time.Time `json:"cacheDownStartTime"`
+	PreCiStartTime     time.Time `json:"preCiStart"`
+	BuildStartTime     time.Time `json:"buildStartTime"`
+	PostCiStartTime    time.Time `json:"postCiStartTime"`
+	CacheUpStartTime   time.Time `json:"cacheUpStartTime"`
+	TotalStartTime     time.Time `json:"totalStartTime"`
+}
+
 func SendCDEvent(cdRequest *CdRequest) error {
 
 	event := CdStageCompleteEvent{
@@ -254,7 +271,7 @@ func SendCDEvent(cdRequest *CdRequest) error {
 	return nil
 }
 
-func SendEvents(ciRequest *CiRequest, digest string, image string) error {
+func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMetrics) error {
 
 	event := CiCompleteEvent{
 		CiProjectDetails: ciRequest.CiProjectDetails,
@@ -266,6 +283,8 @@ func SendEvents(ciRequest *CiRequest, digest string, image string) error {
 		WorkflowId:       ciRequest.WorkflowId,
 		TriggeredBy:      ciRequest.TriggeredBy,
 		MaterialType:     "git",
+		Metrics:          metrics,
+		AppName:          ciRequest.AppName,
 	}
 	err := SendCiCompleteEvent(event)
 	if err != nil {
