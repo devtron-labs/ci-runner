@@ -239,18 +239,18 @@ type PublishRequest struct {
 }
 
 type CIMetrics struct {
-	CacheDownDuration  float64   `json:"CacheDownDuration"`
-	PreCiDuration      float64   `json:"PreCiDuration"`
-	BuildDuration      float64   `json:"BuildDuration"`
-	PostCiDuration     float64   `json:"PostCiDuration"`
-	CacheUpDuration    float64   `json:"CacheUpDuration"`
-	TotalDuration      float64   `json:"TotalDuration"`
-	CacheDownStartTime time.Time `json:"CacheDownStartTime"`
-	PreCiStartTime     time.Time `json:"pre_ci_start"`
-	BuildStartTime     time.Time `json:"BuildStartTime"`
-	PostCiStartTime    time.Time `json:"PostCiStartTime"`
-	CacheUpStartTime   time.Time `json:"CacheUpStartTime"`
-	TotalStartTime     time.Time `json:"TotalStartTime"`
+	CacheDownDuration  float64   `json:"cacheDownDuration"`
+	PreCiDuration      float64   `json:"preCiDuration"`
+	BuildDuration      float64   `json:"buildDuration"`
+	PostCiDuration     float64   `json:"postCiDuration"`
+	CacheUpDuration    float64   `json:"cacheUpDuration"`
+	TotalDuration      float64   `json:"totalDuration"`
+	CacheDownStartTime time.Time `json:"cacheDownStartTime"`
+	PreCiStartTime     time.Time `json:"preCiStart"`
+	BuildStartTime     time.Time `json:"buildStartTime"`
+	PostCiStartTime    time.Time `json:"postCiStartTime"`
+	CacheUpStartTime   time.Time `json:"cacheUpStartTime"`
+	TotalStartTime     time.Time `json:"totalStartTime"`
 }
 
 func SendCDEvent(cdRequest *CdRequest) error {
@@ -271,7 +271,7 @@ func SendCDEvent(cdRequest *CdRequest) error {
 	return nil
 }
 
-func SendEvents(ciRequest *CiRequest, digest string, image string, met CIMetrics) error {
+func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMetrics) error {
 
 	event := CiCompleteEvent{
 		CiProjectDetails: ciRequest.CiProjectDetails,
@@ -283,7 +283,7 @@ func SendEvents(ciRequest *CiRequest, digest string, image string, met CIMetrics
 		WorkflowId:       ciRequest.WorkflowId,
 		TriggeredBy:      ciRequest.TriggeredBy,
 		MaterialType:     "git",
-		Metrics:          met,
+		Metrics:          metrics,
 		AppName:          ciRequest.AppName,
 	}
 	err := SendCiCompleteEvent(event)
