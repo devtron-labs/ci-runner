@@ -203,12 +203,9 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-build")
-	start = time.Now()
-	met.BuildStartTime = start
 
 	helper.StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert, ciCdRequest.CiRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CiRequest.DefaultAddressPoolSize, ciCdRequest.CiRequest.CiBuildDockerMtuValue)
 
-	met.BuildDuration = time.Since(start).Seconds()
 	scriptEnvs, err := getGlobalEnvVariables(ciCdRequest)
 	if err != nil {
 		return artifactUploaded, err
@@ -252,7 +249,10 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	met.PreCiDuration = PreCi
 	util.LogStage("Build")
 	// build
+	start = time.Now()
+	met.BuildStartTime = start
 	dest, err := helper.BuildArtifact(ciCdRequest.CiRequest) //TODO make it skipable
+	met.BuildDuration = time.Since(start).Seconds()
 	if err != nil {
 		return artifactUploaded, err
 	}
@@ -296,10 +296,9 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	log.Println(util.DEVTRON, " /docker-push")
 
 	log.Println(util.DEVTRON, " artifact-upload")
-	start = time.Now()
-	met.CacheUpStartTime = start
+
 	err = helper.ZipAndUpload(ciCdRequest.CiRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
-	met.CacheUpDuration = time.Since(start).Seconds()
+
 	if err != nil {
 		return artifactUploaded, err
 	} else {
