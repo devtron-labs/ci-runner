@@ -233,20 +233,20 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 
 	var preeCiStageOutVariable map[int]map[string]*helper.VariableObject
-	var preCi float64
+	var preCiDuration float64
 	start = time.Now()
 	metrics.PreCiStartTime = start
 	if len(ciCdRequest.CiRequest.PreCiSteps) > 0 {
 		util.LogStage("running PRE-CI steps")
 		// run pre artifact processing
 		preeCiStageOutVariable, err = RunCiSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
-		preCi = time.Since(start).Seconds()
+		preCiDuration = time.Since(start).Seconds()
 		if err != nil {
 			log.Println(err)
 			return artifactUploaded, err
 		}
 	}
-	metrics.PreCiDuration = preCi
+	metrics.PreCiDuration = preCiDuration
 	util.LogStage("Build")
 	// build
 	start = time.Now()
@@ -257,7 +257,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		return artifactUploaded, err
 	}
 	log.Println(util.DEVTRON, " /Build")
-	var postCi float64
+	var postCiDuration float64
 	start = time.Now()
 	metrics.PostCiStartTime = start
 	if len(ciCdRequest.CiRequest.PostCiSteps) > 0 {
@@ -266,12 +266,12 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "true"
 		// run post artifact processing
 		_, err = RunCiSteps(STEP_TYPE_POST, ciCdRequest.CiRequest.PostCiSteps, refStageMap, scriptEnvs, preeCiStageOutVariable)
-		postCi = time.Since(start).Seconds()
+		postCiDuration = time.Since(start).Seconds()
 		if err != nil {
 			return artifactUploaded, err
 		}
 	}
-	metrics.PostCiDuration = postCi
+	metrics.PostCiDuration = postCiDuration
 	var digest string
 	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
 	if !buildSkipEnabled {
