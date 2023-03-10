@@ -40,6 +40,7 @@ type StepObject struct {
 	SourceCodeMount          *MountPath         `json:"sourceCodeMount"`   // destination path - mountCodeToContainerPath
 	ExtraVolumeMounts        []*MountPath       `json:"extraVolumeMounts"` // filePathMapping
 	ArtifactPaths            []string           `json:"artifactPaths"`
+	TriggerIfParentStageFail bool               `json:"triggerIfParentStageFail"`
 }
 
 type MountPath struct {
@@ -47,7 +48,7 @@ type MountPath struct {
 	DstPath string `json:"destinationPath"`
 }
 
-//------------
+// ------------
 type Format int
 
 const (
@@ -92,7 +93,7 @@ func (t *Format) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-//---------------
+// ---------------
 type ExecutorType int
 
 const (
@@ -178,7 +179,7 @@ func (t *VariableType) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-//---------------
+// ---------------
 type VariableObject struct {
 	Name   string `json:"name"`
 	Format Format `json:"format"`
@@ -201,7 +202,7 @@ func (v *VariableObject) TypeCheck() error {
 	return nil
 }
 
-//----------
+// ----------
 type ConditionType int
 
 const (

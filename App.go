@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -162,6 +163,10 @@ func getSystemEnvVariables() map[string]string {
 }
 
 func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
+
+	var metrics helper.CIMetrics
+	start := time.Now()
+	metrics.TotalStartTime = start
 	artifactUploaded = false
 	err = os.Chdir("/")
 	if err != nil {
@@ -174,7 +179,10 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 
 	// Get ci cache
 	log.Println(util.DEVTRON, " cache-pull")
+	start = time.Now()
+	metrics.CacheDownStartTime = start
 	err = helper.GetCache(ciCdRequest.CiRequest)
+	metrics.CacheDownDuration = time.Since(start).Seconds()
 	if err != nil {
 		return artifactUploaded, err
 	}
@@ -195,6 +203,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-build")
+
 	helper.StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert, ciCdRequest.CiRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CiRequest.DefaultAddressPoolSize, ciCdRequest.CiRequest.CiBuildDockerMtuValue)
 
 	scriptEnvs, err := getGlobalEnvVariables(ciCdRequest)
@@ -224,38 +233,59 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 
 	var preeCiStageOutVariable map[int]map[string]*helper.VariableObject
+	var preCiDuration float64
+	start = time.Now()
+	metrics.PreCiStartTime = start
 	if len(ciCdRequest.CiRequest.PreCiSteps) > 0 {
 		util.LogStage("running PRE-CI steps")
 		// run pre artifact processing
 		preeCiStageOutVariable, err = RunCiSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
+		preCiDuration = time.Since(start).Seconds()
 		if err != nil {
 			log.Println(err)
 			return artifactUploaded, err
 		}
 	}
-
+	metrics.PreCiDuration = preCiDuration
 	var dest string
 	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
 	if !buildSkipEnabled {
 		util.LogStage("Build")
 		// build
-		dest, err = helper.BuildArtifact(ciCdRequest.CiRequest)
+		start = time.Now()
+		metrics.BuildStartTime = start
+		dest, err = helper.BuildArtifact(ciCdRequest.CiRequest) //TODO make it skipable
+		metrics.BuildDuration = time.Since(start).Seconds()
 		if err != nil {
+			// code-block starts : run post-ci which are enabled to run on ci fail
+			postCiStepsToTriggerOnCiFail := getPostCiStepToRunOnCiFail(ciCdRequest.CiRequest.PostCiSteps)
+			if len(postCiStepsToTriggerOnCiFail) > 0 {
+				util.LogStage("Running POST-CI steps which are enabled to RUN even on CI FAIL")
+				// build success will always be false
+				scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
+				// run post artifact processing
+				RunCiSteps(STEP_TYPE_POST, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preeCiStageOutVariable)
+			}
+			// code-block ends
 			return artifactUploaded, err
 		}
 		log.Println(util.DEVTRON, " /Build")
 	}
+	var postCiDuration float64
+	start = time.Now()
+	metrics.PostCiStartTime = start
 	if len(ciCdRequest.CiRequest.PostCiSteps) > 0 {
 		util.LogStage("running POST-CI steps")
 		// sending build success as true always as post-ci triggers only if ci gets success
 		scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "true"
 		// run post artifact processing
 		_, err = RunCiSteps(STEP_TYPE_POST, ciCdRequest.CiRequest.PostCiSteps, refStageMap, scriptEnvs, preeCiStageOutVariable)
+		postCiDuration = time.Since(start).Seconds()
 		if err != nil {
 			return artifactUploaded, err
 		}
 	}
-
+	metrics.PostCiDuration = postCiDuration
 	var digest string
 
 	if !buildSkipEnabled {
@@ -280,7 +310,9 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	log.Println(util.DEVTRON, " /docker-push")
 
 	log.Println(util.DEVTRON, " artifact-upload")
+
 	err = helper.ZipAndUpload(ciCdRequest.CiRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
+
 	if err != nil {
 		return artifactUploaded, err
 	} else {
@@ -303,7 +335,9 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 
 	log.Println(util.DEVTRON, " event")
-	err = helper.SendEvents(ciCdRequest.CiRequest, digest, dest, artifactUploaded)
+	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
+
+	err = helper.SendEvents(ciCdRequest.CiRequest, digest, dest, metrics, artifactUploaded)
 	if err != nil {
 		log.Println(err)
 		return artifactUploaded, err
@@ -316,6 +350,18 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		return artifactUploaded, err
 	}
 	return artifactUploaded, nil
+}
+
+func getPostCiStepToRunOnCiFail(postCiSteps []*helper.StepObject) []*helper.StepObject {
+	var postCiStepsToTriggerOnCiFail []*helper.StepObject
+	if len(postCiSteps) > 0 {
+		for _, postCiStep := range postCiSteps {
+			if postCiStep.TriggerIfParentStageFail {
+				postCiStepsToTriggerOnCiFail = append(postCiStepsToTriggerOnCiFail, postCiStep)
+			}
+		}
+	}
+	return postCiStepsToTriggerOnCiFail
 }
 
 func makeDockerfile(config *helper.DockerBuildConfig) error {
