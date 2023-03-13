@@ -236,8 +236,11 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	var preCiDuration float64
 	start = time.Now()
 	metrics.PreCiStartTime = start
+	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
 	if len(ciCdRequest.CiRequest.PreCiSteps) > 0 {
-		util.LogStage("running PRE-CI steps")
+		if !buildSkipEnabled {
+			util.LogStage("running PRE-CI steps")
+		}
 		// run pre artifact processing
 		preeCiStageOutVariable, err = RunCiSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
 		preCiDuration = time.Since(start).Seconds()
@@ -248,7 +251,6 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 	metrics.PreCiDuration = preCiDuration
 	var dest string
-	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
 	if !buildSkipEnabled {
 		util.LogStage("Build")
 		// build
