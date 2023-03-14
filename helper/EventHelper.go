@@ -201,7 +201,7 @@ type CiCompleteEvent struct {
 	MaterialType       string             `json:"materialType"`
 	Metrics            CIMetrics          `json:"metrics"`
 	AppName            string             `json:"appName"`
-	isArtifactUploaded bool               `json:"isArtifactUploaded"`
+	IsArtifactUploaded bool               `json:"isArtifactUploaded"`
 }
 
 type CdStageCompleteEvent struct {
@@ -286,14 +286,14 @@ func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMet
 		MaterialType:       "git",
 		Metrics:            metrics,
 		AppName:            ciRequest.AppName,
-		isArtifactUploaded: artifactUploaded,
+		IsArtifactUploaded: artifactUploaded,
 	}
 	err := SendCiCompleteEvent(event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	log.Println(util.DEVTRON, "isArtifactUploaded", event.isArtifactUploaded)
+	log.Println(util.DEVTRON, "isArtifactUploaded", event.IsArtifactUploaded)
 	log.Println(util.DEVTRON, " housekeeping done. exiting now")
 	return nil
 }
