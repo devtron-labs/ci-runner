@@ -293,7 +293,7 @@ func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMet
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	log.Println(util.DEVTRON, "event", event)
+	log.Println(util.DEVTRON, "isArtifactUploaded", event.isArtifactUploaded)
 	log.Println(util.DEVTRON, " housekeeping done. exiting now")
 	return nil
 }
