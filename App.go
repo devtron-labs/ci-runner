@@ -54,7 +54,6 @@ func main() {
 		log.Println(util.DEVTRON, artifactUploaded, err)
 		var artifactUploadErr error
 		if !artifactUploaded {
-			log.Println("shashwat : uploading artifact after sending nats event")
 			artifactUploadErr = helper.ZipAndUpload(ciRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
 		}
 
@@ -317,7 +316,6 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	err = helper.ZipAndUpload(ciCdRequest.CiRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
 
 	if err != nil {
-		log.Println("shashwat : error in uploading artifact before sending nats event")
 		return artifactUploaded, err
 	} else {
 		artifactUploaded = true
