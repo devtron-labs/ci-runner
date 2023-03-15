@@ -54,7 +54,7 @@ func main() {
 		log.Println(util.DEVTRON, artifactUploaded, err)
 		var artifactUploadErr error
 		if !artifactUploaded {
-			artifactUploadErr = helper.ZipAndUpload(ciRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
+			artifactUploaded, artifactUploadErr = helper.ZipAndUpload(ciRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
 		}
 
 		if err != nil || artifactUploadErr != nil {
@@ -313,13 +313,14 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 
 	log.Println(util.DEVTRON, " artifact-upload")
 
-	err = helper.ZipAndUpload(ciCdRequest.CiRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
+	artifactUploaded, err = helper.ZipAndUpload(ciCdRequest.CiRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
 
 	if err != nil {
 		return artifactUploaded, err
-	} else {
-		artifactUploaded = true
 	}
+	//else {
+	//	artifactUploaded = true
+	//}
 	log.Println(util.DEVTRON, " /artifact-upload")
 
 	// scan only if ci scan enabled

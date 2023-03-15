@@ -57,30 +57,31 @@ func UploadArtifact(storageModuleConfigured bool, artifactFiles map[string]strin
 			return err
 		}
 	}
-	err = ZipAndUpload(storageModuleConfigured, blobStorageS3Config, artifactFileLocation, cloudProvider, azureBlobConfig, gcpBlobConfig)
+	_, err = ZipAndUpload(storageModuleConfigured, blobStorageS3Config, artifactFileLocation, cloudProvider, azureBlobConfig, gcpBlobConfig)
 	return err
 }
 
 func ZipAndUpload(storageModuleConfigured bool, blobStorageS3Config *blob_storage.BlobStorageS3Config, artifactFileName string,
-	cloudProvider blob_storage.BlobStorageType, azureBlobConfig *blob_storage.AzureBlobConfig, gcpBlobConfig *blob_storage.GcpBlobConfig) error {
+	cloudProvider blob_storage.BlobStorageType, azureBlobConfig *blob_storage.AzureBlobConfig, gcpBlobConfig *blob_storage.GcpBlobConfig) (bool, error) {
+	artifactUploaded := false
 	if !storageModuleConfigured {
 		log.Println(util.DEVTRON, "not going to upload artifact as storage module not configured...")
-		return nil
+		return artifactUploaded, nil
 	}
 	isEmpty, err := IsDirEmpty(util.TmpArtifactLocation)
 	if err != nil {
 		log.Println(util.DEVTRON, "artifact empty check error ")
-		return err
+		return artifactUploaded, err
 	} else if isEmpty {
 		log.Println(util.DEVTRON, "no artifact to upload")
-		return nil
+		return artifactUploaded, nil
 	}
 	log.Println(util.DEVTRON, "artifact to upload")
 	zipFile := "job-artifact.zip"
 	zipCmd := exec.Command("zip", "-r", zipFile, util.TmpArtifactLocation)
 	err = util.RunCommand(zipCmd)
 	if err != nil {
-		return err
+		return artifactUploaded, err
 	}
 	log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactFileName)
 
@@ -88,7 +89,11 @@ func ZipAndUpload(storageModuleConfigured bool, blobStorageS3Config *blob_storag
 	request := createBlobStorageRequest(cloudProvider, zipFile, artifactFileName, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
 
 	err = blobStorageService.PutWithCommand(request)
-	return err
+	if err != nil {
+		return artifactUploaded, err
+	}
+	artifactUploaded = true
+	return artifactUploaded, err
 }
 
 func IsDirEmpty(name string) (bool, error) {
