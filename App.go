@@ -54,7 +54,7 @@ func main() {
 		log.Println(util.DEVTRON, artifactUploaded, err)
 		var artifactUploadErr error
 		if !artifactUploaded {
-			artifactUploadErr = helper.ZipAndUpload(ciRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
+			artifactUploaded, artifactUploadErr = helper.ZipAndUpload(ciRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
 		}
 
 		if err != nil || artifactUploadErr != nil {
@@ -236,8 +236,11 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	var preCiDuration float64
 	start = time.Now()
 	metrics.PreCiStartTime = start
+	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
 	if len(ciCdRequest.CiRequest.PreCiSteps) > 0 {
-		util.LogStage("running PRE-CI steps")
+		if !buildSkipEnabled {
+			util.LogStage("running PRE-CI steps")
+		}
 		// run pre artifact processing
 		preeCiStageOutVariable, err = RunCiSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
 		preCiDuration = time.Since(start).Seconds()
@@ -247,26 +250,29 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		}
 	}
 	metrics.PreCiDuration = preCiDuration
-	util.LogStage("Build")
-	// build
-	start = time.Now()
-	metrics.BuildStartTime = start
-	dest, err := helper.BuildArtifact(ciCdRequest.CiRequest) //TODO make it skipable
-	metrics.BuildDuration = time.Since(start).Seconds()
-	if err != nil {
-		// code-block starts : run post-ci which are enabled to run on ci fail
-		postCiStepsToTriggerOnCiFail := getPostCiStepToRunOnCiFail(ciCdRequest.CiRequest.PostCiSteps)
-		if len(postCiStepsToTriggerOnCiFail) > 0 {
-			util.LogStage("Running POST-CI steps which are enabled to RUN even on CI FAIL")
-			// build success will always be false
-			scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
-			// run post artifact processing
-			RunCiSteps(STEP_TYPE_POST, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preeCiStageOutVariable)
+	var dest string
+	if !buildSkipEnabled {
+		util.LogStage("Build")
+		// build
+		start = time.Now()
+		metrics.BuildStartTime = start
+		dest, err = helper.BuildArtifact(ciCdRequest.CiRequest) //TODO make it skipable
+		metrics.BuildDuration = time.Since(start).Seconds()
+		if err != nil {
+			// code-block starts : run post-ci which are enabled to run on ci fail
+			postCiStepsToTriggerOnCiFail := getPostCiStepToRunOnCiFail(ciCdRequest.CiRequest.PostCiSteps)
+			if len(postCiStepsToTriggerOnCiFail) > 0 {
+				util.LogStage("Running POST-CI steps which are enabled to RUN even on CI FAIL")
+				// build success will always be false
+				scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
+				// run post artifact processing
+				RunCiSteps(STEP_TYPE_POST, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preeCiStageOutVariable)
+			}
+			// code-block ends
+			return artifactUploaded, err
 		}
-		// code-block ends
-		return artifactUploaded, err
+		log.Println(util.DEVTRON, " /Build")
 	}
-	log.Println(util.DEVTRON, " /Build")
 	var postCiDuration float64
 	start = time.Now()
 	metrics.PostCiStartTime = start
@@ -283,7 +289,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 	metrics.PostCiDuration = postCiDuration
 	var digest string
-	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
+
 	if !buildSkipEnabled {
 		isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && ciBuildConfigBean.DockerBuildConfig.TargetPlatform != ""
 		if isBuildX {
@@ -307,13 +313,14 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 
 	log.Println(util.DEVTRON, " artifact-upload")
 
-	err = helper.ZipAndUpload(ciCdRequest.CiRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
+	artifactUploaded, err = helper.ZipAndUpload(ciCdRequest.CiRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
 
 	if err != nil {
 		return artifactUploaded, err
-	} else {
-		artifactUploaded = true
 	}
+	//else {
+	//	artifactUploaded = true
+	//}
 	log.Println(util.DEVTRON, " /artifact-upload")
 
 	// scan only if ci scan enabled
@@ -333,7 +340,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	log.Println(util.DEVTRON, " event")
 	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
 
-	err = helper.SendEvents(ciCdRequest.CiRequest, digest, dest, metrics)
+	err = helper.SendEvents(ciCdRequest.CiRequest, digest, dest, metrics, artifactUploaded)
 	if err != nil {
 		log.Println(err)
 		return artifactUploaded, err

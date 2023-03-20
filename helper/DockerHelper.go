@@ -180,7 +180,6 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	envVars := &EnvironmentVariables{}
 	err = env.Parse(envVars)
 	if err != nil {

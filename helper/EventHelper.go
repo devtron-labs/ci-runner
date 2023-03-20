@@ -190,17 +190,18 @@ type CiArtifactDTO struct {
 }
 
 type CiCompleteEvent struct {
-	CiProjectDetails []CiProjectDetails `json:"ciProjectDetails"`
-	DockerImage      string             `json:"dockerImage"`
-	Digest           string             `json:"digest"`
-	PipelineId       int                `json:"pipelineId"`
-	DataSource       string             `json:"dataSource"`
-	PipelineName     string             `json:"pipelineName"`
-	WorkflowId       int                `json:"workflowId"`
-	TriggeredBy      int                `json:"triggeredBy"`
-	MaterialType     string             `json:"materialType"`
-	Metrics          CIMetrics          `json:"metrics"`
-	AppName          string             `json:"appName"`
+	CiProjectDetails   []CiProjectDetails `json:"ciProjectDetails"`
+	DockerImage        string             `json:"dockerImage"`
+	Digest             string             `json:"digest"`
+	PipelineId         int                `json:"pipelineId"`
+	DataSource         string             `json:"dataSource"`
+	PipelineName       string             `json:"pipelineName"`
+	WorkflowId         int                `json:"workflowId"`
+	TriggeredBy        int                `json:"triggeredBy"`
+	MaterialType       string             `json:"materialType"`
+	Metrics            CIMetrics          `json:"metrics"`
+	AppName            string             `json:"appName"`
+	IsArtifactUploaded bool               `json:"isArtifactUploaded"`
 }
 
 type CdStageCompleteEvent struct {
@@ -271,20 +272,21 @@ func SendCDEvent(cdRequest *CdRequest) error {
 	return nil
 }
 
-func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMetrics) error {
+func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool) error {
 
 	event := CiCompleteEvent{
-		CiProjectDetails: ciRequest.CiProjectDetails,
-		DockerImage:      image,
-		Digest:           digest,
-		PipelineId:       ciRequest.PipelineId,
-		PipelineName:     ciRequest.PipelineName,
-		DataSource:       "CI-RUNNER",
-		WorkflowId:       ciRequest.WorkflowId,
-		TriggeredBy:      ciRequest.TriggeredBy,
-		MaterialType:     "git",
-		Metrics:          metrics,
-		AppName:          ciRequest.AppName,
+		CiProjectDetails:   ciRequest.CiProjectDetails,
+		DockerImage:        image,
+		Digest:             digest,
+		PipelineId:         ciRequest.PipelineId,
+		PipelineName:       ciRequest.PipelineName,
+		DataSource:         "CI-RUNNER",
+		WorkflowId:         ciRequest.WorkflowId,
+		TriggeredBy:        ciRequest.TriggeredBy,
+		MaterialType:       "git",
+		Metrics:            metrics,
+		AppName:            ciRequest.AppName,
+		IsArtifactUploaded: artifactUploaded,
 	}
 	err := SendCiCompleteEvent(event)
 	if err != nil {
