@@ -47,8 +47,6 @@ func main() {
 	}
 
 	if ciCdRequest.Type == util.CIEVENT {
-		//remove this line after testing
-		log.Println("build-context : ", ciCdRequest.CiRequest.CiBuildConfig.DockerBuildConfig.BuildContext)
 		ciRequest := ciCdRequest.CiRequest
 		artifactUploaded, err := runCIStages(ciCdRequest)
 		log.Println(util.DEVTRON, artifactUploaded, err)
