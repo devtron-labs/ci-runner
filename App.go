@@ -218,10 +218,9 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		return artifactUploaded, err
 	}
 	ciCdRequest.CiRequest.TaskYaml = taskYaml
-
 	ciBuildConfigBean := ciCdRequest.CiRequest.CiBuildConfig
 	if ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.MANAGED_DOCKERFILE_BUILD_TYPE {
-		err = makeDockerfile(ciBuildConfigBean.DockerBuildConfig)
+		err = makeDockerfile(ciBuildConfigBean.DockerBuildConfig, ciCdRequest.CiRequest.CheckoutPath)
 		if err != nil {
 			return artifactUploaded, err
 		}
@@ -367,9 +366,9 @@ func getPostCiStepToRunOnCiFail(postCiSteps []*helper.StepObject) []*helper.Step
 	return postCiStepsToTriggerOnCiFail
 }
 
-func makeDockerfile(config *helper.DockerBuildConfig) error {
+func makeDockerfile(config *helper.DockerBuildConfig, checkoutPath string) error {
 	dockerfileContent := config.DockerfileContent
-	dockerfilePath := filepath.Join(util.WORKINGDIR, "./Dockerfile")
+	dockerfilePath := filepath.Join(util.WORKINGDIR, checkoutPath, "./Dockerfile")
 	f, err := os.Create(dockerfilePath)
 	if err != nil {
 		return err
