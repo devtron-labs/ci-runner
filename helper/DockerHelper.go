@@ -180,7 +180,6 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	envVars := &EnvironmentVariables{}
 	err = env.Parse(envVars)
 	if err != nil {
@@ -453,7 +452,7 @@ func createBuildxBuilder() error {
 }
 
 func installAllSupportedPlatforms() error {
-	multiPlatformCmd := "docker run --privileged --rm tonistiigi/binfmt --install all"
+	multiPlatformCmd := "docker run --privileged --rm quay.io/devtron/binfmt:stable --install all"
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
 	err := util.RunCommand(dockerBuildCMD)

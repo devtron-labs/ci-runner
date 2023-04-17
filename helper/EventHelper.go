@@ -191,15 +191,18 @@ type CiArtifactDTO struct {
 }
 
 type CiCompleteEvent struct {
-	CiProjectDetails []CiProjectDetails `json:"ciProjectDetails"`
-	DockerImage      string             `json:"dockerImage"`
-	Digest           string             `json:"digest"`
-	PipelineId       int                `json:"pipelineId"`
-	DataSource       string             `json:"dataSource"`
-	PipelineName     string             `json:"pipelineName"`
-	WorkflowId       int                `json:"workflowId"`
-	TriggeredBy      int                `json:"triggeredBy"`
-	MaterialType     string             `json:"materialType"`
+	CiProjectDetails   []CiProjectDetails `json:"ciProjectDetails"`
+	DockerImage        string             `json:"dockerImage"`
+	Digest             string             `json:"digest"`
+	PipelineId         int                `json:"pipelineId"`
+	DataSource         string             `json:"dataSource"`
+	PipelineName       string             `json:"pipelineName"`
+	WorkflowId         int                `json:"workflowId"`
+	TriggeredBy        int                `json:"triggeredBy"`
+	MaterialType       string             `json:"materialType"`
+	Metrics            CIMetrics          `json:"metrics"`
+	AppName            string             `json:"appName"`
+	IsArtifactUploaded bool               `json:"isArtifactUploaded"`
 }
 
 type CdStageCompleteEvent struct {
@@ -237,6 +240,21 @@ type PublishRequest struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
+type CIMetrics struct {
+	CacheDownDuration  float64   `json:"cacheDownDuration"`
+	PreCiDuration      float64   `json:"preCiDuration"`
+	BuildDuration      float64   `json:"buildDuration"`
+	PostCiDuration     float64   `json:"postCiDuration"`
+	CacheUpDuration    float64   `json:"cacheUpDuration"`
+	TotalDuration      float64   `json:"totalDuration"`
+	CacheDownStartTime time.Time `json:"cacheDownStartTime"`
+	PreCiStartTime     time.Time `json:"preCiStart"`
+	BuildStartTime     time.Time `json:"buildStartTime"`
+	PostCiStartTime    time.Time `json:"postCiStartTime"`
+	CacheUpStartTime   time.Time `json:"cacheUpStartTime"`
+	TotalStartTime     time.Time `json:"totalStartTime"`
+}
+
 func SendCDEvent(cdRequest *CdRequest) error {
 
 	event := CdStageCompleteEvent{
@@ -255,18 +273,21 @@ func SendCDEvent(cdRequest *CdRequest) error {
 	return nil
 }
 
-func SendEvents(ciRequest *CiRequest, digest string, image string) error {
+func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool) error {
 
 	event := CiCompleteEvent{
-		CiProjectDetails: ciRequest.CiProjectDetails,
-		DockerImage:      image,
-		Digest:           digest,
-		PipelineId:       ciRequest.PipelineId,
-		PipelineName:     ciRequest.PipelineName,
-		DataSource:       "CI-RUNNER",
-		WorkflowId:       ciRequest.WorkflowId,
-		TriggeredBy:      ciRequest.TriggeredBy,
-		MaterialType:     "git",
+		CiProjectDetails:   ciRequest.CiProjectDetails,
+		DockerImage:        image,
+		Digest:             digest,
+		PipelineId:         ciRequest.PipelineId,
+		PipelineName:       ciRequest.PipelineName,
+		DataSource:         "CI-RUNNER",
+		WorkflowId:         ciRequest.WorkflowId,
+		TriggeredBy:        ciRequest.TriggeredBy,
+		MaterialType:       "git",
+		Metrics:            metrics,
+		AppName:            ciRequest.AppName,
+		IsArtifactUploaded: artifactUploaded,
 	}
 	err := SendCiCompleteEvent(event)
 	if err != nil {
