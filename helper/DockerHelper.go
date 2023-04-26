@@ -239,7 +239,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		if dockerBuildConfig.BuildContext == "" {
 			dockerBuildConfig.BuildContext = "."
 		}
-		dockerBuildConfig.BuildContext = path.Join(".", ciRequest.CheckoutPath, dockerBuildConfig.BuildContext)
+		dockerBuildConfig.BuildContext = path.Join(".", dockerBuildConfig.BuildContext)
 		if useBuildx {
 			err = installAllSupportedPlatforms()
 			if err != nil {
