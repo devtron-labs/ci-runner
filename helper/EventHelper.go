@@ -202,6 +202,7 @@ type CiCompleteEvent struct {
 	Metrics            CIMetrics          `json:"metrics"`
 	AppName            string             `json:"appName"`
 	IsArtifactUploaded bool               `json:"isArtifactUploaded"`
+	FailedStepName     string             `json:"failedStepName"`
 }
 
 type CdStageCompleteEvent struct {
@@ -272,7 +273,7 @@ func SendCDEvent(cdRequest *CdRequest) error {
 	return nil
 }
 
-func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool) error {
+func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failedStepName string) error {
 
 	event := CiCompleteEvent{
 		CiProjectDetails:   ciRequest.CiProjectDetails,
@@ -287,7 +288,9 @@ func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMet
 		Metrics:            metrics,
 		AppName:            ciRequest.AppName,
 		IsArtifactUploaded: artifactUploaded,
+		FailedStepName:     failedStepName,
 	}
+
 	err := SendCiCompleteEvent(event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)

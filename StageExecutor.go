@@ -36,7 +36,7 @@ const (
 	STEP_TYPE_REF_PLUGIN StepType = "REF_PLUGIN"
 )
 
-func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, err error) {
+func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error) {
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
@@ -54,7 +54,7 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 			}
 		}
 		if err != nil {
-			return nil, err
+			return nil, ciStep, err
 		}
 		ciStep.InputVars = vars
 
@@ -74,7 +74,7 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 			shouldTrigger, err := helper.ShouldTriggerStage(ciStep.TriggerSkipConditions, ciStep.InputVars)
 			if err != nil {
 				log.Println(err)
-				return nil, err
+				return nil, ciStep, err
 			}
 			if !shouldTrigger {
 				log.Printf("skipping %s as per pass Condition\n", ciStep.Name)
@@ -90,21 +90,21 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 		err = os.RemoveAll(util.Output_path)
 		if err != nil {
 			log.Println(util.DEVTRON, err)
-			return nil, err
+			return nil, ciStep, err
 		}
 		err = os.MkdirAll(util.Output_path, os.ModePerm|os.ModeDir)
 		if err != nil {
 			log.Println(util.DEVTRON, err)
-			return nil, err
+			return nil, ciStep, err
 		}
 
-		 stepOutputVarsFinal := make(map[string]string)
+		stepOutputVarsFinal := make(map[string]string)
 		//---------------------------------------------------------------------------------------------------
 		if ciStep.StepType == helper.STEP_TYPE_INLINE {
 			if ciStep.ExecutorType == helper.SHELL {
 				stageOutputVars, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", i), ciStep.Script, scriptEnvs, outVars)
 				if err != nil {
-					return nil, err
+					return nil, ciStep, err
 				}
 				stepOutputVarsFinal = stageOutputVars
 				if len(ciStep.ArtifactPaths) > 0 {
@@ -115,7 +115,7 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 								log.Println(util.DEVTRON, "dir not exists", path)
 								continue
 							} else {
-								return nil, err
+								return nil, ciStep, err
 							}
 						}
 					}
@@ -129,7 +129,7 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 					err = os.MkdirAll(hostPath, os.ModePerm|os.ModeDir)
 					if err != nil {
 						log.Println(util.DEVTRON, err)
-						return nil, err
+						return nil, ciStep, err
 					}
 					path := &helper.MountPath{DstPath: artifact, SrcPath: filepath.Join(stepArtifact, artifact)}
 					outputDirMount = append(outputDirMount, path)
@@ -154,7 +154,7 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 				}
 				stageOutputVars, err := RunScriptsInDocker(executionConf)
 				if err != nil {
-					return nil, err
+					return nil, ciStep, err
 				}
 				stepOutputVarsFinal = stageOutputVars
 				if _, err := os.Stat(stepArtifact); os.IsNotExist(err) {
@@ -163,7 +163,7 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 				} else {
 					err = copy.Copy(stepArtifact, filepath.Join(util.TmpArtifactLocation, ciStep.Name))
 					if err != nil {
-						return nil, err
+						return nil, ciStep, err
 					}
 				}
 			}
@@ -188,10 +188,10 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 					}
 				}
 			}
-			opt, err := RunCiSteps(STEP_TYPE_REF_PLUGIN, steps, refStageMap, globalEnvironmentVariables, nil)
+			opt, _, err := RunCiSteps(STEP_TYPE_REF_PLUGIN, steps, refStageMap, globalEnvironmentVariables, nil)
 			if err != nil {
 				fmt.Println(err)
-				return nil, err
+				return nil, ciStep, err
 			}
 			for _, outputVar := range ciStep.OutputVars {
 				if varObj, ok := opt[outputVar.VariableStepIndexInPlugin]; ok {
@@ -206,21 +206,21 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 			// artifact path
 			//
 		} else {
-			return nil, fmt.Errorf("step Type :%s not supported", ciStep.StepType)
+			return nil, ciStep, fmt.Errorf("step Type :%s not supported", ciStep.StepType)
 		}
 		//---------------------------------------------------------------------------------------------------
 		finalOutVars, err := populateOutVars(stepOutputVarsFinal, ciStep.OutputVars)
 		if err != nil {
-			return nil, err
+			return nil, ciStep, err
 		}
 		ciStep.OutputVars = finalOutVars
 		if len(ciStep.SuccessFailureConditions) > 0 {
 			success, err := helper.StageIsSuccess(ciStep.SuccessFailureConditions, finalOutVars)
 			if err != nil {
-				return nil, err
+				return nil, ciStep, err
 			}
 			if !success {
-				return nil, fmt.Errorf("stage not successful because of condition failure")
+				return nil, ciStep, fmt.Errorf("stage not successful because of condition failure")
 			}
 		}
 		finalOutVarMap := make(map[string]*helper.VariableObject)
@@ -229,7 +229,7 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 		}
 		stageVariable[ciStep.Index] = finalOutVarMap
 	}
-	return stageVariable, nil
+	return stageVariable, nil, nil
 }
 
 func populateOutVars(outData map[string]string, desired []*helper.VariableObject) ([]*helper.VariableObject, error) {
