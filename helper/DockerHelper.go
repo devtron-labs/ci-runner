@@ -48,6 +48,7 @@ import (
 const (
 	DEVTRON_ENV_VAR_PREFIX = "$devtron_env_"
 	BUILD_ARG_FLAG         = "--build-arg"
+	ROOT_PATH              = "."
 )
 
 func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int, ciRunnerDockerMtuValue int) {
@@ -237,9 +238,9 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			dockerBuild = dockerBuild + " " + key + value
 		}
 		if dockerBuildConfig.BuildContext == "" {
-			dockerBuildConfig.BuildContext = "."
+			dockerBuildConfig.BuildContext = ROOT_PATH
 		}
-		dockerBuildConfig.BuildContext = path.Join(".", dockerBuildConfig.BuildContext)
+		dockerBuildConfig.BuildContext = path.Join(ROOT_PATH, dockerBuildConfig.BuildContext)
 		if useBuildx {
 			err = installAllSupportedPlatforms()
 			if err != nil {

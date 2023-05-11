@@ -48,6 +48,7 @@ func main() {
 	}
 
 	if ciCdRequest.Type == util.CIEVENT {
+
 		ciRequest := ciCdRequest.CiRequest
 		artifactUploaded, err := runCIStages(ciCdRequest)
 		log.Println(util.DEVTRON, artifactUploaded, err)
