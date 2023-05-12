@@ -184,6 +184,16 @@ func sendFailureNotification(failureMessage string, ciRequest *helper.CiRequest,
 	return artifactUploaded, &helper.CiStageError{Err: err}
 }
 
+type CiFailReason string
+
+const (
+	PreCi  CiFailReason = "Pre-CI step failed: "
+	PostCi CiFailReason = "Post-CI step failed: "
+	Build  CiFailReason = "Docker build failed"
+	Push   CiFailReason = "Docker push failed"
+	Scan   CiFailReason = "Image scan failed"
+)
+
 func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
 
 	var metrics helper.CIMetrics
@@ -268,7 +278,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		preCiDuration = time.Since(start).Seconds()
 		if err != nil {
 			log.Println(err)
-			return sendFailureNotification("Pre-CI step failed: "+step.Name, ciCdRequest.CiRequest, "", "", metrics, artifactUploaded, err)
+			return sendFailureNotification(string(PreCi)+step.Name, ciCdRequest.CiRequest, "", "", metrics, artifactUploaded, err)
 
 		}
 	}
@@ -292,7 +302,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 				RunCiSteps(STEP_TYPE_POST, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preeCiStageOutVariable)
 			}
 			// code-block ends
-			return sendFailureNotification("Build Failed", ciCdRequest.CiRequest, "", "", metrics, artifactUploaded, err)
+			return sendFailureNotification(string(Build), ciCdRequest.CiRequest, "", "", metrics, artifactUploaded, err)
 		}
 		log.Println(util.DEVTRON, " /Build")
 	}
@@ -307,7 +317,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		_, step, err = RunCiSteps(STEP_TYPE_POST, ciCdRequest.CiRequest.PostCiSteps, refStageMap, scriptEnvs, preeCiStageOutVariable)
 		postCiDuration = time.Since(start).Seconds()
 		if err != nil {
-			return sendFailureNotification("Post-CI step failed: "+step.Name, ciCdRequest.CiRequest, "", "", metrics, artifactUploaded, err)
+			return sendFailureNotification(string(PostCi)+step.Name, ciCdRequest.CiRequest, "", "", metrics, artifactUploaded, err)
 		}
 	}
 	metrics.PostCiDuration = postCiDuration
@@ -323,7 +333,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 			log.Println(util.DEVTRON, " docker-push")
 			err = helper.PushArtifact(dest)
 			if err != nil {
-				return sendFailureNotification("Docker push failed", ciCdRequest.CiRequest, digest, dest, metrics, artifactUploaded, err)
+				return sendFailureNotification(string(Push), ciCdRequest.CiRequest, digest, dest, metrics, artifactUploaded, err)
 			}
 			digest, err = helper.ExtractDigestUsingPull(dest)
 		}
@@ -355,7 +365,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		err = helper.SendEventToClairUtility(scanEvent)
 		if err != nil {
 			log.Println(err)
-			return sendFailureNotification("Image scan failed", ciCdRequest.CiRequest, digest, dest, metrics, artifactUploaded, err)
+			return sendFailureNotification(string(Scan), ciCdRequest.CiRequest, digest, dest, metrics, artifactUploaded, err)
 
 		}
 		log.Println(util.DEVTRON, " /image-scanner")
