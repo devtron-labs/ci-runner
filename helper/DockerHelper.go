@@ -48,6 +48,7 @@ import (
 const (
 	DEVTRON_ENV_VAR_PREFIX = "$devtron_env_"
 	BUILD_ARG_FLAG         = "--build-arg"
+	ROOT_PATH              = "."
 )
 
 func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int, ciRunnerDockerMtuValue int) {
@@ -236,6 +237,10 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		for key, value := range dockerBuildFlags {
 			dockerBuild = dockerBuild + " " + key + value
 		}
+		if dockerBuildConfig.BuildContext == "" {
+			dockerBuildConfig.BuildContext = ROOT_PATH
+		}
+		dockerBuildConfig.BuildContext = path.Join(ROOT_PATH, dockerBuildConfig.BuildContext)
 		if useBuildx {
 			err = installAllSupportedPlatforms()
 			if err != nil {
@@ -256,9 +261,9 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			}
 			oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
 			manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push . --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s --allow network.host --allow security.insecure --metadata-file %s", dockerBuild, dockerBuildConfig.DockerfilePath, dest, localCachePath, oldCacheBuildxPath, manifestLocation)
+			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push %s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s --allow network.host --allow security.insecure --metadata-file %s", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext, localCachePath, oldCacheBuildxPath, manifestLocation)
 		} else {
-			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s .", dockerBuild, dockerBuildConfig.DockerfilePath, ciRequest.DockerRepository)
+			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerBuildConfig.DockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
 		if envVars.ShowDockerBuildCmdInLogs {
 			log.Println("Starting docker build : ", dockerBuild)

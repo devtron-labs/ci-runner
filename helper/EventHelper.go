@@ -59,6 +59,7 @@ type DockerBuildConfig struct {
 	Args               map[string]string `json:"args,omitempty"`
 	DockerBuildOptions map[string]string `json:"dockerBuildOptions"`
 	TargetPlatform     string            `json:"targetPlatform,omitempty"`
+	BuildContext       string            `json:"buildContext,omitempty"`
 }
 
 type BuildPackConfig struct {
