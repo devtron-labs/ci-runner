@@ -187,8 +187,8 @@ func sendFailureNotification(failureMessage string, ciRequest *helper.CiRequest,
 type CiFailReason string
 
 const (
-	PreCi  CiFailReason = "Pre-CI step failed: "
-	PostCi CiFailReason = "Post-CI step failed: "
+	PreCi  CiFailReason = "Pre-CI task failed: "
+	PostCi CiFailReason = "Post-CI task failed: "
 	Build  CiFailReason = "Docker build failed"
 	Push   CiFailReason = "Docker push failed"
 	Scan   CiFailReason = "Image scan failed"
