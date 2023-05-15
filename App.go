@@ -19,6 +19,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	_ "github.com/aws/aws-sdk-go/aws"
 	"github.com/devtron-labs/ci-runner/helper"
@@ -57,8 +58,18 @@ func main() {
 			artifactUploaded, artifactUploadErr = helper.ZipAndUpload(ciRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
 		}
 
-		if err != nil || artifactUploadErr != nil {
-			log.Println(util.DEVTRON, err, artifactUploadErr)
+		const CiStageFailErrorCode = 2
+		if err != nil {
+			var stageError *helper.CiStageError
+			log.Println(util.DEVTRON, err)
+			if errors.As(err, &stageError) {
+				os.Exit(CiStageFailErrorCode)
+			}
+			os.Exit(1)
+		}
+
+		if artifactUploadErr != nil {
+			log.Println(util.DEVTRON, artifactUploadErr)
 			os.Exit(1)
 		}
 
@@ -162,6 +173,27 @@ func getSystemEnvVariables() map[string]string {
 	return envs
 }
 
+func sendFailureNotification(failureMessage string, ciRequest *helper.CiRequest,
+	digest string, image string, ciMetrics helper.CIMetrics,
+	artifactUploaded bool, err error) (bool, error) {
+	e := helper.SendEvents(ciRequest, digest, image, ciMetrics, artifactUploaded, failureMessage)
+	if e != nil {
+		log.Println(e)
+		return artifactUploaded, e
+	}
+	return artifactUploaded, &helper.CiStageError{Err: err}
+}
+
+type CiFailReason string
+
+const (
+	PreCi  CiFailReason = "Pre-CI task failed: "
+	PostCi CiFailReason = "Post-CI task failed: "
+	Build  CiFailReason = "Docker build failed"
+	Push   CiFailReason = "Docker push failed"
+	Scan   CiFailReason = "Image scan failed"
+)
+
 func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
 
 	var metrics helper.CIMetrics
@@ -232,6 +264,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 
 	var preeCiStageOutVariable map[int]map[string]*helper.VariableObject
+	var step *helper.StepObject
 	var preCiDuration float64
 	start = time.Now()
 	metrics.PreCiStartTime = start
@@ -241,11 +274,12 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 			util.LogStage("running PRE-CI steps")
 		}
 		// run pre artifact processing
-		preeCiStageOutVariable, err = RunCiSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
+		preeCiStageOutVariable, step, err = RunCiSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
 		preCiDuration = time.Since(start).Seconds()
 		if err != nil {
 			log.Println(err)
-			return artifactUploaded, err
+			return sendFailureNotification(string(PreCi)+step.Name, ciCdRequest.CiRequest, "", "", metrics, artifactUploaded, err)
+
 		}
 	}
 	metrics.PreCiDuration = preCiDuration
@@ -268,7 +302,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 				RunCiSteps(STEP_TYPE_POST, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preeCiStageOutVariable)
 			}
 			// code-block ends
-			return artifactUploaded, err
+			return sendFailureNotification(string(Build), ciCdRequest.CiRequest, "", "", metrics, artifactUploaded, err)
 		}
 		log.Println(util.DEVTRON, " /Build")
 	}
@@ -280,10 +314,10 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		// sending build success as true always as post-ci triggers only if ci gets success
 		scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "true"
 		// run post artifact processing
-		_, err = RunCiSteps(STEP_TYPE_POST, ciCdRequest.CiRequest.PostCiSteps, refStageMap, scriptEnvs, preeCiStageOutVariable)
+		_, step, err = RunCiSteps(STEP_TYPE_POST, ciCdRequest.CiRequest.PostCiSteps, refStageMap, scriptEnvs, preeCiStageOutVariable)
 		postCiDuration = time.Since(start).Seconds()
 		if err != nil {
-			return artifactUploaded, err
+			return sendFailureNotification(string(PostCi)+step.Name, ciCdRequest.CiRequest, "", "", metrics, artifactUploaded, err)
 		}
 	}
 	metrics.PostCiDuration = postCiDuration
@@ -299,7 +333,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 			log.Println(util.DEVTRON, " docker-push")
 			err = helper.PushArtifact(dest)
 			if err != nil {
-				return artifactUploaded, err
+				return sendFailureNotification(string(Push), ciCdRequest.CiRequest, digest, dest, metrics, artifactUploaded, err)
 			}
 			digest, err = helper.ExtractDigestUsingPull(dest)
 		}
@@ -331,7 +365,8 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		err = helper.SendEventToClairUtility(scanEvent)
 		if err != nil {
 			log.Println(err)
-			return artifactUploaded, err
+			return sendFailureNotification(string(Scan), ciCdRequest.CiRequest, digest, dest, metrics, artifactUploaded, err)
+
 		}
 		log.Println(util.DEVTRON, " /image-scanner")
 	}
@@ -339,7 +374,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	log.Println(util.DEVTRON, " event")
 	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
 
-	err = helper.SendEvents(ciCdRequest.CiRequest, digest, dest, metrics, artifactUploaded)
+	err = helper.SendEvents(ciCdRequest.CiRequest, digest, dest, metrics, artifactUploaded, "")
 	if err != nil {
 		log.Println(err)
 		return artifactUploaded, err
