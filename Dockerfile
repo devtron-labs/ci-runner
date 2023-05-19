@@ -35,4 +35,5 @@ RUN chmod 644 /root/.ssh/config
 #ENTRYPOINT ["./cirunner 2>&1 | tee main.log"]
 #ENTRYPOINT ["./cirunner"]
 #CMD ["2>&1 | tee /main.log"]
-ENTRYPOINT ["/bin/sh", "-c", "./cirunner 2>&1 | tee output.log"]
+ENTRYPOINT ["/bin/sh", "-c", "./cirunner \"$@\" 2>&1 | tee output.log"]
+
