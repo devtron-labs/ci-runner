@@ -169,6 +169,11 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 	return nil
 }
 func BuildArtifact(ciRequest *CiRequest) (string, error) {
+	enableBuildContextENVValue := os.Getenv("ENABLE_BUILD_CONTEXT")
+	enableBuildContext := false
+	if enableBuildContextENVValue == "true" {
+		enableBuildContext = true
+	}
 	err := DockerLogin(&DockerCredentials{
 		DockerUsername:     ciRequest.DockerUsername,
 		DockerPassword:     ciRequest.DockerPassword,
@@ -237,7 +242,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		for key, value := range dockerBuildFlags {
 			dockerBuild = dockerBuild + " " + key + value
 		}
-		if dockerBuildConfig.BuildContext == "" {
+		if !enableBuildContext || dockerBuildConfig.BuildContext == "" {
 			dockerBuildConfig.BuildContext = ROOT_PATH
 		}
 		dockerBuildConfig.BuildContext = path.Join(ROOT_PATH, dockerBuildConfig.BuildContext)
