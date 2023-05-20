@@ -237,7 +237,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		for key, value := range dockerBuildFlags {
 			dockerBuild = dockerBuild + " " + key + value
 		}
-		if dockerBuildConfig.BuildContext == "" {
+		if !ciRequest.EnableBuildContext || dockerBuildConfig.BuildContext == "" {
 			dockerBuildConfig.BuildContext = ROOT_PATH
 		}
 		dockerBuildConfig.BuildContext = path.Join(ROOT_PATH, dockerBuildConfig.BuildContext)
