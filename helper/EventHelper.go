@@ -132,6 +132,7 @@ type CiRequest struct {
 	CacheInvalidate             bool                              `json:"cacheInvalidate"`
 	IsPvcMounted                bool                              `json:"IsPvcMounted"`
 	ExtraEnvironmentVariables   map[string]string                 `json:"extraEnvironmentVariables"`
+	EnableBuildContext          bool                              `json:"enableBuildContext"`
 }
 
 type CdRequest struct {
