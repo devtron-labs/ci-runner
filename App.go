@@ -40,7 +40,10 @@ func main() {
 	for i, arg := range os.Args {
 		fmt.Println(i, " : ", arg)
 	}
-	args := os.Args[1]
+	//os.Stdout
+
+	//args := os.Args[1]
+	args := os.Getenv("CI_CD_EVENT")
 	ciCdRequest := &helper.CiCdTriggerEvent{}
 	err := json.Unmarshal([]byte(args), ciCdRequest)
 	if err != nil {
