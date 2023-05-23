@@ -24,6 +24,7 @@ import (
 	_ "github.com/aws/aws-sdk-go/aws"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
+	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 	"log"
 	"os"
 	"path/filepath"
@@ -36,19 +37,17 @@ func main() {
 	//args := `{"type":"CI","ciRequest":{"DockerBuildTargetPlatform":"linux/arm64", "workflowNamePrefix":"16-ci-25-w5x1-70","pipelineName":"ci-25-w5x1","pipelineId":70,"dockerImageTag":"da3ba326-70-17","dockerRegistryId":"devtron-quay","dockerRegistryType":"other","dockerRegistryURL":"https://quay.io/devtron","dockerConnection":"secure","dockerCert":"","dockerBuildArgs":"{}","dockerRepository":"test","dockerfileLocation":"Dockerfile","dockerUsername":"devtron+devtest","dockerPassword":"5WEDXDJMP6RV1CG1KKFJQL3MQOLC64JKM6K684WPEBKVWKOZ4LSMBHEHJU1HBGXK","awsRegion":"","accessKey":"","secretKey":"","ciCacheLocation":"","ciCacheRegion":"","ciCacheFileName":"ci-25-w5x1-70.tar.gz","ciProjectDetails":[{"gitRepository":"https://github.com/devtron-labs/getting-started-nodejs","materialName":"1-getting-started-nodejs","checkoutPath":"./","fetchSubmodules":false,"commitHash":"da3ba3254712965b5944a6271e71bff91fe51f20","gitTag":"","commitTime":"2022-04-12T20:26:08+05:30","type":"SOURCE_TYPE_BRANCH_FIXED","message":"Update README.md","author":"Prakarsh \u003c71125043+prakarsh-dt@users.noreply.github.com\u003e","gitOptions":{"userName":"","password":"","sshPrivateKey":"","accessToken":"","authMode":"ANONYMOUS"},"sourceType":"SOURCE_TYPE_BRANCH_FIXED","sourceValue":"master","WebhookData":{"Id":0,"EventActionType":"","Data":null}}],"containerResources":{"minCpu":"","maxCpu":"","minStorage":"","maxStorage":"","minEphStorage":"","maxEphStorage":"","minMem":"","maxMem":""},"activeDeadlineSeconds":3600,"ciImage":"quay.io/devtron/ci-runner:1290cf23-182-8015","namespace":"devtron-ci","workflowId":16,"triggeredBy":8,"cacheLimit":5000000000,"beforeDockerBuildScripts":null,"afterDockerBuildScripts":null,"ciArtifactLocation":"","invalidateCache":true,"scanEnabled":false,"cloudProvider":"AZURE","azureBlobConfig":{"enabled":true,"accountName":"devtrondemoblob","blobContainerCiLog":"","blobContainerCiCache":"cache","accountKey":"y1/K13YMp/v7uuvZNkKJ4dS3CyGc37bPIN9Hv8MVhog6OkG0joV05proQReMQIJQ8qXp0JVpj+mz+AStHNKR3Q=="},"minioEndpoint":"","defaultAddressPoolBaseCidr":"","defaultAddressPoolSize":0,"preCiSteps":[{"name":"Task 1","index":1,"stepType":"INLINE","executorType":"SHELL","refPluginId":0,"script":"echo $","inputVars":null,"exposedPorts":{"0":0},"outputVars":null,"triggerSkipConditions":null,"successFailureConditions":null,"dockerImage":"","command":"","args":null,"customScriptMountDestinationPath":{"sourcePath":"","destinationPath":""},"sourceCodeMountDestinationPath":{"sourcePath":"","destinationPath":""},"extraVolumeMounts":null,"artifactPaths":null}],"postCiSteps":null,"refPlugins":null},"cdRequest":null}`
 	//args := `{"type":"DryRun","dryRunRequest":{"buildPackParams":{"builderId":"gcr.io/buildpacks/builder:v1"},"DockerBuildTargetPlatform":"", "workflowNamePrefix":"16-ci-25-w5x1-70","pipelineName":"ci-25-w5x1","pipelineId":70,"dockerImageTag":"da3ba326-70-17","dockerRegistryId":"devtron-quay","dockerRegistryType":"other","dockerRegistryURL":"https://quay.io/devtron","dockerConnection":"secure","dockerCert":"","dockerBuildArgs":"{}","dockerRepository":"test","dockerfileLocation":"Dockerfile","dockerUsername":"devtron+devtest","dockerPassword":"5WEDXDJMP6RV1CG1KKFJQL3MQOLC64JKM6K684WPEBKVWKOZ4LSMBHEHJU1HBGXK","awsRegion":"","accessKey":"","secretKey":"","ciCacheLocation":"","ciCacheRegion":"","ciCacheFileName":"ci-25-w5x1-70.tar.gz","ciProjectDetails":[{"gitRepository":"https://github.com/devtron-labs/sample-go-app","materialName":"1-getting-started-nodejs","checkoutPath":"./","fetchSubmodules":false,"commitHash":"8654623ec2bd9efd663935cb8332c8c765541837","gitTag":"","commitTime":"2022-04-12T20:26:08+05:30","type":"SOURCE_TYPE_BRANCH_FIXED","message":"Update README.md","author":"Prakarsh \u003c71125043+prakarsh-dt@users.noreply.github.com\u003e","gitOptions":{"userName":"","password":"","sshPrivateKey":"","accessToken":"","authMode":"ANONYMOUS"},"sourceType":"SOURCE_TYPE_BRANCH_FIXED","sourceValue":"master","WebhookData":{"Id":0,"EventActionType":"","Data":null}}],"containerResources":{"minCpu":"","maxCpu":"","minStorage":"","maxStorage":"","minEphStorage":"","maxEphStorage":"","minMem":"","maxMem":""},"activeDeadlineSeconds":3600,"ciImage":"quay.io/devtron/ci-runner:1290cf23-182-8015","namespace":"devtron-ci","workflowId":16,"triggeredBy":8,"cacheLimit":5000000000,"beforeDockerBuildScripts":null,"afterDockerBuildScripts":null,"ciArtifactLocation":"","invalidateCache":true,"scanEnabled":false,"cloudProvider":"AZURE","azureBlobConfig":{"enabled":true,"accountName":"devtrondemoblob","blobContainerCiLog":"","blobContainerCiCache":"cache","accountKey":"y1/K13YMp/v7uuvZNkKJ4dS3CyGc37bPIN9Hv8MVhog6OkG0joV05proQReMQIJQ8qXp0JVpj+mz+AStHNKR3Q=="},"minioEndpoint":"","defaultAddressPoolBaseCidr":"","defaultAddressPoolSize":0,"preCiSteps":[{"name":"Task 1","index":1,"stepType":"INLINE","executorType":"SHELL","refPluginId":0,"script":"echo $","inputVars":null,"exposedPorts":{"0":0},"outputVars":null,"triggerSkipConditions":null,"successFailureConditions":null,"dockerImage":"","command":"","args":null,"customScriptMountDestinationPath":{"sourcePath":"","destinationPath":""},"sourceCodeMountDestinationPath":{"sourcePath":"","destinationPath":""},"extraVolumeMounts":null,"artifactPaths":null}],"postCiSteps":null,"refPlugins":null},"cdRequest":null}`
 	//' {"workflowNamePrefix":"55-suraj-23-ci-suraj-test-pipeline-8","pipelineName":"suraj-23-ci-suraj-test-pipeline","pipelineId":8,"dockerImageTag":"a6b809c4be87c217feba4af15cf5ebc3cafe21e0","dockerRegistryURL":"686244538589.dkr.ecr.us-east-2.amazonaws.com","dockerRepository":"test/suraj-23","dockerfileLocation":"./notifier/Dockerfile","awsRegion":"us-east-2","ciCacheLocation":"ci-caching","ciCacheFileName":"suraj-23-ci-suraj-test-pipeline.tar.gz","ciProjectDetails":[{"gitRepository":"https://gitlab.com/devtron/notifier.git","materialName":"1-notifier","checkoutPath":"./notifier","commitHash":"d4df38bcd065004014d255c2203d592a91585955","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"test-commit","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":"USERNAME_PASSWORD"}},{"gitRepository":"https://gitlab.com/devtron/orchestrator.git","materialName":"2-orchestrator","checkoutPath":"./orch","commitHash":"","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":""}}],"ciImage":"686244538589.dkr.ecr.us-east-2.amazonaws.com/cirunner:latest","namespace":"default"}'
-	fmt.Println("debug", len(os.Args), "debug")
-	for i, arg := range os.Args {
-		fmt.Println(i, " : ", arg)
-	}
-	//os.Stdout
 
-	//args := os.Args[1]
-	args := os.Getenv("CI_CD_EVENT")
+	var exitCode int
+	args := os.Getenv(util.CiCdEventEnvKey)
 	ciCdRequest := &helper.CiCdTriggerEvent{}
 	err := json.Unmarshal([]byte(args), ciCdRequest)
+
+	defer uploadLogsAndHandleExit(*ciCdRequest, &exitCode)
 	if err != nil {
 		log.Println(err)
-		os.Exit(1)
+		exitCode = util.DefaultErrorCode
+		return
 	}
 	logLevel := os.Getenv("LOG_LEVEL")
 	if logLevel == "" || logLevel == "DEBUG" {
@@ -65,19 +64,22 @@ func main() {
 			artifactUploaded, artifactUploadErr = helper.ZipAndUpload(ciRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
 		}
 
-		const CiStageFailErrorCode = 2
 		if err != nil {
 			var stageError *helper.CiStageError
 			log.Println(util.DEVTRON, err)
 			if errors.As(err, &stageError) {
-				os.Exit(CiStageFailErrorCode)
+				//os.Exit(util.CiStageFailErrorCode)
+				exitCode = util.CiStageFailErrorCode
+				return
 			}
-			os.Exit(1)
+			exitCode = util.DefaultErrorCode
+			return
 		}
 
 		if artifactUploadErr != nil {
 			log.Println(util.DEVTRON, artifactUploadErr)
-			os.Exit(1)
+			exitCode = util.DefaultErrorCode
+			return
 		}
 
 		// sync cache
@@ -85,7 +87,8 @@ func main() {
 		err = helper.SyncCache(ciRequest)
 		if err != nil {
 			log.Println(err)
-			os.Exit(1)
+			exitCode = util.DefaultErrorCode
+			return
 		}
 		log.Println(util.DEVTRON, " /cache-push")
 	} else {
@@ -93,7 +96,8 @@ func main() {
 		artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CdRequest)
 		if err != nil || artifactUploadErr != nil {
 			log.Println(err)
-			os.Exit(1)
+			exitCode = util.DefaultErrorCode
+			return
 		}
 	}
 }
@@ -497,4 +501,34 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		return err
 	}
 	return nil
+}
+
+func uploadLogsAndHandleExit(event helper.CiCdTriggerEvent, exitCode *int) {
+	var storageModuleConfigured bool
+	var blobStorageLogKey string
+	var cloudProvider blob_storage.BlobStorageType
+	var blobStorageS3Config *blob_storage.BlobStorageS3Config
+	var azureBlobConfig *blob_storage.AzureBlobConfig
+	var gcpBlobConfig *blob_storage.GcpBlobConfig
+
+	if event.Type == util.CIEVENT && event.CiRequest.BlobStorageConfigured {
+		storageModuleConfigured = true
+		blobStorageLogKey = event.CiRequest.BlobStorageLogsKey
+		cloudProvider = event.CiRequest.CloudProvider
+		blobStorageS3Config = event.CiRequest.BlobStorageS3Config
+		azureBlobConfig = event.CiRequest.AzureBlobConfig
+		gcpBlobConfig = event.CiRequest.GcpBlobConfig
+
+	} else if event.Type == util.CDSTAGE && event.CdRequest.BlobStorageConfigured {
+		storageModuleConfigured = true
+		blobStorageLogKey = event.CdRequest.BlobStorageLogsKey
+		cloudProvider = event.CdRequest.CloudProvider
+		blobStorageS3Config = event.CdRequest.BlobStorageS3Config
+		azureBlobConfig = event.CdRequest.AzureBlobConfig
+		gcpBlobConfig = event.CdRequest.GcpBlobConfig
+	}
+	helper.UploadLogs(storageModuleConfigured, blobStorageLogKey, cloudProvider, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
+	if *exitCode != 0 {
+		os.Exit(*exitCode)
+	}
 }
