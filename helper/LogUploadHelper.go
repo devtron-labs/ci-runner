@@ -17,16 +17,16 @@ func UploadLogs(storageModuleConfigured bool, blogStorageLogKey string, cloudPro
 		return
 	}
 
-	isEmpty, err := IsDirEmpty(util.TmpLogLocation)
-	if err != nil {
-		log.Println(util.DEVTRON, "logs empty check error", err)
-		return
-	} else if isEmpty {
-		log.Println(util.DEVTRON, "log file is empty")
-		return
-	}
+	//isEmpty, err := IsDirEmpty(util.TmpLogLocation)
+	//if err != nil {
+	//	log.Println(util.DEVTRON, "logs empty check error", err)
+	//	return
+	//} else if isEmpty {
+	//	log.Println(util.DEVTRON, "log file is empty")
+	//	return
+	//}
 
-	err = UploadFileToCloud(cloudProvider, util.TmpLogLocation, blogStorageLogKey, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
+	err := UploadFileToCloud(cloudProvider, util.TmpLogLocation, blogStorageLogKey, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
 	if err != nil {
 		fmt.Println("Failed to upload to blob storage with error", err)
 		return
