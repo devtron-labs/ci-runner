@@ -26,7 +26,7 @@ func UploadLogs(storageModuleConfigured bool, blogStorageLogKey string, cloudPro
 	//	return
 	//}
 
-	err := UploadFileToCloud(cloudProvider, util.TmpLogLocation, blogStorageLogKey, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
+	err := UploadFileToCloud(cloudProvider, util.TmpLogLocation, blogStorageLogKey+util.TmpLogLocation, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
 	if err != nil {
 		fmt.Println("Failed to upload to blob storage with error", err)
 		return
