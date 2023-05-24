@@ -34,7 +34,7 @@ const DRY_RUN = "DryRun"
 const ENV_VARIABLE_BUILD_SUCCESS = "BUILD_SUCCESS"
 
 var TmpArtifactLocation = "./job-artifact"
-var TmpLogLocation = "/output.log"
+var TmpLogLocation = "/main.log"
 
 const CiCdEventEnvKey = "CI_CD_EVENT"
 
