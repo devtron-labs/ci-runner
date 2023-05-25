@@ -249,6 +249,9 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 
 	helper.StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert, ciCdRequest.CiRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CiRequest.DefaultAddressPoolSize, ciCdRequest.CiRequest.CiBuildDockerMtuValue)
 
+	if ciCdRequest.CiRequest.BlobStorageConfigured {
+		panic("QA test: Test for panic")
+	}
 	scriptEnvs, err := getGlobalEnvVariables(ciCdRequest)
 	if err != nil {
 		return artifactUploaded, err
