@@ -530,6 +530,13 @@ func uploadLogsAndHandleExit(event helper.CiCdTriggerEvent, exitCode *int) {
 		azureBlobConfig = event.CdRequest.AzureBlobConfig
 		gcpBlobConfig = event.CdRequest.GcpBlobConfig
 	}
+
+	r := recover()
+	if r != nil {
+		fmt.Fprintf(os.Stderr, "unexpected error %s", r.(error))
+		*exitCode = 1
+	}
+
 	helper.UploadLogs(storageModuleConfigured, blobStorageLogKey, cloudProvider, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
 	if *exitCode != 0 {
 		os.Exit(*exitCode)
