@@ -553,7 +553,7 @@ func uploadLogsAndHandleExit(event helper.CiCdTriggerEvent, exitCode *int) {
 
 func processEvent(args string) (exitCode int) {
 
-	exitCode = 0
+	exitCode = 1
 	ciCdRequest := &helper.CiCdTriggerEvent{}
 	err := json.Unmarshal([]byte(args), ciCdRequest)
 	if err != nil {
