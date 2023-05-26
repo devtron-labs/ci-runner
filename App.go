@@ -40,6 +40,7 @@ func main() {
 	//' {"workflowNamePrefix":"55-suraj-23-ci-suraj-test-pipeline-8","pipelineName":"suraj-23-ci-suraj-test-pipeline","pipelineId":8,"dockerImageTag":"a6b809c4be87c217feba4af15cf5ebc3cafe21e0","dockerRegistryURL":"686244538589.dkr.ecr.us-east-2.amazonaws.com","dockerRepository":"test/suraj-23","dockerfileLocation":"./notifier/Dockerfile","awsRegion":"us-east-2","ciCacheLocation":"ci-caching","ciCacheFileName":"suraj-23-ci-suraj-test-pipeline.tar.gz","ciProjectDetails":[{"gitRepository":"https://gitlab.com/devtron/notifier.git","materialName":"1-notifier","checkoutPath":"./notifier","commitHash":"d4df38bcd065004014d255c2203d592a91585955","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"test-commit","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":"USERNAME_PASSWORD"}},{"gitRepository":"https://gitlab.com/devtron/orchestrator.git","materialName":"2-orchestrator","checkoutPath":"./orch","commitHash":"","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":""}}],"ciImage":"686244538589.dkr.ecr.us-east-2.amazonaws.com/cirunner:latest","namespace":"default"}'
 
 	exitCode := 0
+	defer func() { os.Exit(exitCode) }()
 	args := os.Getenv(util.CiCdEventEnvKey)
 	ciCdRequest := &helper.CiCdTriggerEvent{}
 	err := json.Unmarshal([]byte(args), ciCdRequest)
@@ -536,12 +537,12 @@ func uploadLogsAndHandleExit(event helper.CiCdTriggerEvent, exitCode *int) {
 	r := recover()
 	if r != nil {
 		//fmt.Fprintf(os.Stderr, "unexpected error %s", r.(error))
-		fmt.Println("unexpected error", debug.Stack())
+		fmt.Println("unexpected error", string(debug.Stack()))
 		*exitCode = 1
 	}
 
 	helper.UploadLogs(storageModuleConfigured, blobStorageLogKey, cloudProvider, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
 	fmt.Println("exit code: ", *exitCode)
 
-	os.Exit(*exitCode)
+	//os.Exit(*exitCode)
 }
