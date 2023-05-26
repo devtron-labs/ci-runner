@@ -38,7 +38,8 @@ RUN chmod 644 /root/.ssh/config
 #ENTRYPOINT ["/bin/sh", "-c", "./cirunner \"$@\" 2>&1 | tee output.log"]
 #ENTRYPOINT ["/bin/sh", "-c", "./cirunner 2>&1 | tee main.log"]
 #ENTRYPOINT ["/bin/bash", "-o", "errexit", "-c", "./cirunner 2>&1 | tee main.log"]
-ENTRYPOINT ["/bin/sh", "-c", "set -e -o pipefail; ./cirunner 2>&1 | tee main.log"]
+#ENTRYPOINT ["/bin/sh", "-c", "set -e -o pipefail; ./cirunner 2>&1 | tee main.log"]
+ENTRYPOINT ["/bin/sh", "-c", "set -o pipefail; ./cirunner 2>&1 | tee main.log"]
 
 #ENTRYPOINT ["/bin/sh", "-c"]
 #CMD ["./cirunner \"$@\" 2>&1 | tee output.log"]
