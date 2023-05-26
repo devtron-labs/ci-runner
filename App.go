@@ -28,6 +28,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -534,7 +535,7 @@ func uploadLogsAndHandleExit(event helper.CiCdTriggerEvent, exitCode *int) {
 	r := recover()
 	if r != nil {
 		//fmt.Fprintf(os.Stderr, "unexpected error %s", r.(error))
-		fmt.Println("unexpected error", r.(error))
+		fmt.Println("unexpected error", debug.Stack())
 		*exitCode = 1
 	}
 
