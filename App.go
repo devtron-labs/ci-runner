@@ -536,24 +536,15 @@ func uploadLogsAndHandleExit(event helper.CiCdTriggerEvent, exitCode *int) {
 
 	r := recover()
 	if r != nil {
-		//fmt.Fprintf(os.Stderr, "unexpected error %s", r.(error))
-		fmt.Println("unexpected error", string(debug.Stack()))
+		fmt.Println(r.(error), string(debug.Stack()))
 		*exitCode = 1
 	}
-
 	helper.UploadLogs(storageModuleConfigured, blobStorageLogKey, cloudProvider, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
-	fmt.Println("exit code: ", *exitCode)
-
-	if r != nil {
-		panic(r.(error))
-	}
-	//os.Exit(*exitCode)
-	//runtime.Goexit()
 }
 
 func processEvent(args string) (exitCode int) {
 
-	exitCode = 1
+	exitCode = 0
 	ciCdRequest := &helper.CiCdTriggerEvent{}
 	err := json.Unmarshal([]byte(args), ciCdRequest)
 	if err != nil {
