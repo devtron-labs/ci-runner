@@ -544,6 +544,9 @@ func uploadLogsAndHandleExit(event helper.CiCdTriggerEvent, exitCode *int) {
 	helper.UploadLogs(storageModuleConfigured, blobStorageLogKey, cloudProvider, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
 	fmt.Println("exit code: ", *exitCode)
 
+	if r != nil {
+		panic(r.(error))
+	}
 	//os.Exit(*exitCode)
 	//runtime.Goexit()
 }
