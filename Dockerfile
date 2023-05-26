@@ -32,17 +32,7 @@ RUN (curl -sSL "https://github.com/buildpacks/pack/releases/download/v0.27.0/pac
 COPY --from=build-env /go/bin/cirunner .
 COPY ./ssh-config /root/.ssh/config
 RUN chmod 644 /root/.ssh/config
-#ENTRYPOINT ["./cirunner 2>&1 | tee main.log"]
-#ENTRYPOINT ["./cirunner --agrs=value"]
-#CMD ["2>&1 | tee /main.log"]
-#ENTRYPOINT ["/bin/sh", "-c", "./cirunner \"$@\" 2>&1 | tee output.log"]
-#ENTRYPOINT ["/bin/sh", "-c", "./cirunner 2>&1 | tee main.log"]
-#ENTRYPOINT ["/bin/bash", "-o", "errexit", "-c", "./cirunner 2>&1 | tee main.log"]
-#ENTRYPOINT ["/bin/sh", "-c", "set -e -o pipefail; ./cirunner 2>&1 | tee main.log"]
-ENTRYPOINT ["/bin/sh", "-c", "set -o pipefail; ./cirunner 2>&1 | tee main.log"]
 
-#ENTRYPOINT ["/bin/sh", "-c"]
-#CMD ["./cirunner \"$@\" 2>&1 | tee output.log"]
-#ENTRYPOINT ["/bin/sh", "-c", "exec ./cirunner \"$@\" 2>&1 | tee output.log"]
-#ENTRYPOINT ["./cirunner", ">>", "/myapp.log", "2>&1"]
+# changing anything here will break current functionalities of logging and failure handling
+ENTRYPOINT ["/bin/sh", "-c", "set -o pipefail; ./cirunner 2>&1 | tee main.log"]
 
