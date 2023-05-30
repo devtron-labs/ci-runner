@@ -58,6 +58,7 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 		}
 		ciStep.InputVars = vars
 
+		log.Println("Deduced variables are : ", ciStep.InputVars)
 		//variables with empty value
 		var emptyVariableList []string
 		scriptEnvs := make(map[string]string)
@@ -152,6 +153,8 @@ func RunCiSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[i
 				if executionConf.SourceCodeMount != nil {
 					executionConf.SourceCodeMount.SrcPath = util.WORKINGDIR
 				}
+
+				log.Println("ExecutionConf input variables are : ", executionConf.EnvInputVars)
 				stageOutputVars, err := RunScriptsInDocker(executionConf)
 				if err != nil {
 					return nil, ciStep, err

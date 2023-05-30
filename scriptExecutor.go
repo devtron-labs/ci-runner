@@ -175,6 +175,15 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
+
+	// Print the environment variables.
+	envMap1, _ := godotenv.Read(envInputFileName)
+	for key, value := range envMap1 {
+		log.Println("Key is : ", key)
+		log.Println("Value is : ", value)
+	}
+	log.Println("After successfully write, Environment input variables file is : ", envInputFileName)
+
 	entryScript, err := buildDockerEntryScript(executionConf.command, executionConf.args, executionConf.OutputVars)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
