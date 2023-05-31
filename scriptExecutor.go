@@ -5,6 +5,7 @@ import (
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/joho/godotenv"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -177,11 +178,14 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	}
 
 	// Print the environment variables.
-	envMap1, _ := godotenv.Read(envInputFileName)
-	for key, value := range envMap1 {
-		log.Println("Key is : ", key)
-		log.Println("Value is : ", value)
+	content, err := ioutil.ReadFile("envInputFileName")
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
 	}
+
+	// Print the contents of the file to the console.
+	fmt.Println(string(content))
 	log.Println("After successfully write, Environment input variables file is : ", envInputFileName)
 
 	entryScript, err := buildDockerEntryScript(executionConf.command, executionConf.args, executionConf.OutputVars)
@@ -253,7 +257,6 @@ set -e
 func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 	cmdTemplate := `docker run --network host \
 --env-file {{.EnvInputFileName}} \
--u \
 -v {{.EntryScriptFileName}}:/devtron_script/_entry.sh \
 -v {{.EnvOutFileName}}:/devtron_script/_out.env \
 {{- if .SourceCodeMount }}
@@ -274,10 +277,6 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 {{- .DockerImage}} \
 /bin/sh /devtron_script/_entry.sh
 `
-	for key, value := range executionConf.EnvInputVars {
-		cmdTemplate = strings.ReplaceAll(cmdTemplate, "<KEY>", key)
-		cmdTemplate = strings.ReplaceAll(cmdTemplate, "<VALUE>", value)
-	}
 	finalScript, err := Tprintf(cmdTemplate, executionConf)
 	if err != nil {
 		return "", err
