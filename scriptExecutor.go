@@ -5,7 +5,6 @@ import (
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/joho/godotenv"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -177,15 +176,6 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		return nil, err
 	}
 
-	// Print the environment variables.
-	content, err := ioutil.ReadFile("envInputFileName")
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
-
-	// Print the contents of the file to the console.
-	log.Println("Content is ", string(content))
 	log.Println("After successfully write, Environment input variables file is : ", envInputFileName)
 
 	entryScript, err := buildDockerEntryScript(executionConf.command, executionConf.args, executionConf.OutputVars)
