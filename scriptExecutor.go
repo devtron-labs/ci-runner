@@ -252,7 +252,7 @@ set -e
 
 func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 	cmdTemplate := `docker run --network host \
---env-file {{.EnvInputFileName}} -D \
+-e {{.EnvInputFileName}} \
 -v {{.EntryScriptFileName}}:/devtron_script/_entry.sh \
 -v {{.EnvOutFileName}}:/devtron_script/_out.env \
 {{- if .SourceCodeMount }}
