@@ -185,7 +185,7 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	}
 
 	// Print the contents of the file to the console.
-	fmt.Println(string(content))
+	log.Println("Content is ", string(content))
 	log.Println("After successfully write, Environment input variables file is : ", envInputFileName)
 
 	entryScript, err := buildDockerEntryScript(executionConf.command, executionConf.args, executionConf.OutputVars)
