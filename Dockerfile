@@ -12,7 +12,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /go/bin/cirunner
 
 
-FROM docker:20.10.17-dind
+FROM docker:20.10.24-dind
 # All these steps will be cached
 #RUN apk add --no-cache ca-certificates
 RUN apk update && apk add --no-cache --virtual .build-deps && apk add bash && apk add make && apk add curl && apk add openssh && apk add git && apk add zip && apk add jq
