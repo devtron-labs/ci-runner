@@ -252,7 +252,8 @@ set -e
 
 func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 	cmdTemplate := `docker run --network host \
---env-file {{.EnvInputFileName}} -u \
+--env-file {{.EnvInputFileName}} \
+-u \
 -v {{.EntryScriptFileName}}:/devtron_script/_entry.sh \
 -v {{.EnvOutFileName}}:/devtron_script/_out.env \
 {{- if .SourceCodeMount }}
@@ -273,10 +274,13 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 {{- .DockerImage}} \
 /bin/sh /devtron_script/_entry.sh
 `
+	for key, value := range executionConf.EnvInputVars {
+		cmdTemplate = strings.ReplaceAll(cmdTemplate, "<KEY>", key)
+		cmdTemplate = strings.ReplaceAll(cmdTemplate, "<VALUE>", value)
+	}
 	finalScript, err := Tprintf(cmdTemplate, executionConf)
 	if err != nil {
 		return "", err
 	}
 	return finalScript, nil
-
 }
