@@ -170,22 +170,12 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	executionConf.EntryScriptFileName = entryScriptFileName
 	executionConf.EnvOutFileName = envOutFileName
 
-	err := godotenv.Write(executionConf.EnvInputVars, envInputFileName)
+	err := writeEnvFile(envInputFileName, executionConf.EnvInputVars)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
 
-	log.Println("Key and values are ", executionConf.EnvInputVars)
-	err = godotenv.Load(envInputFileName)
-	if err != nil {
-		log.Fatalf("Error loading environment file: %s", err.Error())
-	}
-
-	// Access the environment variables
-	value := os.Getenv("VARIABLE_NAME")
-	log.Println("value obtained is ", value)
-	log.Println("Env Input file is ", envInputFileName)
 	entryScript, err := buildDockerEntryScript(executionConf.command, executionConf.args, executionConf.OutputVars)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
@@ -228,6 +218,27 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		return nil, err
 	}
 	return envMap, nil
+}
+
+func writeEnvFile(fileName string, envVars map[string]string) error {
+	file, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	for key, value := range envVars {
+		// Remove double quotes from the value
+		value = strings.ReplaceAll(value, "\"", "")
+
+		// Write key-value pair to file
+		_, err := file.WriteString(fmt.Sprintf("%s=%s\n", key, value))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func buildDockerEntryScript(command string, args []string, outputVars []string) (string, error) {
