@@ -220,6 +220,7 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	return envMap, nil
 }
 func buildDockerEntryScript(command string, args []string, outputVars []string) (string, error) {
+	log.Println("output variables are ", outputVars)
 	entryTemplate := `#!/bin/sh
 set -e
 {{.command}} {{.args}}
