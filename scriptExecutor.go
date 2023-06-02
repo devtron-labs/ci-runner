@@ -197,7 +197,7 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
-	fmt.Println(dockerRunCommand)
+	log.Println("docker run command is ", dockerRunCommand)
 	//dockerRunCommand = "echo hello------;sleep 10; echo done------"
 	err = os.WriteFile(executionConf.RunCommandFileName, []byte(dockerRunCommand), 0644)
 	if err != nil {
@@ -227,7 +227,7 @@ set -e
 > {{.envOutFileName}}
 {{$envOutFileName := .envOutFileName}}
 {{- range .outputVars -}} 
-  printf "\n{{.}}=%s" ${{.}} >> {{$envOutFileName}}
+  printf "\n{{.}}=%s" "${{.}}" >> {{$envOutFileName}}
 {{end -}}`
 
 	templateData := make(map[string]interface{})
