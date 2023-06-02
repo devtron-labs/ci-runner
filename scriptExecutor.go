@@ -228,8 +228,10 @@ func writeEnvFile(fileName string, envVars map[string]string) error {
 	defer file.Close()
 
 	for key, value := range envVars {
-		// Remove double quotes from the value
-		value = strings.ReplaceAll(value, "\"", "")
+		// Remove double quotes from the first and last characters of the value
+		if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
+			value = value[1 : len(value)-1]
+		}
 
 		// Write key-value pair to file
 		_, err := file.WriteString(fmt.Sprintf("%s=%s\n", key, value))
