@@ -170,7 +170,7 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	executionConf.EntryScriptFileName = entryScriptFileName
 	executionConf.EnvOutFileName = envOutFileName
 
-	err := writeEnvFile(envInputFileName, executionConf.EnvInputVars)
+	err := godotenv.Write(executionConf.EnvInputVars, envInputFileName)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
 		return nil, err
@@ -219,30 +219,6 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	}
 	return envMap, nil
 }
-
-func writeEnvFile(fileName string, envVars map[string]string) error {
-	file, err := os.Create(fileName)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	for key, value := range envVars {
-		// Remove double quotes from the first and last characters of the value
-		if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
-			value = value[1 : len(value)-1]
-		}
-
-		// Write key-value pair to file
-		_, err := file.WriteString(fmt.Sprintf("%s=%s\n", key, value))
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func buildDockerEntryScript(command string, args []string, outputVars []string) (string, error) {
 	entryTemplate := `#!/bin/sh
 set -e
@@ -250,7 +226,7 @@ set -e
 > {{.envOutFileName}}
 {{$envOutFileName := .envOutFileName}}
 {{- range .outputVars -}} 
-  printf "\n{{.}}=%s" "${{.}}" >> {{$envOutFileName}}
+  printf "\n{{.}}=%s" ${{.}} >> {{$envOutFileName}}
 {{end -}}`
 
 	templateData := make(map[string]interface{})
