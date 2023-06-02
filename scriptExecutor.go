@@ -175,6 +175,17 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
+
+	log.Println("Key and values are ", executionConf.EnvInputVars)
+	err = godotenv.Load(envInputFileName)
+	if err != nil {
+		log.Fatalf("Error loading environment file: %s", err.Error())
+	}
+
+	// Access the environment variables
+	value := os.Getenv("VARIABLE_NAME")
+	log.Println("value obtained is ", value)
+	log.Println("Env Input file is ", envInputFileName)
 	entryScript, err := buildDockerEntryScript(executionConf.command, executionConf.args, executionConf.OutputVars)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
@@ -243,7 +254,7 @@ set -e
 
 func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 	cmdTemplate := `docker run --network host \
---env-file <(sed 's/"//g' {{.EnvInputFileName}}) \
+--env-file {{.EnvInputFileName}} \
 -v {{.EntryScriptFileName}}:/devtron_script/_entry.sh \
 -v {{.EnvOutFileName}}:/devtron_script/_out.env \
 {{- if .SourceCodeMount }}
