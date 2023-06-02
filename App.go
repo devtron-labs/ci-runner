@@ -514,6 +514,7 @@ func uploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
 	var blobStorageS3Config *blob_storage.BlobStorageS3Config
 	var azureBlobConfig *blob_storage.AzureBlobConfig
 	var gcpBlobConfig *blob_storage.GcpBlobConfig
+	var inAppLoggingEnabled bool
 
 	if event.Type == util.CIEVENT && event.CiRequest.BlobStorageConfigured {
 		storageModuleConfigured = true
@@ -522,6 +523,7 @@ func uploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
 		blobStorageS3Config = event.CiRequest.BlobStorageS3Config
 		azureBlobConfig = event.CiRequest.AzureBlobConfig
 		gcpBlobConfig = event.CiRequest.GcpBlobConfig
+		inAppLoggingEnabled = event.CiRequest.InAppLoggingEnabled
 
 	} else if event.Type == util.CDSTAGE && event.CdRequest.BlobStorageConfigured {
 		storageModuleConfigured = true
@@ -530,11 +532,16 @@ func uploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
 		blobStorageS3Config = event.CdRequest.BlobStorageS3Config
 		azureBlobConfig = event.CdRequest.AzureBlobConfig
 		gcpBlobConfig = event.CdRequest.GcpBlobConfig
+		inAppLoggingEnabled = event.CdRequest.InAppLoggingEnabled
 	}
 
 	if r := recover(); r != nil {
 		fmt.Println(r, string(debug.Stack()))
 		*exitCode = 1
 	}
-	helper.UploadLogs(storageModuleConfigured, blobStorageLogKey, cloudProvider, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
+	if inAppLoggingEnabled {
+		helper.UploadLogs(storageModuleConfigured, blobStorageLogKey, cloudProvider, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
+	} else {
+		log.Println(util.DEVTRON, "not uploading logs from app")
+	}
 }
