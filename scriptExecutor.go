@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
@@ -181,6 +182,27 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
 		return nil, err
+	}
+
+	file, err := os.Open(envInputFileName)
+	if err != nil {
+		log.Println("Error opening file:", err)
+		return nil, err
+	}
+	defer file.Close()
+
+	// Create a new scanner to read the file line by line
+	scanner := bufio.NewScanner(file)
+
+	// Read the file line by line
+	for scanner.Scan() {
+		line := scanner.Text()
+		log.Println("Line received is ", line)
+	}
+
+	// Check if there was an error while scanning
+	if err = scanner.Err(); err != nil {
+		log.Println("Error reading file:", err)
 	}
 
 	entryScript, err := buildDockerEntryScript(executionConf.command, executionConf.args, executionConf.OutputVars)
