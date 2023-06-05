@@ -10,8 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
-	"strconv"
 	"strings"
 )
 
@@ -182,32 +180,58 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		executionConf.EnvInputVars[key] = value
 	}
 
-	err := Write(executionConf.EnvInputVars, envInputFileName)
-	if err != nil {
-		log.Println(util.DEVTRON, err)
-		return nil, err
-	}
+	//err := Write(executionConf.EnvInputVars, envInputFileName)
+	//if err != nil {
+	//	log.Println(util.DEVTRON, err)
+	//	return nil, err
+	//}
 
-	file, err := os.Open(envInputFileName)
+	file, err := os.Create(envInputFileName)
 	if err != nil {
-		log.Println("Error opening file:", err)
-		return nil, err
+		panic(err)
 	}
 	defer file.Close()
 
+	// Create a buffered writer
+	writer := bufio.NewWriter(file)
+
+	// Write each key-value pair to the file
+	for key, value := range executionConf.EnvInputVars {
+		// Format the key-value pair
+		line := fmt.Sprintf("%s=%s\n", key, value)
+
+		// Write the line to the file
+		_, err = writer.WriteString(line)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	err = writer.Flush()
+	if err != nil {
+		panic(err)
+	}
+
+	//file, err := os.Open(envInputFileName)
+	//if err != nil {
+	//	log.Println("Error opening file:", err)
+	//	return nil, err
+	//}
+	//defer file.Close()
+
 	// Create a new scanner to read the file line by line
-	scanner := bufio.NewScanner(file)
+	//scanner := bufio.NewScanner(file)
 
 	// Read the file line by line
-	for scanner.Scan() {
-		line := scanner.Text()
-		log.Println("Line received is ", line)
-	}
-
+	//for scanner.Scan() {
+	//	line := scanner.Text()
+	//	log.Println("Line received is ", line)
+	//}
+	//
 	// Check if there was an error while scanning
-	if err = scanner.Err(); err != nil {
-		log.Println("Error reading file:", err)
-	}
+	//if err = scanner.Err(); err != nil {
+	//	log.Println("Error reading file:", err)
+	//}
 
 	entryScript, err := buildDockerEntryScript(executionConf.command, executionConf.args, executionConf.OutputVars)
 	if err != nil {
@@ -251,51 +275,6 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		return nil, err
 	}
 	return envMap, nil
-}
-
-func Write(envMap map[string]string, filename string) error {
-	content, err := Marshal(envMap)
-	if err != nil {
-		return err
-	}
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	_, err = file.WriteString(content + "\n")
-	if err != nil {
-		return err
-	}
-	file.Sync()
-	return err
-}
-
-func Marshal(envMap map[string]string) (string, error) {
-	lines := make([]string, 0, len(envMap))
-	for k, v := range envMap {
-		if d, err := strconv.Atoi(v); err == nil {
-			lines = append(lines, fmt.Sprintf(`%s=%d`, k, d))
-		} else {
-			lines = append(lines, fmt.Sprintf(`%s=%s`, k, doubleQuoteEscape(v)))
-		}
-	}
-	sort.Strings(lines)
-	return strings.Join(lines, "\n"), nil
-}
-
-func doubleQuoteEscape(line string) string {
-	for _, c := range doubleQuoteSpecialChars {
-		toReplace := "\\" + string(c)
-		if c == '\n' {
-			toReplace = `\n`
-		}
-		if c == '\r' {
-			toReplace = `\r`
-		}
-		line = strings.Replace(line, string(c), toReplace, -1)
-	}
-	return line
 }
 
 func buildDockerEntryScript(command string, args []string, outputVars []string) (string, error) {
