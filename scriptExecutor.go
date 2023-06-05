@@ -170,6 +170,13 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	executionConf.EntryScriptFileName = entryScriptFileName
 	executionConf.EnvOutFileName = envOutFileName
 
+	// Remove double quotes at this point and then observe the behaviour, might be a possibility that double quotes are inserted before this point
+
+	for key, value := range executionConf.EnvInputVars {
+		value = strings.Trim(value, "\"")
+		executionConf.EnvInputVars[key] = value
+	}
+
 	err := godotenv.Write(executionConf.EnvInputVars, envInputFileName)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
