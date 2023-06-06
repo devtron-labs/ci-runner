@@ -13,7 +13,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
 const doubleQuoteSpecialChars = "\\\n\r\"!$`"
@@ -278,15 +277,6 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	return envMap, nil
 }
 
-func hasSpecialCharacters(s string) bool {
-	for _, char := range s {
-		if !unicode.IsLetter(char) && !unicode.IsDigit(char) {
-			return true
-		}
-	}
-	return false
-}
-
 func buildDockerEntryScript(command string, args []string, outputVars []string) (string, error) {
 	log.Println("output variables are ", outputVars)
 	entryTemplate := `#!/bin/sh
@@ -365,7 +355,7 @@ func Marshal(envMap map[string]string) (string, error) {
 		if d, err := strconv.Atoi(v); err == nil {
 			lines = append(lines, fmt.Sprintf(`%s=%d`, k, d))
 		} else {
-			lines = append(lines, fmt.Sprintf(`%s=%s`, k, doubleQuoteEscape(v)))
+			lines = append(lines, fmt.Sprintf(`%s=%s`, k, v))
 		}
 	}
 	sort.Strings(lines)
