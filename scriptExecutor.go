@@ -355,7 +355,7 @@ func Marshal(envMap map[string]string) (string, error) {
 		if d, err := strconv.Atoi(v); err == nil {
 			lines = append(lines, fmt.Sprintf(`%s=%d`, k, d))
 		} else {
-			lines = append(lines, fmt.Sprintf(`%s=%s`, k, v))
+			lines = append(lines, fmt.Sprintf(`%s=%s`, k, doubleQuoteEscape(v)))
 		}
 	}
 	sort.Strings(lines)
