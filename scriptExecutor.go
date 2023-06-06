@@ -15,8 +15,6 @@ import (
 	"strings"
 )
 
-const doubleQuoteSpecialChars = "\\\n\r\"!$`"
-
 func RunScriptsV1(outputPath string, bashScript string, script string, envVars map[string]string) error {
 	log.Println("running script commands")
 	scriptTemplate := `#!/bin/sh
@@ -355,23 +353,9 @@ func Marshal(envMap map[string]string) (string, error) {
 		if d, err := strconv.Atoi(v); err == nil {
 			lines = append(lines, fmt.Sprintf(`%s=%d`, k, d))
 		} else {
-			lines = append(lines, fmt.Sprintf(`%s=%s`, k, doubleQuoteEscape(v)))
+			lines = append(lines, fmt.Sprintf(`%s=%s`, k, v))
 		}
 	}
 	sort.Strings(lines)
 	return strings.Join(lines, "\n"), nil
-}
-
-func doubleQuoteEscape(line string) string {
-	for _, c := range doubleQuoteSpecialChars {
-		toReplace := "\\" + string(c)
-		if c == '\n' {
-			toReplace = `\n`
-		}
-		if c == '\r' {
-			toReplace = `\r`
-		}
-		line = strings.Replace(line, string(c), toReplace, -1)
-	}
-	return line
 }
