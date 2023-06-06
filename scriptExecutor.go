@@ -172,7 +172,8 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	executionConf.EntryScriptFileName = entryScriptFileName
 	executionConf.EnvOutFileName = envOutFileName
 
-	err := Write(executionConf.EnvInputVars, envInputFileName)
+	//Write env input vars to env file
+	err := writeToEnvFile(executionConf.EnvInputVars, envInputFileName)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
 		return nil, err
@@ -274,8 +275,9 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 
 }
 
-func Write(envMap map[string]string, filename string) error {
-	content, err := Marshal(envMap)
+// Writes input vars to env file
+func writeToEnvFile(envMap map[string]string, filename string) error {
+	content, err := marshal(envMap)
 	if err != nil {
 		return err
 	}
@@ -292,7 +294,8 @@ func Write(envMap map[string]string, filename string) error {
 	return err
 }
 
-func Marshal(envMap map[string]string) (string, error) {
+// Filters values of env variables on the basis of type and inserts to slice of strings
+func marshal(envMap map[string]string) (string, error) {
 	lines := make([]string, 0, len(envMap))
 	for k, v := range envMap {
 		if d, err := strconv.Atoi(v); err == nil {
