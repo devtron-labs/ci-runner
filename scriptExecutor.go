@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"unicode"
 )
 
 const doubleQuoteSpecialChars = "\\\n\r\"!$`"
@@ -198,7 +199,10 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	// Write each key-value pair to the file
 	for key, value := range executionConf.EnvInputVars {
 		// Format the key-value pair
-		line := fmt.Sprintf("%s : %v\n", key, value)
+		//if hasSpecialCharacters(value) {
+		//	line := fmt.Sprintf("%s : %q\n", key, value)
+		//}
+		line := fmt.Sprintf("%s : %q\n", key, value)
 		_, err = file.WriteString(line)
 		if err != nil {
 			panic(err)
@@ -273,6 +277,15 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		return nil, err
 	}
 	return envMap, nil
+}
+
+func hasSpecialCharacters(s string) bool {
+	for _, char := range s {
+		if !unicode.IsLetter(char) && !unicode.IsDigit(char) {
+			return true
+		}
+	}
+	return false
 }
 
 func buildDockerEntryScript(command string, args []string, outputVars []string) (string, error) {
