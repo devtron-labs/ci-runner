@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
@@ -173,62 +172,10 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	executionConf.EntryScriptFileName = entryScriptFileName
 	executionConf.EnvOutFileName = envOutFileName
 
-	// Remove double quotes at this point and then observe the behaviour, might be a possibility that double quotes are inserted before this point
-
-	for key, value := range executionConf.EnvInputVars {
-		log.Println("The key is ", key, " and the value is ", value)
-	}
-
 	err := Write(executionConf.EnvInputVars, envInputFileName)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
 		return nil, err
-	}
-
-	//file, err := os.Create(envInputFileName)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//defer file.Close()
-	//
-	//// Create a buffered writer
-	//writer := bufio.NewWriter(file)
-	//
-	//// Write each key-value pair to the file
-	//for key, value := range executionConf.EnvInputVars {
-	//	// Format the key-value pair
-	//	log.Println("The key is ", key, " and the value is ", value)
-	//	line := fmt.Sprintf(`%s : %s\n`, key, value)
-	//	_, err = file.WriteString(line)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//}
-	//
-	//err = writer.Flush()
-	//if err != nil {
-	//	panic(err)
-	//}
-
-	file, err := os.Open(envInputFileName)
-	if err != nil {
-		log.Println("Error opening file:", err)
-		return nil, err
-	}
-	defer file.Close()
-
-	//Create a new scanner to read the file line by line
-	scanner := bufio.NewScanner(file)
-
-	//Read the file line by line
-	for scanner.Scan() {
-		line := scanner.Text()
-		log.Println("Line received is ", line)
-	}
-
-	//Check if there was an error while scanning
-	if err = scanner.Err(); err != nil {
-		log.Println("Error reading file:", err)
 	}
 
 	entryScript, err := buildDockerEntryScript(executionConf.command, executionConf.args, executionConf.OutputVars)
@@ -252,7 +199,6 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
-	log.Println("docker run command is ", dockerRunCommand)
 	//dockerRunCommand = "echo hello------;sleep 10; echo done------"
 	err = os.WriteFile(executionConf.RunCommandFileName, []byte(dockerRunCommand), 0644)
 	if err != nil {
@@ -276,7 +222,6 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 }
 
 func buildDockerEntryScript(command string, args []string, outputVars []string) (string, error) {
-	log.Println("output variables are ", outputVars)
 	entryTemplate := `#!/bin/sh
 set -e
 {{.command}} {{.args}}
