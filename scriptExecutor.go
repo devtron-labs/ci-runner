@@ -198,12 +198,8 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	// Write each key-value pair to the file
 	for key, value := range executionConf.EnvInputVars {
 		// Format the key-value pair
-		var line string
-		if hasSpecialCharacters(value) {
-			line = fmt.Sprintf("%s : %q\n", key, value)
-		} else {
-			line = fmt.Sprintf("%s : %s\n", key, value)
-		}
+		log.Println("The key is ", key, " and the value is ", value)
+		line := fmt.Sprintf("%s : %s\n", key, value)
 		_, err = file.WriteString(line)
 		if err != nil {
 			panic(err)
