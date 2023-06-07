@@ -35,6 +35,8 @@ const ENV_VARIABLE_BUILD_SUCCESS = "BUILD_SUCCESS"
 
 var TmpArtifactLocation = "./job-artifact"
 
+const NewLineChar = "\n"
+
 var (
 	Output_path = filepath.Join(WORKINGDIR, "./process")
 

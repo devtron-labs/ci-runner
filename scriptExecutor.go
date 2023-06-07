@@ -6,10 +6,10 @@ import (
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/joho/godotenv"
 	"log"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -196,6 +196,7 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		return nil, err
 	}
 	dockerRunCommand, err := buildDockerRunCommand(executionConf)
+	fmt.Println(dockerRunCommand)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
 		return nil, err
@@ -279,15 +280,18 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 func writeToEnvFile(envMap map[string]string, filename string) error {
 	content, err := marshal(envMap)
 	if err != nil {
+		log.Println(util.DEVTRON, "error while marshalling the content for env file ", err)
 		return err
 	}
 	file, err := os.Create(filename)
 	if err != nil {
+		log.Println(util.DEVTRON, "error while creating env file ", err)
 		return err
 	}
 	defer file.Close()
 	_, err = file.WriteString(content + "\n")
 	if err != nil {
+		log.Println(util.DEVTRON, "error while writing env values to file ", err)
 		return err
 	}
 	file.Sync()
@@ -298,12 +302,21 @@ func writeToEnvFile(envMap map[string]string, filename string) error {
 func marshal(envMap map[string]string) (string, error) {
 	lines := make([]string, 0, len(envMap))
 	for k, v := range envMap {
-		if d, err := strconv.Atoi(v); err == nil {
+		if d, ok := isValidInteger(v); ok {
 			lines = append(lines, fmt.Sprintf(`%s=%d`, k, d))
 		} else {
 			lines = append(lines, fmt.Sprintf(`%s=%s`, k, v))
 		}
 	}
-	sort.Strings(lines)
-	return strings.Join(lines, "\n"), nil
+	//sort.Strings(lines)
+	return strings.Join(lines, util.NewLineChar), nil
+}
+
+func isValidInteger(value string) (int, bool) {
+	d, err := strconv.Atoi(value)
+	if err == nil {
+		return d, true
+	}
+	log.Println(util.DEVTRON, " Received error while extracting value from environment input variables ", err)
+	return math.MaxInt, false
 }

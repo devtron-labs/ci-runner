@@ -1,8 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"github.com/devtron-labs/ci-runner/helper"
+	"io/ioutil"
+	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -203,6 +207,76 @@ func TestRunScriptsInDocker(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("RunScriptsInDocker() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_writeToEnvFile(t *testing.T) {
+	type args struct {
+		envMap   map[string]string
+		filename string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{{
+		name: "empty_env_map",
+		args: args{
+			envMap:   map[string]string{},
+			filename: "test.env",
+		},
+		wantErr: false,
+	}, {
+		name: "single_env_var",
+		args: args{
+			envMap:   map[string]string{"FOO": "BAR"},
+			filename: "test.env",
+		},
+		wantErr: false,
+	}, {
+		name: "multiple_env_vars",
+		args: args{
+			envMap:   map[string]string{"FOO": "BAR", "BAR": "FOO"},
+			filename: "test.env",
+		},
+		wantErr: false,
+	}, {
+		name: "error_creating_file",
+		args: args{
+			envMap:   map[string]string{"FOO": "BAR"},
+			filename: "/dev/null",
+		},
+		wantErr: true,
+	},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := writeToEnvFile(tt.args.envMap, tt.args.filename)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("writeToEnvFile() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err == nil {
+				// Check the contents of the file
+				file, err := os.Open(tt.args.filename)
+				if err != nil {
+					t.Errorf("Error opening file: %v", err)
+					return
+				}
+				defer file.Close()
+				contents, err := ioutil.ReadAll(file)
+				if err != nil {
+					t.Errorf("Error reading file contents: %v", err)
+					return
+				}
+				for k, v := range tt.args.envMap {
+					if !strings.Contains(string(contents), fmt.Sprintf("%s=%s", k, v)) {
+						t.Errorf("Expected to find env var %s=%s in file, but it was not found", k, v)
+					}
+				}
 			}
 		})
 	}
