@@ -6,7 +6,6 @@ import (
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/joho/godotenv"
 	"log"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -278,11 +277,7 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 
 // Writes input vars to env file
 func writeToEnvFile(envMap map[string]string, filename string) error {
-	content, err := marshal(envMap)
-	if err != nil {
-		log.Println(util.DEVTRON, "error while marshalling the content for env file ", err)
-		return err
-	}
+	content := marshal(envMap)
 	file, err := os.Create(filename)
 	if err != nil {
 		log.Println(util.DEVTRON, "error while creating env file ", err)
@@ -299,24 +294,17 @@ func writeToEnvFile(envMap map[string]string, filename string) error {
 }
 
 // Filters values of env variables on the basis of type and inserts to slice of strings
-func marshal(envMap map[string]string) (string, error) {
+func marshal(envMap map[string]string) string {
 	lines := make([]string, 0, len(envMap))
 	for k, v := range envMap {
-		if d, ok := isValidInteger(v); ok {
-			lines = append(lines, fmt.Sprintf(`%s=%d`, k, d))
-		} else {
+		d, err := strconv.Atoi(v)
+		if err != nil {
+			//received string
 			lines = append(lines, fmt.Sprintf(`%s=%s`, k, v))
+		} else {
+			//received integer
+			lines = append(lines, fmt.Sprintf(`%s=%d`, k, d))
 		}
 	}
-	//sort.Strings(lines)
-	return strings.Join(lines, util.NewLineChar), nil
-}
-
-func isValidInteger(value string) (int, bool) {
-	d, err := strconv.Atoi(value)
-	if err == nil {
-		return d, true
-	}
-	log.Println(util.DEVTRON, " Received error while extracting value from environment input variables ", err)
-	return math.MaxInt, false
+	return strings.Join(lines, util.NewLineChar)
 }
