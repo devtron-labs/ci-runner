@@ -195,11 +195,12 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		return nil, err
 	}
 	dockerRunCommand, err := buildDockerRunCommand(executionConf)
-	fmt.Println(dockerRunCommand)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
+
+	fmt.Println(dockerRunCommand)
 	//dockerRunCommand = "echo hello------;sleep 10; echo done------"
 	err = os.WriteFile(executionConf.RunCommandFileName, []byte(dockerRunCommand), 0644)
 	if err != nil {
