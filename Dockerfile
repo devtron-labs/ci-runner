@@ -1,4 +1,3 @@
-
 ####--------------
 FROM golang:1.17.8-alpine3.15  AS build-env
 
@@ -33,6 +32,8 @@ COPY --from=build-env /go/bin/cirunner .
 COPY ./ssh-config /root/.ssh/config
 RUN chmod 644 /root/.ssh/config
 
-# changing anything here will break current functionalities of logging and failure handling
-ENTRYPOINT ["/bin/sh", "-c", "set -o pipefail; ./cirunner 2>&1 | tee main.log"]
+# entrypoint script with conditional logic
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
+ENTRYPOINT ["/entrypoint.sh"]

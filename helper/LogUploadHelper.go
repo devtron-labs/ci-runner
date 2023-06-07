@@ -5,6 +5,7 @@ import (
 	"github.com/devtron-labs/ci-runner/util"
 	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 	"log"
+	"path"
 )
 
 // UploadLogs
@@ -17,7 +18,7 @@ func UploadLogs(storageModuleConfigured bool, blogStorageLogKey string, cloudPro
 		return
 	}
 
-	err := UploadFileToCloud(cloudProvider, util.TmpLogLocation, blogStorageLogKey+util.TmpLogLocation, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
+	err := UploadFileToCloud(cloudProvider, util.TmpLogLocation, path.Join(blogStorageLogKey, util.TmpLogLocation), blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
 	if err != nil {
 		fmt.Println("Failed to upload to blob storage with error", err)
 		return
