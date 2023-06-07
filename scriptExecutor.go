@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -170,11 +171,13 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	executionConf.EntryScriptFileName = entryScriptFileName
 	executionConf.EnvOutFileName = envOutFileName
 
-	err := godotenv.Write(executionConf.EnvInputVars, envInputFileName)
+	//Write env input vars to env file
+	err := writeToEnvFile(executionConf.EnvInputVars, envInputFileName)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
+
 	entryScript, err := buildDockerEntryScript(executionConf.command, executionConf.args, executionConf.OutputVars)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
@@ -192,11 +195,11 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 		return nil, err
 	}
 	dockerRunCommand, err := buildDockerRunCommand(executionConf)
+	fmt.Println(dockerRunCommand)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
-	fmt.Println(dockerRunCommand)
 	//dockerRunCommand = "echo hello------;sleep 10; echo done------"
 	err = os.WriteFile(executionConf.RunCommandFileName, []byte(dockerRunCommand), 0644)
 	if err != nil {
@@ -270,4 +273,38 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 	}
 	return finalScript, nil
 
+}
+
+// Writes input vars to env file
+func writeToEnvFile(envMap map[string]string, filename string) error {
+	content := formatEnvironmentVariables(envMap)
+	file, err := os.Create(filename)
+	if err != nil {
+		log.Println(util.DEVTRON, "error while creating env file ", err)
+		return err
+	}
+	defer file.Close()
+	_, err = file.WriteString(content + "\n")
+	if err != nil {
+		log.Println(util.DEVTRON, "error while writing env values to file ", err)
+		return err
+	}
+	file.Sync()
+	return err
+}
+
+// Filters values of env variables on the basis of type and inserts to slice of strings
+func formatEnvironmentVariables(envMap map[string]string) string {
+	lines := make([]string, 0, len(envMap))
+	for k, v := range envMap {
+		d, err := strconv.Atoi(v)
+		if err != nil {
+			//received string
+			lines = append(lines, fmt.Sprintf(`%s=%s`, k, v))
+		} else {
+			//received integer
+			lines = append(lines, fmt.Sprintf(`%s=%d`, k, d))
+		}
+	}
+	return strings.Join(lines, util.NewLineChar)
 }
