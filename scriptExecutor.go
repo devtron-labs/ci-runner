@@ -277,7 +277,7 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 
 // Writes input vars to env file
 func writeToEnvFile(envMap map[string]string, filename string) error {
-	content := marshal(envMap)
+	content := formatEnvironmentVariables(envMap)
 	file, err := os.Create(filename)
 	if err != nil {
 		log.Println(util.DEVTRON, "error while creating env file ", err)
@@ -294,7 +294,7 @@ func writeToEnvFile(envMap map[string]string, filename string) error {
 }
 
 // Filters values of env variables on the basis of type and inserts to slice of strings
-func marshal(envMap map[string]string) string {
+func formatEnvironmentVariables(envMap map[string]string) string {
 	lines := make([]string, 0, len(envMap))
 	for k, v := range envMap {
 		d, err := strconv.Atoi(v)
