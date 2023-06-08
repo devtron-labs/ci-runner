@@ -1,4 +1,3 @@
-
 ####--------------
 FROM golang:1.17.8-alpine3.15  AS build-env
 
@@ -12,10 +11,10 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /go/bin/cirunner
 
 
-FROM docker:20.10.17-dind
+FROM docker:20.10.24-dind
 # All these steps will be cached
 #RUN apk add --no-cache ca-certificates
-RUN apk update && apk add --no-cache --virtual .build-deps && apk add bash && apk add make && apk add curl && apk add openssh && apk add git && apk add zip && apk add jq
+RUN apk update && apk add --no-cache --virtual .build-deps && apk add bash && apk add make && apk add curl && apk add git && apk add zip && apk add jq && apk add openssh
 RUN ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
 RUN apk -Uuv add groff less python3 py3-pip
 RUN pip3 install awscli
@@ -32,4 +31,9 @@ RUN (curl -sSL "https://github.com/buildpacks/pack/releases/download/v0.27.0/pac
 COPY --from=build-env /go/bin/cirunner .
 COPY ./ssh-config /root/.ssh/config
 RUN chmod 644 /root/.ssh/config
-ENTRYPOINT ["./cirunner"]
+
+# entrypoint script with conditional logic
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

@@ -119,6 +119,8 @@ type CiRequest struct {
 	CloudProvider               blob_storage.BlobStorageType      `json:"cloudProvider"`
 	AzureBlobConfig             *blob_storage.AzureBlobConfig     `json:"azureBlobConfig"`
 	GcpBlobConfig               *blob_storage.GcpBlobConfig       `json:"gcpBlobConfig"`
+	BlobStorageLogsKey          string                            `json:"blobStorageLogsKey"`
+	InAppLoggingEnabled         bool                              `json:"inAppLoggingEnabled"`
 	MinioEndpoint               string                            `json:"minioEndpoint"`
 	DefaultAddressPoolBaseCidr  string                            `json:"defaultAddressPoolBaseCidr"`
 	DefaultAddressPoolSize      int                               `json:"defaultAddressPoolSize"`
@@ -166,6 +168,8 @@ type CdRequest struct {
 	BlobStorageConfigured      bool                              `json:"blobStorageConfigured"`
 	AzureBlobConfig            *blob_storage.AzureBlobConfig     `json:"azureBlobConfig"`
 	GcpBlobConfig              *blob_storage.GcpBlobConfig       `json:"gcpBlobConfig"`
+	BlobStorageLogsKey         string                            `json:"blobStorageLogsKey"`
+	InAppLoggingEnabled        bool                              `json:"inAppLoggingEnabled"`
 	MinioEndpoint              string                            `json:"minioEndpoint"`
 	DefaultAddressPoolBaseCidr string                            `json:"defaultAddressPoolBaseCidr"`
 	DefaultAddressPoolSize     int                               `json:"defaultAddressPoolSize"`

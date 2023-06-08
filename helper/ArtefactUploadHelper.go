@@ -85,10 +85,7 @@ func ZipAndUpload(storageModuleConfigured bool, blobStorageS3Config *blob_storag
 	}
 	log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactFileName)
 
-	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
-	request := createBlobStorageRequest(cloudProvider, zipFile, artifactFileName, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
-
-	err = blobStorageService.PutWithCommand(request)
+	err = UploadFileToCloud(cloudProvider, zipFile, artifactFileName, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
 	if err != nil {
 		return artifactUploaded, err
 	}
@@ -114,47 +111,4 @@ func IsDirEmpty(name string) (bool, error) {
 		return true, nil
 	}
 	return false, err
-}
-
-func createBlobStorageRequest(cloudProvider blob_storage.BlobStorageType, sourceKey string, destinationKey string,
-	blobStorageS3Config *blob_storage.BlobStorageS3Config, azureBlobConfig *blob_storage.AzureBlobConfig,
-	gcpBlobConfig *blob_storage.GcpBlobConfig) *blob_storage.BlobStorageRequest {
-	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
-	if blobStorageS3Config != nil {
-		awsS3BaseConfig = &blob_storage.AwsS3BaseConfig{
-			AccessKey:         blobStorageS3Config.AccessKey,
-			Passkey:           blobStorageS3Config.Passkey,
-			EndpointUrl:       blobStorageS3Config.EndpointUrl,
-			IsInSecure:        blobStorageS3Config.IsInSecure,
-			BucketName:        blobStorageS3Config.CiArtifactBucketName,
-			Region:            blobStorageS3Config.CiArtifactRegion,
-			VersioningEnabled: blobStorageS3Config.CiArtifactBucketVersioning,
-		}
-	}
-
-	var azureBlobBaseConfig *blob_storage.AzureBlobBaseConfig
-	if azureBlobConfig != nil {
-		azureBlobBaseConfig = &blob_storage.AzureBlobBaseConfig{
-			AccountKey:        azureBlobConfig.AccountKey,
-			AccountName:       azureBlobConfig.AccountName,
-			Enabled:           azureBlobConfig.Enabled,
-			BlobContainerName: azureBlobConfig.BlobContainerArtifact,
-		}
-	}
-	var gcpBlobBaseConfig *blob_storage.GcpBlobBaseConfig
-	if gcpBlobConfig != nil {
-		gcpBlobBaseConfig = &blob_storage.GcpBlobBaseConfig{
-			CredentialFileJsonData: gcpBlobConfig.CredentialFileJsonData,
-			BucketName:             gcpBlobConfig.ArtifactBucketName,
-		}
-	}
-	request := &blob_storage.BlobStorageRequest{
-		StorageType:         cloudProvider,
-		SourceKey:           sourceKey,
-		DestinationKey:      destinationKey,
-		AzureBlobBaseConfig: azureBlobBaseConfig,
-		AwsS3BaseConfig:     awsS3BaseConfig,
-		GcpBlobBaseConfig:   gcpBlobBaseConfig,
-	}
-	return request
 }
