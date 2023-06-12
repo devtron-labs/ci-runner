@@ -112,12 +112,14 @@ type EnvironmentVariables struct {
 func DockerLogin(dockerCredentials *DockerCredentials) error {
 	username := dockerCredentials.DockerUsername
 	pwd := dockerCredentials.DockerPassword
+	log.Println("line number 115 in DockerLogin")
 	if dockerCredentials.DockerRegistryType == DOCKER_REGISTRY_TYPE_ECR {
 		accessKey, secretKey := dockerCredentials.AccessKey, dockerCredentials.SecretKey
 		//fmt.Printf("accessKey %s, secretKey %s\n", accessKey, secretKey)
 
 		var creds *credentials.Credentials
 
+		log.Println("line number 122 in DockerLogin")
 		if len(dockerCredentials.AccessKey) == 0 || len(dockerCredentials.SecretKey) == 0 {
 			//fmt.Println("empty accessKey or secretKey")
 			sess, err := session.NewSession(&aws.Config{
@@ -129,6 +131,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 			}
 			creds = ec2rolecreds.NewCredentials(sess)
 		} else {
+			log.Println("line number 134 in DockerLogin")
 			creds = credentials.NewStaticCredentials(accessKey, secretKey, "")
 		}
 		sess, err := session.NewSession(&aws.Config{
@@ -158,6 +161,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 		pwd = credsSlice[1]
 
 	}
+	log.Println("line number 163 in DockerLogin")
 	dockerLogin := "docker login -u " + username + " -p " + pwd + " " + dockerCredentials.DockerRegistryURL
 	log.Println(util.DEVTRON, " -----> "+dockerLogin)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
@@ -169,6 +173,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 	return nil
 }
 func BuildArtifact(ciRequest *CiRequest) (string, error) {
+	log.Println("line number 172 in BuildArtifact")
 	err := DockerLogin(&DockerCredentials{
 		DockerUsername:     ciRequest.DockerUsername,
 		DockerPassword:     ciRequest.DockerPassword,
