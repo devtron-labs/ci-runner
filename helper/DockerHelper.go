@@ -178,11 +178,13 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		DockerRegistryURL:  ciRequest.DockerRegistryURL,
 		DockerRegistryType: ciRequest.DockerRegistryType,
 	})
+	log.Println("line number 181 in BuildArtifact")
 	if err != nil {
 		return "", err
 	}
 	envVars := &EnvironmentVariables{}
 	err = env.Parse(envVars)
+	log.Println("line number 187 in BuildArtifact")
 	if err != nil {
 		log.Println("Error while parsing environment variables", err)
 	}
@@ -206,6 +208,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		dockerBuildConfig := ciBuildConfig.DockerBuildConfig
 		useBuildx := dockerBuildConfig.TargetPlatform != ""
 		dockerBuildxBuild := "docker buildx build "
+		log.Println("Line number 211 in if-else case SELF_DOCKERFILE_BUILD_TYPE ")
 		if useBuildx {
 			if ciRequest.CacheInvalidate && ciRequest.IsPvcMounted {
 				dockerBuild = dockerBuildxBuild + "--no-cache --platform " + dockerBuildConfig.TargetPlatform + " "
@@ -480,6 +483,7 @@ func BuildDockerImagePath(ciRequest *CiRequest) (string, error) {
 	if DOCKER_REGISTRY_TYPE_DOCKERHUB == ciRequest.DockerRegistryType {
 		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
 	} else {
+		log.Println("Line number 485 in BuildDockerImagePath : ", ciRequest.DockerRegistryURL)
 		u, err := url.Parse(ciRequest.DockerRegistryURL)
 		if err != nil {
 			log.Println("not a valid docker repository url")

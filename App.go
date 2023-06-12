@@ -304,6 +304,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		// build
 		start = time.Now()
 		metrics.BuildStartTime = start
+		log.Println("Build has started at 307 in app.go")
 		dest, err = helper.BuildArtifact(ciCdRequest.CiRequest) //TODO make it skipable
 		metrics.BuildDuration = time.Since(start).Seconds()
 		if err != nil {
