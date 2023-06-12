@@ -159,7 +159,6 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 
 	}
 	dockerLogin := "docker login -u " + username + " -p " + pwd + " " + dockerCredentials.DockerRegistryURL
-	log.Println(util.DEVTRON, " -----> "+dockerLogin)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
