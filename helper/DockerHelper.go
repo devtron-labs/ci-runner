@@ -159,6 +159,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 
 	}
 	dockerLogin := "docker login -u " + username + " -p " + pwd + " " + dockerCredentials.DockerRegistryURL
+	fmt.Println("Docker login successful with username ", username, " on docker registry URL ", dockerCredentials.DockerRegistryURL)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
