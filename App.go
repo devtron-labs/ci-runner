@@ -76,9 +76,6 @@ func processEvent(args string) (exitCode int) {
 		var defaultErrorCode = util.DefaultErrorCode
 		log.Println(util.DEVTRON, "SIGTERM listener started!")
 		receivedSignal := <-sigTerm
-		//switch signal {
-		//
-		//}
 		log.Println(util.DEVTRON, "signal received: ", receivedSignal)
 		handleCleanup(*ciCdRequest, &defaultErrorCode, "source: SIGNAL")
 	}()
@@ -129,7 +126,7 @@ func processEvent(args string) (exitCode int) {
 	} else {
 		err = runCDStages(ciCdRequest)
 		log.Println(util.DEVTRON, "Sleeping")
-		time.Sleep(5000)
+		time.Sleep(5000000)
 		log.Println(util.DEVTRON, "Awake")
 		artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CdRequest)
 		if err != nil || artifactUploadErr != nil {
