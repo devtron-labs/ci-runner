@@ -41,7 +41,7 @@ var handleOnce sync.Once
 
 func handleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *int) {
 	handleOnce.Do(func() {
-		log.Println(util.DEVTRON, " CI-Runner cleanup executed with exit Code", exitCode)
+		log.Println(util.DEVTRON, " CI-Runner cleanup executed with exit Code", *exitCode)
 		uploadLogs(ciCdRequest, exitCode)
 	})
 }
@@ -74,6 +74,7 @@ func processEvent(args string) (exitCode int) {
 	// Start a goroutine to listen for the signal
 	go func() {
 		var defaultErrorCode = util.DefaultErrorCode
+		log.Println(util.DEVTRON, "SIGTERM listener started!")
 		<-sigTerm
 		log.Println(util.DEVTRON, "SIGTERM received")
 		handleCleanup(*ciCdRequest, &defaultErrorCode)
