@@ -77,7 +77,7 @@ func processEvent(args string) (exitCode int) {
 		log.Println(util.DEVTRON, "SIGTERM listener started!")
 		<-sigTerm
 		log.Println(util.DEVTRON, "SIGTERM received")
-		handleCleanup(*ciCdRequest, &defaultErrorCode, "source: SIGTERM")
+		handleCleanup(*ciCdRequest, &defaultErrorCode, "source: SIGKILL")
 	}()
 
 	// Create a channel to receive the SIGTERM signal
@@ -139,6 +139,9 @@ func processEvent(args string) (exitCode int) {
 		log.Println(util.DEVTRON, " /cache-push")
 	} else {
 		err = runCDStages(ciCdRequest)
+		log.Println(util.DEVTRON, "Sleeping")
+		time.Sleep(5000)
+		log.Println(util.DEVTRON, "Awake")
 		artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CdRequest)
 		if err != nil || artifactUploadErr != nil {
 			log.Println(err)
