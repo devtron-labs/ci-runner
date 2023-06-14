@@ -80,6 +80,20 @@ func processEvent(args string) (exitCode int) {
 		handleCleanup(*ciCdRequest, &defaultErrorCode, "source: SIGTERM")
 	}()
 
+	// Create a channel to receive the SIGTERM signal
+	sigKill := make(chan os.Signal, 1)
+	signal.Notify(sigKill, syscall.SIGKILL)
+	//sigTerm <- syscall.SIGTERM
+	//syscall.SIGTERM -> sigTerm
+	// Start a goroutine to listen for the signal
+	go func() {
+		var defaultErrorCode = util.DefaultErrorCode
+		log.Println(util.DEVTRON, "SIGKILL listener started!")
+		<-sigKill
+		log.Println(util.DEVTRON, "SIGKILL received")
+		handleCleanup(*ciCdRequest, &defaultErrorCode, "source: SIGTERM")
+	}()
+
 	//defer uploadLogs(*ciCdRequest, &exitCode)
 	defer handleCleanup(*ciCdRequest, &exitCode, "source: DEFER")
 	logLevel := os.Getenv("LOG_LEVEL")
