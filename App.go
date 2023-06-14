@@ -73,70 +73,68 @@ func processEvent(args string) (exitCode int) {
 	//syscall.SIGTERM -> sigTerm
 	// Start a goroutine to listen for the signal
 	go func() {
-
-		//defer uploadLogs(*ciCdRequest, &exitCode)
-		defer handleCleanup(*ciCdRequest, &exitCode, "source: DEFER")
-		logLevel := os.Getenv("LOG_LEVEL")
-		if logLevel == "" || logLevel == "DEBUG" {
-			log.Println(util.DEVTRON, " ci-cd request details -----> ", args)
-		}
-
-		if ciCdRequest.Type == util.CIEVENT {
-
-			ciRequest := ciCdRequest.CiRequest
-			artifactUploaded, err := runCIStages(ciCdRequest)
-			log.Println(util.DEVTRON, artifactUploaded, err)
-			var artifactUploadErr error
-			if !artifactUploaded {
-				artifactUploaded, artifactUploadErr = helper.ZipAndUpload(ciRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
-			}
-
-			if err != nil {
-				var stageError *helper.CiStageError
-				log.Println(util.DEVTRON, err)
-				if errors.As(err, &stageError) {
-					exitCode = util.CiStageFailErrorCode
-					return
-				}
-				exitCode = util.DefaultErrorCode
-				return
-			}
-
-			if artifactUploadErr != nil {
-				log.Println(util.DEVTRON, artifactUploadErr)
-				exitCode = util.DefaultErrorCode
-				return
-			}
-
-			// sync cache
-			log.Println(util.DEVTRON, " cache-push")
-			err = helper.SyncCache(ciRequest)
-			if err != nil {
-				log.Println(err)
-				exitCode = util.DefaultErrorCode
-				return
-			}
-			log.Println(util.DEVTRON, " /cache-push")
-		} else {
-			err = runCDStages(ciCdRequest)
-			log.Println(util.DEVTRON, "Sleeping")
-			time.Sleep(5000000)
-			log.Println(util.DEVTRON, "Awake")
-			artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CdRequest)
-			if err != nil || artifactUploadErr != nil {
-				log.Println(err)
-				exitCode = util.DefaultErrorCode
-				return
-			}
-		}
+		var defaultErrorCode = util.DefaultErrorCode
+		log.Println(util.DEVTRON, "SIGTERM listener started!")
+		receivedSignal := <-sigTerm
+		log.Println(util.DEVTRON, "signal received: ", receivedSignal)
+		handleCleanup(*ciCdRequest, &defaultErrorCode, "source: SIGNAL")
 	}()
 
-	var defaultErrorCode = util.DefaultErrorCode
-	log.Println(util.DEVTRON, "SIGTERM listener started!")
-	receivedSignal := <-sigTerm
-	log.Println(util.DEVTRON, "signal received: ", receivedSignal)
-	handleCleanup(*ciCdRequest, &defaultErrorCode, "source: SIGNAL")
+	//defer uploadLogs(*ciCdRequest, &exitCode)
+	defer handleCleanup(*ciCdRequest, &exitCode, "source: DEFER")
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel == "" || logLevel == "DEBUG" {
+		log.Println(util.DEVTRON, " ci-cd request details -----> ", args)
+	}
 
+	if ciCdRequest.Type == util.CIEVENT {
+
+		ciRequest := ciCdRequest.CiRequest
+		artifactUploaded, err := runCIStages(ciCdRequest)
+		log.Println(util.DEVTRON, artifactUploaded, err)
+		var artifactUploadErr error
+		if !artifactUploaded {
+			artifactUploaded, artifactUploadErr = helper.ZipAndUpload(ciRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
+		}
+
+		if err != nil {
+			var stageError *helper.CiStageError
+			log.Println(util.DEVTRON, err)
+			if errors.As(err, &stageError) {
+				exitCode = util.CiStageFailErrorCode
+				return
+			}
+			exitCode = util.DefaultErrorCode
+			return
+		}
+
+		if artifactUploadErr != nil {
+			log.Println(util.DEVTRON, artifactUploadErr)
+			exitCode = util.DefaultErrorCode
+			return
+		}
+
+		// sync cache
+		log.Println(util.DEVTRON, " cache-push")
+		err = helper.SyncCache(ciRequest)
+		if err != nil {
+			log.Println(err)
+			exitCode = util.DefaultErrorCode
+			return
+		}
+		log.Println(util.DEVTRON, " /cache-push")
+	} else {
+		err = runCDStages(ciCdRequest)
+		log.Println(util.DEVTRON, "Sleeping")
+		time.Sleep(5000000)
+		log.Println(util.DEVTRON, "Awake")
+		artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CdRequest)
+		if err != nil || artifactUploadErr != nil {
+			log.Println(err)
+			exitCode = util.DefaultErrorCode
+			return
+		}
+	}
 	return
 }
 
