@@ -39,9 +39,9 @@ import (
 
 var handleOnce sync.Once
 
-func handleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *int) {
+func handleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *int, source string) {
 	handleOnce.Do(func() {
-		log.Println(util.DEVTRON, " CI-Runner cleanup executed with exit Code", *exitCode)
+		log.Println(util.DEVTRON, " CI-Runner cleanup executed with exit Code", *exitCode, source)
 		uploadLogs(ciCdRequest, exitCode)
 	})
 }
@@ -77,11 +77,11 @@ func processEvent(args string) (exitCode int) {
 		log.Println(util.DEVTRON, "SIGTERM listener started!")
 		<-sigTerm
 		log.Println(util.DEVTRON, "SIGTERM received")
-		handleCleanup(*ciCdRequest, &defaultErrorCode)
+		handleCleanup(*ciCdRequest, &defaultErrorCode, "source: SIGTERM")
 	}()
 
 	//defer uploadLogs(*ciCdRequest, &exitCode)
-	defer handleCleanup(*ciCdRequest, &exitCode)
+	defer handleCleanup(*ciCdRequest, &exitCode, "source: DEFER")
 	logLevel := os.Getenv("LOG_LEVEL")
 	if logLevel == "" || logLevel == "DEBUG" {
 		log.Println(util.DEVTRON, " ci-cd request details -----> ", args)
