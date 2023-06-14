@@ -490,15 +490,16 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	if err != nil {
 		return err
 	}
-
-	log.Println(util.DEVTRON, " event")
-	err = helper.SendCDEvent(cicdRequest.CdRequest)
-	if err != nil {
-		log.Println(err)
-		return err
+	// dry run flag indicates that ci runner image is being run from external helm chart
+	if !cicdRequest.CdRequest.IsDryRun {
+		log.Println(util.DEVTRON, " event")
+		err = helper.SendCDEvent(cicdRequest.CdRequest)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		log.Println(util.DEVTRON, " /event")
 	}
-	log.Println(util.DEVTRON, " /event")
-
 	err = helper.StopDocker()
 	if err != nil {
 		log.Println("err", err)
