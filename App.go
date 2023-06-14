@@ -69,9 +69,7 @@ func processEvent(args string) (exitCode int) {
 	// Create a channel to receive the SIGTERM signal
 	sigTerm := make(chan os.Signal, 1)
 	signal.Notify(sigTerm, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT, syscall.SIGSEGV, syscall.SIGKILL)
-	//sigTerm <- syscall.SIGTERM
-	//syscall.SIGTERM -> sigTerm
-	// Start a goroutine to listen for the signal
+
 	go func() {
 		var defaultErrorCode = util.DefaultErrorCode
 		log.Println(util.DEVTRON, "SIGTERM listener started!")
@@ -80,7 +78,6 @@ func processEvent(args string) (exitCode int) {
 		handleCleanup(*ciCdRequest, &defaultErrorCode, "source: SIGNAL")
 	}()
 
-	//defer uploadLogs(*ciCdRequest, &exitCode)
 	defer handleCleanup(*ciCdRequest, &exitCode, "source: DEFER")
 	logLevel := os.Getenv("LOG_LEVEL")
 	if logLevel == "" || logLevel == "DEBUG" {
@@ -125,9 +122,6 @@ func processEvent(args string) (exitCode int) {
 		log.Println(util.DEVTRON, " /cache-push")
 	} else {
 		err = runCDStages(ciCdRequest)
-		log.Println(util.DEVTRON, "Sleeping")
-		time.Sleep(5000000)
-		log.Println(util.DEVTRON, "Awake")
 		artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CdRequest)
 		if err != nil || artifactUploadErr != nil {
 			log.Println(err)
