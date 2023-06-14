@@ -41,6 +41,7 @@ var handleOnce sync.Once
 
 func handleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *int) {
 	handleOnce.Do(func() {
+		log.Println(util.DEVTRON, " CI-Runner cleanup executed with exit Code", exitCode)
 		uploadLogs(ciCdRequest, exitCode)
 	})
 }
@@ -68,10 +69,13 @@ func processEvent(args string) (exitCode int) {
 	// Create a channel to receive the SIGTERM signal
 	sigTerm := make(chan os.Signal, 1)
 	signal.Notify(sigTerm, syscall.SIGTERM)
+	//sigTerm <- syscall.SIGTERM
+	//syscall.SIGTERM -> sigTerm
 	// Start a goroutine to listen for the signal
 	go func() {
 		var defaultErrorCode = util.DefaultErrorCode
 		<-sigTerm
+		log.Println(util.DEVTRON, "SIGTERM received")
 		handleCleanup(*ciCdRequest, &defaultErrorCode)
 	}()
 
@@ -562,6 +566,8 @@ func uploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
 		fmt.Println(r, string(debug.Stack()))
 		*exitCode = 1
 	}
+	log.Println(util.DEVTRON, " blob storage configured ", storageModuleConfigured)
+	log.Println(util.DEVTRON, " in app logging enabled ", inAppLoggingEnabled)
 	if inAppLoggingEnabled {
 		helper.UploadLogs(storageModuleConfigured, blobStorageLogKey, cloudProvider, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
 	} else {
