@@ -68,30 +68,19 @@ func processEvent(args string) (exitCode int) {
 
 	// Create a channel to receive the SIGTERM signal
 	sigTerm := make(chan os.Signal, 1)
-	signal.Notify(sigTerm, syscall.SIGTERM)
+	signal.Notify(sigTerm, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT, syscall.SIGSEGV, syscall.SIGKILL)
 	//sigTerm <- syscall.SIGTERM
 	//syscall.SIGTERM -> sigTerm
 	// Start a goroutine to listen for the signal
 	go func() {
 		var defaultErrorCode = util.DefaultErrorCode
 		log.Println(util.DEVTRON, "SIGTERM listener started!")
-		<-sigTerm
-		log.Println(util.DEVTRON, "SIGTERM received")
-		handleCleanup(*ciCdRequest, &defaultErrorCode, "source: SIGKILL")
-	}()
-
-	// Create a channel to receive the SIGTERM signal
-	sigKill := make(chan os.Signal, 1)
-	signal.Notify(sigKill, syscall.SIGKILL)
-	//sigTerm <- syscall.SIGTERM
-	//syscall.SIGTERM -> sigTerm
-	// Start a goroutine to listen for the signal
-	go func() {
-		var defaultErrorCode = util.DefaultErrorCode
-		log.Println(util.DEVTRON, "SIGKILL listener started!")
-		<-sigKill
-		log.Println(util.DEVTRON, "SIGKILL received")
-		handleCleanup(*ciCdRequest, &defaultErrorCode, "source: SIGTERM")
+		receivedSignal := <-sigTerm
+		//switch signal {
+		//
+		//}
+		log.Println(util.DEVTRON, "signal received: ", receivedSignal)
+		handleCleanup(*ciCdRequest, &defaultErrorCode, "source: SIGNAL")
 	}()
 
 	//defer uploadLogs(*ciCdRequest, &exitCode)
