@@ -16,12 +16,27 @@ if [ "$IN_APP_LOGGING" = "true" ]; then
   # Run cirunner command with logging
 #  exec ./cirunner 2>&1 | tee main.log
    trap 'cleanup' SIGTERM
-  { ./cirunner 2>&1 & echo $! > cirunner_pid.txt; } | tee main.log &
+#  { ./cirunner 2>&1 & echo $! > cirunner_pid.txt; } | tee main.log &
   # Read the cirunner PID from cirunner_pid.txt
-  cirunner_pid=$(cat cirunner_pid.txt)
-  echo 'PID of cirunner: '
-  echo $cirunner_pid
-  wait "$cirunner_pid"
+#  cirunner_pid=$(cat cirunner_pid.txt)
+
+
+  ./cirunner 2>&1 | {
+    tee main.log &
+    tee_pid=$!
+
+    #Capture pid of cirunner
+    cirunner_pid=$!
+    echo 'PID of cirunner: '
+    echo $cirunner_pid
+    #Wait for both cirunner and tee processes to finish
+    wait "$cirunner_pid"
+    wait "$tee_pid"
+  }
+
+#  echo 'PID of cirunner: '
+#  echo $cirunner_pid
+#  wait "$cirunner_pid"
 #  rm cirunner_pid.txt
 else
   # Run cirunner command without logging
