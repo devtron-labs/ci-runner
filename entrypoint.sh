@@ -19,6 +19,8 @@ if [ "$IN_APP_LOGGING" = "true" ]; then
   { ./cirunner 2>&1 & echo $! > cirunner_pid.txt; } | tee main.log
   # Read the cirunner PID from cirunner_pid.txt
   cirunner_pid=$(cat cirunner_pid.txt)
+  echo 'PID of cirunner: '
+  echo $cirunner_pid
   wait "$cirunner_pid"
 #  rm cirunner_pid.txt
 else
