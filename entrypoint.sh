@@ -16,7 +16,7 @@ if [ "$IN_APP_LOGGING" = "true" ]; then
   # Run cirunner command with logging
 #  exec ./cirunner 2>&1 | tee main.log
    trap 'cleanup' SIGTERM
-  { ./cirunner 2>&1 & echo $! > cirunner_pid.txt; } | tee main.log
+  { ./cirunner 2>&1 & echo $! > cirunner_pid.txt; } | tee main.log &
   # Read the cirunner PID from cirunner_pid.txt
   cirunner_pid=$(cat cirunner_pid.txt)
   echo 'PID of cirunner: '
