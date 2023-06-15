@@ -38,6 +38,9 @@ var TmpLogLocation = "/main.log"
 
 const CiCdEventEnvKey = "CI_CD_EVENT"
 
+const Source_Signal = "Source_Signal"
+const Source_Defer = "Source_Defer"
+
 const DefaultErrorCode = 1
 const CiStageFailErrorCode = 2
 

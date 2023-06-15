@@ -43,6 +43,10 @@ func handleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *int, source st
 	handleOnce.Do(func() {
 		log.Println(util.DEVTRON, " CI-Runner cleanup executed with exit Code", *exitCode, source)
 		uploadLogs(ciCdRequest, exitCode)
+		if source == util.Source_Signal {
+			log.Println(util.DEVTRON, " Exiting with exit code ", *exitCode)
+			os.Exit(*exitCode)
+		}
 	})
 }
 
@@ -75,10 +79,10 @@ func processEvent(args string) (exitCode int) {
 		log.Println(util.DEVTRON, "SIGTERM listener started!")
 		receivedSignal := <-sigTerm
 		log.Println(util.DEVTRON, "signal received: ", receivedSignal)
-		handleCleanup(*ciCdRequest, &defaultErrorCode, "source: SIGNAL")
+		handleCleanup(*ciCdRequest, &defaultErrorCode, util.Source_Signal)
 	}()
 
-	defer handleCleanup(*ciCdRequest, &exitCode, "source: DEFER")
+	defer handleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
 	logLevel := os.Getenv("LOG_LEVEL")
 	if logLevel == "" || logLevel == "DEBUG" {
 		log.Println(util.DEVTRON, " ci-cd request details -----> ", args)
