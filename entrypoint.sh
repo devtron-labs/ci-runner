@@ -4,6 +4,10 @@ set -o pipefail
 
 cleanup() {
   echo "Cleaning up.."
+  echo 'PID of cirunner: '
+  echo $cirunner_pid
+  echo 'PID of tee: '
+  echo $tee_pid
 
   # Send SIGTERM to the cirunner process
   kill -TERM "$cirunner_pid"
@@ -21,7 +25,9 @@ if [ "$IN_APP_LOGGING" = "true" ]; then
     #Capture pid of cirunner
     cirunner_pid=$!
     echo 'PID of cirunner: '
-    echo cirunner_pid
+    echo $cirunner_pid
+    echo 'PID of tee: '
+    echo $tee_pid
     wait "$cirunner_pid"
 else
   # Run cirunner command without logging
