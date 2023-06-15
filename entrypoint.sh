@@ -31,6 +31,7 @@ if [ "$IN_APP_LOGGING" = "true" ]; then
     echo $cirunner_pid
     #Wait for both cirunner and tee processes to finish
     echo "waiting"
+    wait "$tee_pid"
     wait "$cirunner_pid"
 #    wait "$tee_pid"
   }
