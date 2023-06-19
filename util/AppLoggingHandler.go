@@ -14,9 +14,6 @@ import (
 // The subprocess spawned will bypass this function and execute the main logic
 func SpawnProcessWithLogging() {
 
-	// setting in app logging to false so that the spawned cirunner subprocess bypassed this function
-	os.Setenv(InAppLogging, "false")
-
 	// Create an in-memory pipe
 	pr, pw := io.Pipe()
 
