@@ -33,4 +33,4 @@ COPY ./ssh-config /root/.ssh/config
 RUN chmod 644 /root/.ssh/config
 
 # passing ENABLE_LOGGER as argument to cirunner as default behavior
-ENTRYPOINT ["./cirunner ENABLE_LOGGER"]
+ENTRYPOINT ["./cirunner", "ENABLE_LOGGER"]
