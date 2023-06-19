@@ -76,18 +76,23 @@ func spawnProcess() error {
 	sigTerm := make(chan os.Signal, 1)
 	signal.Notify(sigTerm, syscall.SIGTERM)
 	go func() {
-		log.Println(util.DEVTRON, "SIGTERM listener started!")
+		log.Println(util.DEVTRON, "SIGTERM listener started in parent process!")
 		receivedSignal := <-sigTerm
-		log.Println(util.DEVTRON, "signal received: ", receivedSignal)
+		log.Println(util.DEVTRON, "signal received in parent process: ", receivedSignal)
 		cirunnerCmd.Process.Signal(syscall.SIGTERM)
+		os.Exit(util.DefaultErrorCode)
 	}()
 
+	p, err := cirunnerCmd.Process.Wait()
 	// Wait for cirunner to finish
-	if p, err := cirunnerCmd.Process.Wait(); err != nil {
-		exitCode = p.ExitCode()
-		fmt.Println("ci runner exit code: ", ciRunnerPid)
-		//return err
-	}
+	//if p, err := cirunnerCmd.Process.Wait(); err != nil {
+	//	exitCode = p.ExitCode()
+	//	fmt.Println("ci runner exit code: ", ciRunnerPid)
+	//	//return err
+	//}
+
+	exitCode = p.ExitCode()
+	fmt.Println("ci runner exit code: ", ciRunnerPid)
 
 	// Close write end of the pipe
 	err = pw.Close()
