@@ -42,7 +42,7 @@ const Source_Signal = "Source_Signal"
 const Source_Defer = "Source_Defer"
 
 const DefaultErrorCode = 1
-const AbortErrorCode = 137
+const AbortErrorCode = 143
 const CiStageFailErrorCode = 2
 const InAppLogging = "IN_APP_LOGGING"
 const CiRunnerCommand = "./cirunner"
