@@ -32,18 +32,4 @@ COPY --from=build-env /go/bin/cirunner .
 COPY ./ssh-config /root/.ssh/config
 RUN chmod 644 /root/.ssh/config
 
-### entrypoint script with conditional logic
-##COPY entrypoint.sh /entrypoint.sh
-##RUN chmod +x /entrypoint.sh
-##
-##ENTRYPOINT ["/entrypoint.sh"]
-#
-## Install Go in the Docker image
-#RUN apk add --no-cache go
-## Build the entrypoint Go executable
-##WORKDIR /entrypoint
-#COPY entrypoint/entrypoint.go .
-#RUN go build -o entrypoint entrypoint.go
-
-# Set the entrypoint to the Go executable
 ENTRYPOINT ["./cirunner"]

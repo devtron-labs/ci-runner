@@ -43,6 +43,10 @@ const Source_Defer = "Source_Defer"
 
 const DefaultErrorCode = 1
 const CiStageFailErrorCode = 2
+const InAppLogging = "IN_APP_LOGGING"
+const CiRunnerCommand = "./cirunner"
+const TeeCommand = "tee"
+const LogFileName = "main.log"
 
 const NewLineChar = "\n"
 
