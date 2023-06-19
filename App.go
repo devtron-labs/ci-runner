@@ -80,7 +80,7 @@ func spawnProcess() error {
 		receivedSignal := <-sigTerm
 		log.Println(util.DEVTRON, "signal received in parent process: ", receivedSignal)
 		cirunnerCmd.Process.Signal(syscall.SIGTERM)
-		os.Exit(util.DefaultErrorCode)
+		//os.Exit(util.DefaultErrorCode)
 	}()
 
 	p, err := cirunnerCmd.Process.Wait()
@@ -92,7 +92,7 @@ func spawnProcess() error {
 	//}
 
 	exitCode = p.ExitCode()
-	fmt.Println("ci runner exit code: ", ciRunnerPid)
+	fmt.Println("ci runner exit code: ", exitCode)
 
 	// Close write end of the pipe
 	err = pw.Close()
