@@ -40,6 +40,7 @@ import (
 )
 
 func spawnProcess() error {
+
 	os.Setenv("IN_APP_LOGGING", "false")
 
 	// Create an in-memory pipe
@@ -71,11 +72,21 @@ func spawnProcess() error {
 		return err
 	}
 
+	// Create a channel to receive the SIGTERM signal
+	sigTerm := make(chan os.Signal, 1)
+	signal.Notify(sigTerm, syscall.SIGTERM)
+	go func() {
+		log.Println(util.DEVTRON, "SIGTERM listener started!")
+		receivedSignal := <-sigTerm
+		log.Println(util.DEVTRON, "signal received: ", receivedSignal)
+		cirunnerCmd.Process.Signal(syscall.SIGTERM)
+	}()
+
 	// Wait for cirunner to finish
 	if p, err := cirunnerCmd.Process.Wait(); err != nil {
 		exitCode = p.ExitCode()
-		fmt.Println("ci runner exit coe: ", ciRunnerPid)
-		return err
+		fmt.Println("ci runner exit code: ", ciRunnerPid)
+		//return err
 	}
 
 	// Close write end of the pipe
@@ -91,10 +102,11 @@ func handleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *int, source st
 	handleOnce.Do(func() {
 		log.Println(util.DEVTRON, " CI-Runner cleanup executed with exit Code", *exitCode, source)
 		uploadLogs(ciCdRequest, exitCode)
-		if source == util.Source_Signal {
-			log.Println(util.DEVTRON, " Exiting with exit code ", *exitCode)
-			os.Exit(*exitCode)
-		}
+		//if source == util.Source_Signal {
+		//
+		//}
+		log.Println(util.DEVTRON, " Exiting with exit code ", *exitCode)
+		os.Exit(*exitCode)
 	})
 }
 
@@ -108,13 +120,13 @@ func main() {
 	}
 
 	args := os.Getenv(util.CiCdEventEnvKey)
-	os.Exit(processEvent(args))
+	processEvent(args)
 
 }
 
-func processEvent(args string) (exitCode int) {
+func processEvent(args string) {
 
-	exitCode = 0
+	exitCode := 0
 	ciCdRequest := &helper.CiCdTriggerEvent{}
 	err := json.Unmarshal([]byte(args), ciCdRequest)
 	if err != nil {
