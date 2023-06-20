@@ -32,8 +32,5 @@ COPY --from=build-env /go/bin/cirunner .
 COPY ./ssh-config /root/.ssh/config
 RUN chmod 644 /root/.ssh/config
 
-# entrypoint script with conditional logic
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
+# passing PARENT_MODE as argument to cirunner as default behavior
+ENTRYPOINT ["./cirunner", "PARENT_MODE"]
