@@ -32,5 +32,5 @@ COPY --from=build-env /go/bin/cirunner .
 COPY ./ssh-config /root/.ssh/config
 RUN chmod 644 /root/.ssh/config
 
-# passing ENABLE_LOGGER as argument to cirunner as default behavior
+# passing PARENT_MODE as argument to cirunner as default behavior
 ENTRYPOINT ["./cirunner", "PARENT_MODE"]
