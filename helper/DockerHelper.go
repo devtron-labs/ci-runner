@@ -163,6 +163,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
+		log.Println("error in running command, err : \n" + err.Error() + "\n login cmd : " + dockerLogin)
 		log.Println(err)
 		return err
 	}
