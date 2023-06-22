@@ -492,10 +492,10 @@ func BuildDockerImagePath(ciRequest *CiRequest) (string, error) {
 	return dest, nil
 }
 
-func PushArtifact(dest string) error {
+func PushArtifact(dest string, i int) error {
 	//awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
 	dockerPush := "docker push " + dest
-	log.Println("-----> " + dockerPush)
+	log.Println("-----> " + dockerPush + strconv.Itoa(i+4))
 	dockerPushCMD := exec.Command("/bin/sh", "-c", dockerPush)
 	err := util.RunCommand(dockerPushCMD)
 	if err != nil {

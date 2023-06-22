@@ -392,7 +392,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 				if i != 0 {
 					time.Sleep(time.Duration(imageRetryIntervalvalue) * time.Second)
 				}
-				err = helper.PushArtifact(dest)
+				err = helper.PushArtifact(dest, imageRetryCountValue)
 				if err == nil {
 					break
 
