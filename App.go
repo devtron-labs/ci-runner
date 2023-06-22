@@ -389,7 +389,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 			//var imageRetryIntervalvalue time.Duration
 			imageRetryIntervalvalue, _ := strconv.Atoi(scriptEnvs["IMAGE_RETRY_INTERVAL"])
 			for i := 0; i < imageRetryCountValue; i++ {
-				if i != 0 {
+				if i == 0 {
 					time.Sleep(time.Duration(imageRetryIntervalvalue) * time.Second)
 				}
 				err = helper.PushArtifact(dest, imageRetryCountValue)
