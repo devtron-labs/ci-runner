@@ -384,7 +384,8 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 			// push to dest
 			log.Println(util.DEVTRON, " docker-push")
 			for i := 0; i < 3; i++ {
-				err = helper.PushArtifact(dest)
+
+				err = helper.PushArtifact(dest, i)
 				if err == nil {
 					break
 
