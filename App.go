@@ -181,6 +181,8 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["APP_NAME"] = cicdRequest.CiRequest.AppName
 		envs["TRIGGER_BY_AUTHOR"] = cicdRequest.CiRequest.TriggerByAuthor
 		envs["DOCKER_IMAGE"] = image
+		envs["IMAGE_RETRY_COUNT"] = strconv.Itoa(cicdRequest.CiRequest.ImageRetryCount)
+		envs["IMAGE_RETRY_INTERVAL"] = strconv.Itoa(cicdRequest.CiRequest.ImageRetryInterval)
 
 		//adding GIT_MATERIAL_REQUEST in env for semgrep plugin
 		CiMaterialRequestArr := ""
@@ -383,8 +385,13 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 			util.LogStage("docker push")
 			// push to dest
 			log.Println(util.DEVTRON, " docker-push")
-			for i := 0; i < 3; i++ {
-
+			imageRetryCountValue, _ := strconv.Atoi(scriptEnvs["IMAGE_RETRY_COUNT"])
+			//var imageRetryIntervalvalue time.Duration
+			imageRetryIntervalvalue, _ := strconv.Atoi(scriptEnvs["IMAGE_RETRY_INTERVAL"])
+			for i := 0; i < imageRetryCountValue; i++ {
+				if i != 0 {
+					time.Sleep(time.Duration(imageRetryIntervalvalue) * time.Second)
+				}
 				err = helper.PushArtifact(dest, i)
 				if err == nil {
 					break
