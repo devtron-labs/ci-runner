@@ -135,6 +135,9 @@ type CiRequest struct {
 	IsPvcMounted                bool                              `json:"IsPvcMounted"`
 	ExtraEnvironmentVariables   map[string]string                 `json:"extraEnvironmentVariables"`
 	EnableBuildContext          bool                              `json:"enableBuildContext"`
+	IsExtRun                    bool                              `json:"isExtRun"`
+	OrchestratorHost            string                            `json:"orchestratorHost"`
+	OrchestratorToken           string                            `json:"orchestratorToken"`
 }
 
 type CdRequest struct {
@@ -298,7 +301,7 @@ func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMet
 		FailureReason:      failureReason,
 	}
 
-	err := SendCiCompleteEvent(event)
+	err := SendCiCompleteEvent(ciRequest, event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
 		return err
@@ -307,13 +310,17 @@ func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMet
 	return nil
 }
 
-func SendCiCompleteEvent(event CiCompleteEvent) error {
+func SendCiCompleteEvent(ciRequest *CiRequest, event CiCompleteEvent) error {
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	err = PublishEvent(jsonBody, pubsub1.CI_COMPLETE_TOPIC)
+	cdRequest := CdRequest{
+		OrchestratorHost:  ciRequest.OrchestratorHost,
+		OrchestratorToken: ciRequest.OrchestratorToken,
+	}
+	err = PublishEvent(jsonBody, pubsub1.CI_COMPLETE_TOPIC, &cdRequest)
 	log.Println(util.DEVTRON, "ci complete event notification done")
 	return err
 }
@@ -336,7 +343,10 @@ func PublishCDEvent(jsonBody []byte, topic string, cdRequest *CdRequest) error {
 	return pubsub.PublishEventsOnNats(jsonBody, topic)
 }
 
-func PublishEvent(jsonBody []byte, topic string) error {
+func PublishEvent(jsonBody []byte, topic string, ciRequest *CdRequest) error {
+	if ciRequest.IsExtRun {
+		return PublishEventsOnRest(jsonBody, topic, ciRequest)
+	}
 	return pubsub.PublishEventsOnNats(jsonBody, topic)
 }
 
