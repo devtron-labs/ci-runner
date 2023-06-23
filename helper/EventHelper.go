@@ -319,6 +319,7 @@ func SendCiCompleteEvent(ciRequest *CiRequest, event CiCompleteEvent) error {
 	cdRequest := CdRequest{
 		OrchestratorHost:  ciRequest.OrchestratorHost,
 		OrchestratorToken: ciRequest.OrchestratorToken,
+		IsExtRun:          ciRequest.IsExtRun,
 	}
 	err = PublishEvent(jsonBody, pubsub1.CI_COMPLETE_TOPIC, &cdRequest)
 	log.Println(util.DEVTRON, "ci complete event notification done")
