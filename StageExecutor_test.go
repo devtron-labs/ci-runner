@@ -113,16 +113,16 @@ func TestRunCiSteps(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotPreeCiStageVariableOut, gotPostCiStageVariable, err := RunCiSteps(tt.args.stageType, tt.args.req, tt.args.globalEnvironmentVariables, tt.args.preeCiStageVariable)
+			gotPreeCiStageVariableOut, gotPostCiStageVariable, err := RunCiCdSteps(tt.args.stageType, tt.args.req, tt.args.globalEnvironmentVariables, tt.args.preeCiStageVariable)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("RunCiSteps() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("RunCiCdSteps() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(gotPreeCiStageVariableOut, tt.wantPreeCiStageVariableOut) {
-				t.Errorf("RunCiSteps() gotPreeCiStageVariableOut = %v, want %v", gotPreeCiStageVariableOut, tt.wantPreeCiStageVariableOut)
+				t.Errorf("RunCiCdSteps() gotPreeCiStageVariableOut = %v, want %v", gotPreeCiStageVariableOut, tt.wantPreeCiStageVariableOut)
 			}
 			if !reflect.DeepEqual(gotPostCiStageVariable, tt.wantPostCiStageVariable) {
-				t.Errorf("RunCiSteps() gotPostCiStageVariable = %v, want %v", gotPostCiStageVariable, tt.wantPostCiStageVariable)
+				t.Errorf("RunCiCdSteps() gotPostCiStageVariable = %v, want %v", gotPostCiStageVariable, tt.wantPostCiStageVariable)
 			}
 		})
 	}
