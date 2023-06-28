@@ -189,6 +189,12 @@ type CiCdTriggerEvent struct {
 	CdRequest *CdRequest `json:"cdRequest"`
 }
 
+type ExtEnvRequest struct {
+	OrchestratorHost  string `json:"orchestratorHost"`
+	OrchestratorToken string `json:"orchestratorToken"`
+	IsExtRun          bool   `json:"isExtRun"`
+}
+
 type CiArtifactDTO struct {
 	Id           int    `json:"id"`
 	PipelineId   int    `json:"pipelineId"` //id of the ci pipeline from which this webhook was triggered
@@ -316,12 +322,13 @@ func SendCiCompleteEvent(ciRequest *CiRequest, event CiCompleteEvent) error {
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	cdRequest := CdRequest{
+	log.Println("Requested Ci", ciRequest)
+	extEnvRequest := ExtEnvRequest{
 		OrchestratorHost:  ciRequest.OrchestratorHost,
 		OrchestratorToken: ciRequest.OrchestratorToken,
 		IsExtRun:          ciRequest.IsExtRun,
 	}
-	err = PublishEvent(jsonBody, pubsub1.CI_COMPLETE_TOPIC, &cdRequest)
+	err = PublishEvent(jsonBody, pubsub1.CI_COMPLETE_TOPIC, &extEnvRequest)
 	log.Println(util.DEVTRON, "ci complete event notification done")
 	return err
 }
@@ -332,26 +339,31 @@ func SendCdCompleteEvent(cdRequest *CdRequest, event CdStageCompleteEvent) error
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	err = PublishCDEvent(jsonBody, pubsub1.CD_STAGE_COMPLETE_TOPIC, cdRequest)
+	extEnvRequest := ExtEnvRequest{
+		OrchestratorHost:  cdRequest.OrchestratorHost,
+		OrchestratorToken: cdRequest.OrchestratorToken,
+		IsExtRun:          cdRequest.IsExtRun,
+	}
+	err = PublishCDEvent(jsonBody, pubsub1.CD_STAGE_COMPLETE_TOPIC, &extEnvRequest)
 	log.Println(util.DEVTRON, "cd stage complete event notification done")
 	return err
 }
 
-func PublishCDEvent(jsonBody []byte, topic string, cdRequest *CdRequest) error {
+func PublishCDEvent(jsonBody []byte, topic string, cdRequest *ExtEnvRequest) error {
 	if cdRequest.IsExtRun {
 		return PublishEventsOnRest(jsonBody, topic, cdRequest)
 	}
 	return pubsub.PublishEventsOnNats(jsonBody, topic)
 }
 
-func PublishEvent(jsonBody []byte, topic string, ciRequest *CdRequest) error {
+func PublishEvent(jsonBody []byte, topic string, ciRequest *ExtEnvRequest) error {
 	if ciRequest.IsExtRun {
 		return PublishEventsOnRest(jsonBody, topic, ciRequest)
 	}
 	return pubsub.PublishEventsOnNats(jsonBody, topic)
 }
 
-func PublishEventsOnRest(jsonBody []byte, topic string, cdRequest *CdRequest) error {
+func PublishEventsOnRest(jsonBody []byte, topic string, cdRequest *ExtEnvRequest) error {
 	publishRequest := &PublishRequest{
 		Topic:   topic,
 		Payload: jsonBody,
