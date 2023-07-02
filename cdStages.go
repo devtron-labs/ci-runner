@@ -7,8 +7,8 @@ import (
 	"os"
 )
 
-func HandleCDEvent(err error, ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
-	err = runCDStages(ciCdRequest)
+func HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
+	err := runCDStages(ciCdRequest)
 	artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CdRequest)
 	if err != nil || artifactUploadErr != nil {
 		log.Println(err)
@@ -18,7 +18,7 @@ func HandleCDEvent(err error, ciCdRequest *helper.CiCdTriggerEvent, exitCode *in
 
 func collectAndUploadCDArtifacts(cdRequest *helper.CdRequest) error {
 
-	if len(cdRequest.PrePostDeploySteps) > 0 {
+	if cdRequest.PrePostDeploySteps != nil && len(cdRequest.PrePostDeploySteps) > 0 {
 		_, err := helper.ZipAndUpload(cdRequest.BlobStorageConfigured, cdRequest.BlobStorageS3Config, cdRequest.ArtifactFileName, cdRequest.CloudProvider, cdRequest.AzureBlobConfig, cdRequest.GcpBlobConfig)
 		return err
 	}
