@@ -41,7 +41,7 @@ func StageIsSuccess(conditions []*ConditionObject, variables []*VariableObject) 
 		}
 		status = status && result
 	}
-	if conditionType == SUCCESS {
+	if conditionType == FAIL {
 		return status, nil // success if all success
 	} else {
 		return !status, nil //fail if all success
