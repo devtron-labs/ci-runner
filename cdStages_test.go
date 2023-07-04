@@ -48,7 +48,7 @@ func TestHandleCDEvent(t *testing.T) {
 
 		// Prepare test data
 		ciCdRequest := &helper.CiCdTriggerEvent{}
-		json.Unmarshal([]byte(test_data.CdTriggerEventPayloadWithSteps), ciCdRequest)
+		json.Unmarshal([]byte(test_data.CdTriggerEventPayloadWithSteps1), ciCdRequest)
 
 		exitCode := 0
 
@@ -62,6 +62,24 @@ func TestHandleCDEvent(t *testing.T) {
 		}
 	})
 
+	t.Run("StepsStageOutputWithError", func(t *testing.T) {
+
+		// Prepare test data
+		ciCdRequest := &helper.CiCdTriggerEvent{}
+		json.Unmarshal([]byte(test_data.CdTriggerEventPayloadWithSteps2), ciCdRequest)
+
+		exitCode := 0
+
+		os.RemoveAll(util.WORKINGDIR)
+		// Call the function
+		HandleCDEvent(ciCdRequest, &exitCode, true)
+
+		// Assert the expected results
+		if exitCode != util.DefaultErrorCode {
+			t.Errorf("Expected exitCode to be %d, but got %d", util.DefaultErrorCode, exitCode)
+		}
+	})
+
 	t.Run("StepsStageWithError", func(t *testing.T) {
 
 		// Prepare test data
@@ -71,6 +89,7 @@ func TestHandleCDEvent(t *testing.T) {
 		exitCode := 0
 
 		os.RemoveAll(util.WORKINGDIR)
+		os.RemoveAll("/output")
 		// Call the function
 		HandleCDEvent(ciCdRequest, &exitCode, true)
 
