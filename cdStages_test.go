@@ -13,7 +13,6 @@ func TestHandleCDEvent(t *testing.T) {
 	t.Run("StageYamlNoWithNoError", func(t *testing.T) {
 
 		// Prepare test data
-		//json.Unmarshal(test_data.CiTriggerEventPayload, &helper.CiCdTriggerEvent{})
 		ciCdRequest := &helper.CiCdTriggerEvent{}
 		json.Unmarshal([]byte(test_data.CdTriggerEventPayloadWithTaskYaml), ciCdRequest)
 
@@ -84,7 +83,6 @@ func TestHandleCDEvent(t *testing.T) {
 	t.Run("StepsStagePlugin", func(t *testing.T) {
 
 		// Prepare test data
-		//json.Unmarshal(test_data.CiTriggerEventPayload, &helper.CiCdTriggerEvent{})
 		ciCdRequest := &helper.CiCdTriggerEvent{}
 		json.Unmarshal([]byte(test_data.CdTriggerEventPayloadWithStepsWithPlugin), ciCdRequest)
 
