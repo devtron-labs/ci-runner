@@ -27,7 +27,9 @@ RUN chmod 644 /root/.ssh/config
 WORKDIR testdir
 COPY . .
 
-# To run:  docker build  -t citest -f Dockerfile.test .
-ENTRYPOINT ["go", "test", "-v", "./...", "-coverprofile", "cover.out"]
+# To run
+# docker build  -t citest -f Dockerfile.test .
+# docker run -v /tmp/ci-runner:/testdir/tests citest
+ENTRYPOINT ["go", "test", "-v", "./...", "-coverprofile", "./tests/cover.out"]
 
 
