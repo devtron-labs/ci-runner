@@ -94,7 +94,7 @@ func processEvent(args string) {
 	if ciCdRequest.Type == util.CIEVENT {
 		HandleCIEvent(ciCdRequest, &exitCode)
 	} else {
-		HandleCDEvent(ciCdRequest, &exitCode)
+		HandleCDEvent(ciCdRequest, &exitCode, false)
 	}
 	return
 }

@@ -1,0 +1,102 @@
+package main
+
+import (
+	"encoding/json"
+	"github.com/devtron-labs/ci-runner/helper"
+	test_data "github.com/devtron-labs/ci-runner/test-data"
+	"github.com/devtron-labs/ci-runner/util"
+	"os"
+	"testing"
+)
+
+func TestHandleCDEvent(t *testing.T) {
+	t.Run("StageYamlNoWithNoError", func(t *testing.T) {
+
+		// Prepare test data
+		//json.Unmarshal(test_data.CiTriggerEventPayload, &helper.CiCdTriggerEvent{})
+		ciCdRequest := &helper.CiCdTriggerEvent{}
+		json.Unmarshal([]byte(test_data.CdTriggerEventPayloadWithTaskYaml), ciCdRequest)
+
+		exitCode := 0
+
+		// Call the function
+		HandleCDEvent(ciCdRequest, &exitCode, true)
+
+		// Assert the expected results
+		if exitCode != 0 {
+			t.Errorf("Expected exitCode to be %d, but got %d", 0, exitCode)
+		}
+	})
+
+	t.Run("StageYamlWithError", func(t *testing.T) {
+		// Prepare test data
+		ciCdRequest := &helper.CiCdTriggerEvent{}
+		json.Unmarshal([]byte(test_data.CdTriggerEventPayloadWithTaskYamlBad), ciCdRequest)
+
+		exitCode := 0
+
+		os.RemoveAll(util.WORKINGDIR)
+		// Call the function with an error
+		HandleCDEvent(ciCdRequest, &exitCode, true)
+
+		// Assert the expected results
+		if exitCode != util.DefaultErrorCode {
+			t.Errorf("Expected exitCode to be %d, but got %d", util.DefaultErrorCode, exitCode)
+		}
+	})
+
+	t.Run("StepsStageWithNoError", func(t *testing.T) {
+
+		// Prepare test data
+		ciCdRequest := &helper.CiCdTriggerEvent{}
+		json.Unmarshal([]byte(test_data.CdTriggerEventPayloadWithSteps), ciCdRequest)
+
+		exitCode := 0
+
+		os.RemoveAll(util.WORKINGDIR)
+		// Call the function
+		HandleCDEvent(ciCdRequest, &exitCode, true)
+
+		// Assert the expected results
+		if exitCode != 0 {
+			t.Errorf("Expected exitCode to be %d, but got %d", 0, exitCode)
+		}
+	})
+
+	t.Run("StepsStageWithError", func(t *testing.T) {
+
+		// Prepare test data
+		ciCdRequest := &helper.CiCdTriggerEvent{}
+		json.Unmarshal([]byte(test_data.CdTriggerEventPayloadWithStepsBad), ciCdRequest)
+
+		exitCode := 0
+
+		os.RemoveAll(util.WORKINGDIR)
+		// Call the function
+		HandleCDEvent(ciCdRequest, &exitCode, true)
+
+		// Assert the expected results
+		if exitCode != util.DefaultErrorCode {
+			t.Errorf("Expected exitCode to be %d, but got %d", util.DefaultErrorCode, exitCode)
+		}
+	})
+
+	t.Run("StepsStagePlugin", func(t *testing.T) {
+
+		// Prepare test data
+		//json.Unmarshal(test_data.CiTriggerEventPayload, &helper.CiCdTriggerEvent{})
+		ciCdRequest := &helper.CiCdTriggerEvent{}
+		json.Unmarshal([]byte(test_data.CdTriggerEventPayloadWithStepsWithPlugin), ciCdRequest)
+
+		exitCode := 0
+
+		os.RemoveAll(util.WORKINGDIR)
+		// Call the function
+		HandleCDEvent(ciCdRequest, &exitCode, true)
+
+		// Assert the expected results
+		if exitCode != 0 {
+			t.Errorf("Expected exitCode to be %d, but got %d", 0, exitCode)
+		}
+	})
+}
