@@ -168,6 +168,7 @@ func Test_buildDockerEntryScript(t *testing.T) {
 			}
 		})
 	}
+	fmt.Println("coverage:", testing.CoverMode(), testing.Coverage())
 }
 
 func TestRunScriptsInDocker(t *testing.T) {
