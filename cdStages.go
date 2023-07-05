@@ -7,8 +7,8 @@ import (
 	"os"
 )
 
-func HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int, isTestRun bool) {
-	err := runCDStages(ciCdRequest, isTestRun)
+func HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
+	err := runCDStages(ciCdRequest)
 	artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CdRequest)
 	if err != nil || artifactUploadErr != nil {
 		log.Println(err)
@@ -46,7 +46,7 @@ func collectAndUploadCDArtifacts(cdRequest *helper.CdRequest) error {
 	return helper.UploadArtifact(cdRequest.BlobStorageConfigured, artifactFiles, cdRequest.BlobStorageS3Config, cdRequest.ArtifactFileName, cdRequest.CloudProvider, cdRequest.AzureBlobConfig, cdRequest.GcpBlobConfig)
 }
 
-func runCDStages(cicdRequest *helper.CiCdTriggerEvent, isTestRun bool) error {
+func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	err := os.Chdir("/")
 	if err != nil {
 		return err
@@ -62,7 +62,7 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent, isTestRun bool) error {
 	// git handling
 	log.Println(util.DEVTRON, " git")
 	err = helper.CloneAndCheckout(cicdRequest.CdRequest.CiProjectDetails)
-	if err != nil && !isTestRun {
+	if err != nil {
 		log.Println(util.DEVTRON, "clone err: ", err)
 		return err
 	}
@@ -134,7 +134,7 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent, isTestRun bool) error {
 		log.Println(util.DEVTRON, " /event")
 	}
 	err = helper.StopDocker()
-	if err != nil && !isTestRun {
+	if err != nil {
 		log.Println("error while stopping docker", err)
 		return err
 	}
