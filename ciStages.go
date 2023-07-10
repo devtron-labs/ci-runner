@@ -24,13 +24,16 @@ func HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 		log.Println(util.DEVTRON, err)
 		if errors.As(err, &stageError) {
 			*exitCode = util.CiStageFailErrorCode
+			return
 		}
 		*exitCode = util.DefaultErrorCode
+		return
 	}
 
 	if artifactUploadErr != nil {
 		log.Println(util.DEVTRON, artifactUploadErr)
 		*exitCode = util.DefaultErrorCode
+		return
 	}
 
 	// sync cache
@@ -39,6 +42,7 @@ func HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	if err != nil {
 		log.Println(err)
 		*exitCode = util.DefaultErrorCode
+		return
 	}
 	log.Println(util.DEVTRON, " /cache-push")
 }
