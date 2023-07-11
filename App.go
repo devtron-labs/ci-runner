@@ -385,9 +385,16 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 			util.LogStage("docker push")
 			// push to dest
 			log.Println(util.DEVTRON, " docker-push")
-			imageRetryCountValue, _ := strconv.Atoi(scriptEnvs["IMAGE_RETRY_COUNT"])
-			//var imageRetryIntervalvalue time.Duration
-			imageRetryIntervalvalue, _ := strconv.Atoi(scriptEnvs["IMAGE_RETRY_INTERVAL"])
+			imageRetryCountValue, err := strconv.Atoi(scriptEnvs["IMAGE_RETRY_COUNT"])
+			if err != nil {
+				log.Println("error in converting retry count to integer ")
+				return artifactUploaded, err
+			}
+			imageRetryIntervalvalue, err := strconv.Atoi(scriptEnvs["IMAGE_RETRY_INTERVAL"])
+			if err != nil {
+				log.Println("error in converting retry interval to integer ")
+				return artifactUploaded, err
+			}
 			for i := 0; i < imageRetryCountValue+1; i++ {
 				if i != 0 {
 					time.Sleep(time.Duration(imageRetryIntervalvalue) * time.Second)
