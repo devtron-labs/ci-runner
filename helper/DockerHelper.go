@@ -204,13 +204,17 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			dockerBuild = dockerBuild + "--no-cache"
 		}
 		dockerBuildConfig := ciBuildConfig.DockerBuildConfig
-		useBuildx := dockerBuildConfig.TargetPlatform != ""
+		isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
+		useBuildx := isTargetPlatformSet || dockerBuildConfig.UseBuildx
 		dockerBuildxBuild := "docker buildx build "
 		if useBuildx {
 			if ciRequest.CacheInvalidate && ciRequest.IsPvcMounted {
-				dockerBuild = dockerBuildxBuild + "--no-cache --platform " + dockerBuildConfig.TargetPlatform + " "
+				dockerBuild = dockerBuildxBuild + "--no-cache " + " "
 			} else {
-				dockerBuild = dockerBuildxBuild + "--platform " + dockerBuildConfig.TargetPlatform + " "
+				dockerBuild = dockerBuildxBuild + " "
+			}
+			if isTargetPlatformSet {
+				dockerBuild += "--platform " + dockerBuildConfig.TargetPlatform + " "
 			}
 		}
 		dockerBuildFlags := make(map[string]string)

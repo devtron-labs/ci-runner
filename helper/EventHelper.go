@@ -60,6 +60,7 @@ type DockerBuildConfig struct {
 	DockerBuildOptions map[string]string `json:"dockerBuildOptions"`
 	TargetPlatform     string            `json:"targetPlatform,omitempty"`
 	BuildContext       string            `json:"buildContext,omitempty"`
+	UseBuildx          bool              `json:"useBuildx"`
 }
 
 type BuildPackConfig struct {
