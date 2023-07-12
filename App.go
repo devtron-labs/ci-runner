@@ -78,6 +78,8 @@ func processEvent(args string) {
 		return
 	}
 
+	log.Println(util.DEVTRON, "ciCdRequest", ciCdRequest)
+
 	// Create a channel to receive the SIGTERM signal
 	sigTerm := make(chan os.Signal, 1)
 	signal.Notify(sigTerm, syscall.SIGTERM)
