@@ -206,6 +206,9 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		dockerBuildConfig := ciBuildConfig.DockerBuildConfig
 		isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
 		useBuildx := isTargetPlatformSet || dockerBuildConfig.UseBuildx
+
+		log.Println(util.DEVTRON, "useBuildx", useBuildx)
+
 		dockerBuildxBuild := "docker buildx build "
 		if useBuildx {
 			if ciRequest.CacheInvalidate && ciRequest.IsPvcMounted {
