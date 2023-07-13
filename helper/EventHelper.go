@@ -406,3 +406,7 @@ type ScanEvent struct {
 	AwsRegion        string `json:"awsRegion"`
 	DockerRegistryId string `json:"dockerRegistryId"`
 }
+
+func CheckForBuildx(dockerBuildConfig *DockerBuildConfig) bool {
+	return dockerBuildConfig.TargetPlatform != "" || dockerBuildConfig.UseBuildx
+}

@@ -205,7 +205,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		}
 		dockerBuildConfig := ciBuildConfig.DockerBuildConfig
 		isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
-		useBuildx := isTargetPlatformSet || dockerBuildConfig.UseBuildx
+		useBuildx := CheckForBuildx(dockerBuildConfig)
 
 		dockerBuildxBuild := "docker buildx build "
 		if useBuildx {
