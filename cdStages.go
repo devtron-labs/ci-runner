@@ -92,7 +92,8 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		for _, ref := range cicdRequest.CdRequest.RefPlugins {
 			refStageMap[ref.Id] = ref.Steps
 		}
-		_, _, err = RunCiCdSteps(STEP_TYPE_PRE, cicdRequest.CdRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
+		var stage = StepType(cicdRequest.CdRequest.StageType)
+		_, _, err = RunCiCdSteps(stage, cicdRequest.CdRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
