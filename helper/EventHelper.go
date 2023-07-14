@@ -186,6 +186,7 @@ type CdRequest struct {
 	IsDryRun                   bool                              `json:"isDryRun"`
 	PrePostDeploySteps         []*StepObject                     `json:"prePostDeploySteps"`
 	RefPlugins                 []*RefPluginObject                `json:"refPlugins"`
+	StageType                  string                            `json:"stageType"`
 }
 
 type CiCdTriggerEvent struct {
