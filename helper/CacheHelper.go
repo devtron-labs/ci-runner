@@ -85,7 +85,7 @@ func SyncCache(ciRequest *CiRequest) error {
 	var cachePath string
 	ciBuildConfig := ciRequest.CiBuildConfig
 	if (ciBuildConfig.CiBuildType == SELF_DOCKERFILE_BUILD_TYPE || ciBuildConfig.CiBuildType == MANAGED_DOCKERFILE_BUILD_TYPE) &&
-		CheckForBuildx(ciBuildConfig.DockerBuildConfig) {
+		ciBuildConfig.DockerBuildConfig.CheckForBuildX() {
 		cachePath = util.LOCAL_BUILDX_CACHE_LOCATION
 	} else {
 		cachePath = "/var/lib/docker"

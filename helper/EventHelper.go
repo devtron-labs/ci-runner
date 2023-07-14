@@ -407,6 +407,6 @@ type ScanEvent struct {
 	DockerRegistryId string `json:"dockerRegistryId"`
 }
 
-func CheckForBuildx(dockerBuildConfig *DockerBuildConfig) bool {
+func (dockerBuildConfig *DockerBuildConfig) CheckForBuildX() bool {
 	return dockerBuildConfig.TargetPlatform != "" || dockerBuildConfig.UseBuildx
 }
