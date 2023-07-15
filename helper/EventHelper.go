@@ -60,6 +60,7 @@ type DockerBuildConfig struct {
 	DockerBuildOptions map[string]string `json:"dockerBuildOptions"`
 	TargetPlatform     string            `json:"targetPlatform,omitempty"`
 	BuildContext       string            `json:"buildContext,omitempty"`
+	UseBuildx          bool              `json:"useBuildx"`
 }
 
 type BuildPackConfig struct {
@@ -404,4 +405,8 @@ type ScanEvent struct {
 	Token            string `json:"token"`
 	AwsRegion        string `json:"awsRegion"`
 	DockerRegistryId string `json:"dockerRegistryId"`
+}
+
+func (dockerBuildConfig *DockerBuildConfig) CheckForBuildX() bool {
+	return dockerBuildConfig.TargetPlatform != "" || dockerBuildConfig.UseBuildx
 }
