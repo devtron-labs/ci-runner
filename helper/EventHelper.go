@@ -136,6 +136,9 @@ type CiRequest struct {
 	IsPvcMounted                bool                              `json:"IsPvcMounted"`
 	ExtraEnvironmentVariables   map[string]string                 `json:"extraEnvironmentVariables"`
 	EnableBuildContext          bool                              `json:"enableBuildContext"`
+	IsExtRun                    bool                              `json:"isExtRun"`
+	OrchestratorHost            string                            `json:"orchestratorHost"`
+	OrchestratorToken           string                            `json:"orchestratorToken"`
 	ImageRetryCount             int                               `json:"imageRetryCount"`
 	ImageRetryInterval          int                               `json:"imageRetryInterval"`
 }
@@ -187,6 +190,12 @@ type CiCdTriggerEvent struct {
 	Type      string     `json:"type"`
 	CiRequest *CiRequest `json:"ciRequest"`
 	CdRequest *CdRequest `json:"cdRequest"`
+}
+
+type ExtEnvRequest struct {
+	OrchestratorHost  string `json:"orchestratorHost"`
+	OrchestratorToken string `json:"orchestratorToken"`
+	IsExtRun          bool   `json:"isExtRun"`
 }
 
 type CiArtifactDTO struct {
@@ -301,7 +310,7 @@ func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMet
 		FailureReason:      failureReason,
 	}
 
-	err := SendCiCompleteEvent(event)
+	err := SendCiCompleteEvent(ciRequest, event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
 		return err
@@ -310,13 +319,18 @@ func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMet
 	return nil
 }
 
-func SendCiCompleteEvent(event CiCompleteEvent) error {
+func SendCiCompleteEvent(ciRequest *CiRequest, event CiCompleteEvent) error {
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	err = PublishEvent(jsonBody, pubsub1.CI_COMPLETE_TOPIC)
+	extEnvRequest := ExtEnvRequest{
+		OrchestratorHost:  ciRequest.OrchestratorHost,
+		OrchestratorToken: ciRequest.OrchestratorToken,
+		IsExtRun:          ciRequest.IsExtRun,
+	}
+	err = PublishEvent(jsonBody, pubsub1.CI_COMPLETE_TOPIC, &extEnvRequest)
 	log.Println(util.DEVTRON, "ci complete event notification done")
 	return err
 }
@@ -327,23 +341,31 @@ func SendCdCompleteEvent(cdRequest *CdRequest, event CdStageCompleteEvent) error
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	err = PublishCDEvent(jsonBody, pubsub1.CD_STAGE_COMPLETE_TOPIC, cdRequest)
+	extEnvRequest := ExtEnvRequest{
+		OrchestratorHost:  cdRequest.OrchestratorHost,
+		OrchestratorToken: cdRequest.OrchestratorToken,
+		IsExtRun:          cdRequest.IsExtRun,
+	}
+	err = PublishCDEvent(jsonBody, pubsub1.CD_STAGE_COMPLETE_TOPIC, &extEnvRequest)
 	log.Println(util.DEVTRON, "cd stage complete event notification done")
 	return err
 }
 
-func PublishCDEvent(jsonBody []byte, topic string, cdRequest *CdRequest) error {
+func PublishCDEvent(jsonBody []byte, topic string, cdRequest *ExtEnvRequest) error {
 	if cdRequest.IsExtRun {
 		return PublishEventsOnRest(jsonBody, topic, cdRequest)
 	}
 	return pubsub.PublishEventsOnNats(jsonBody, topic)
 }
 
-func PublishEvent(jsonBody []byte, topic string) error {
+func PublishEvent(jsonBody []byte, topic string, ciRequest *ExtEnvRequest) error {
+	if ciRequest.IsExtRun {
+		return PublishEventsOnRest(jsonBody, topic, ciRequest)
+	}
 	return pubsub.PublishEventsOnNats(jsonBody, topic)
 }
 
-func PublishEventsOnRest(jsonBody []byte, topic string, cdRequest *CdRequest) error {
+func PublishEventsOnRest(jsonBody []byte, topic string, cdRequest *ExtEnvRequest) error {
 	publishRequest := &PublishRequest{
 		Topic:   topic,
 		Payload: jsonBody,
