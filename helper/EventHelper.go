@@ -60,6 +60,7 @@ type DockerBuildConfig struct {
 	DockerBuildOptions map[string]string `json:"dockerBuildOptions"`
 	TargetPlatform     string            `json:"targetPlatform,omitempty"`
 	BuildContext       string            `json:"buildContext,omitempty"`
+	UseBuildx          bool              `json:"useBuildx"`
 }
 
 type BuildPackConfig struct {
@@ -138,6 +139,8 @@ type CiRequest struct {
 	IsExtRun                    bool                              `json:"isExtRun"`
 	OrchestratorHost            string                            `json:"orchestratorHost"`
 	OrchestratorToken           string                            `json:"orchestratorToken"`
+	ImageRetryCount             int                               `json:"imageRetryCount"`
+	ImageRetryInterval          int                               `json:"imageRetryInterval"`
 }
 
 type CdRequest struct {
@@ -322,7 +325,6 @@ func SendCiCompleteEvent(ciRequest *CiRequest, event CiCompleteEvent) error {
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	log.Println("Requested Ci", ciRequest)
 	extEnvRequest := ExtEnvRequest{
 		OrchestratorHost:  ciRequest.OrchestratorHost,
 		OrchestratorToken: ciRequest.OrchestratorToken,
@@ -425,4 +427,8 @@ type ScanEvent struct {
 	Token            string `json:"token"`
 	AwsRegion        string `json:"awsRegion"`
 	DockerRegistryId string `json:"dockerRegistryId"`
+}
+
+func (dockerBuildConfig *DockerBuildConfig) CheckForBuildX() bool {
+	return dockerBuildConfig.TargetPlatform != "" || dockerBuildConfig.UseBuildx
 }
