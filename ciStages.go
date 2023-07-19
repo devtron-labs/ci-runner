@@ -186,14 +186,24 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	var digest string
 
 	if !buildSkipEnabled {
-		isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && ciBuildConfigBean.DockerBuildConfig.TargetPlatform != ""
+		isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && ciBuildConfigBean.DockerBuildConfig.CheckForBuildX()
 		if isBuildX {
 			digest, err = helper.ExtractDigestForBuildx(dest)
 		} else {
 			util.LogStage("docker push")
 			// push to dest
 			log.Println(util.DEVTRON, " docker-push")
-			err = helper.PushArtifact(dest)
+			imageRetryCountValue := ciCdRequest.CiRequest.ImageRetryCount
+			imageRetryIntervalValue := ciCdRequest.CiRequest.ImageRetryInterval
+			for i := 0; i < imageRetryCountValue+1; i++ {
+				if i != 0 {
+					time.Sleep(time.Duration(imageRetryIntervalValue) * time.Second)
+				}
+				err = helper.PushArtifact(dest)
+				if err == nil {
+					break
+				}
+			}
 			if err != nil {
 				return sendFailureNotification(string(Push), ciCdRequest.CiRequest, digest, dest, metrics, artifactUploaded, err)
 			}
