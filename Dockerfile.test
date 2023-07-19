@@ -26,7 +26,7 @@ COPY . .
 
 # To run
 # docker build  -t citest -f Dockerfile.test .
-# docker run -v /tmp/ci-runner:/testdir/tests citest
+# docker run --cap-add=NET_ADMIN -v /tmp/ci-runner:/testdir/tests citest
 ENTRYPOINT ["go", "test", "-v", "./...", "-coverprofile", "./tests/cover.out"]
 
 
