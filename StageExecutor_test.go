@@ -8,11 +8,10 @@ import (
 
 func Test_deduceVariables(t *testing.T) {
 	type args struct {
-		desiredVars             []*helper.VariableObject
-		globalVars              map[string]string
-		preeCiStageVariable     map[int]map[string]*helper.VariableObject
-		postCiStageVariables    map[int]map[string]*helper.VariableObject
-		refPluginStageVariables map[int]map[string]*helper.VariableObject
+		desiredVars          []*helper.VariableObject
+		globalVars           map[string]string
+		preeCiStageVariable  map[int]map[string]*helper.VariableObject
+		postCiStageVariables map[int]map[string]*helper.VariableObject
 	}
 	tests := []struct {
 		name    string
@@ -25,10 +24,9 @@ func Test_deduceVariables(t *testing.T) {
 				desiredVars: []*helper.VariableObject{&helper.VariableObject{Name: "age", Value: "20", VariableType: helper.VALUE, Format: helper.NUMBER},
 					&helper.VariableObject{Name: "name", Value: "test", VariableType: helper.VALUE, Format: helper.STRING},
 					&helper.VariableObject{Name: "status", Value: "true", VariableType: helper.VALUE, Format: helper.BOOL}},
-				globalVars:              nil,
-				preeCiStageVariable:     nil,
-				postCiStageVariables:    nil,
-				refPluginStageVariables: nil,
+				globalVars:           nil,
+				preeCiStageVariable:  nil,
+				postCiStageVariables: nil,
 			},
 			wantErr: false,
 			want: []*helper.VariableObject{&helper.VariableObject{Name: "age", Value: "20", VariableType: helper.VALUE, Format: helper.NUMBER},
@@ -39,10 +37,9 @@ func Test_deduceVariables(t *testing.T) {
 				desiredVars: []*helper.VariableObject{&helper.VariableObject{Name: "age", VariableType: helper.REF_GLOBAL, Format: helper.NUMBER, ReferenceVariableName: "age"},
 					&helper.VariableObject{Name: "name", VariableType: helper.REF_GLOBAL, Format: helper.STRING, ReferenceVariableName: "my-name"},
 					&helper.VariableObject{Name: "status", VariableType: helper.REF_GLOBAL, Format: helper.BOOL, ReferenceVariableName: "status"}},
-				globalVars:              map[string]string{"age": "20", "my-name": "test", "status": "true"},
-				preeCiStageVariable:     nil,
-				postCiStageVariables:    nil,
-				refPluginStageVariables: nil,
+				globalVars:           map[string]string{"age": "20", "my-name": "test", "status": "true"},
+				preeCiStageVariable:  nil,
+				postCiStageVariables: nil,
 			},
 			wantErr: false,
 			want: []*helper.VariableObject{&helper.VariableObject{Name: "age", Value: "20", VariableType: helper.REF_GLOBAL, Format: helper.NUMBER, TypedValue: float64(20), ReferenceVariableName: "age"},
@@ -58,8 +55,7 @@ func Test_deduceVariables(t *testing.T) {
 					"my-name": &helper.VariableObject{Name: "my-name", Value: "test"},
 					"status":  &helper.VariableObject{Name: "status", Value: "true"},
 				}},
-				postCiStageVariables:    nil,
-				refPluginStageVariables: nil,
+				postCiStageVariables: nil,
 			},
 			wantErr: false,
 			want: []*helper.VariableObject{&helper.VariableObject{Name: "age", VariableType: helper.REF_PRE_CI, Format: helper.NUMBER, ReferenceVariableName: "age", Value: "20", TypedValue: float64(20), ReferenceVariableStepIndex: 1},
@@ -75,8 +71,7 @@ func Test_deduceVariables(t *testing.T) {
 					"my-name": &helper.VariableObject{Name: "my-name", Value: "test"},
 					"status":  &helper.VariableObject{Name: "status", Value: "true"},
 				}},
-				preeCiStageVariable:     nil,
-				refPluginStageVariables: nil,
+				preeCiStageVariable: nil,
 			},
 			wantErr: false,
 			want: []*helper.VariableObject{&helper.VariableObject{Name: "age", VariableType: helper.REF_POST_CI, Format: helper.NUMBER, ReferenceVariableName: "age", Value: "20", TypedValue: float64(20), ReferenceVariableStepIndex: 1},
@@ -88,7 +83,7 @@ func Test_deduceVariables(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := deduceVariables(tt.args.desiredVars, tt.args.globalVars, tt.args.preeCiStageVariable, tt.args.postCiStageVariables, tt.args.refPluginStageVariables)
+			got, err := deduceVariables(tt.args.desiredVars, tt.args.globalVars, tt.args.preeCiStageVariable, tt.args.postCiStageVariables, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("deduceVariables() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -102,33 +97,32 @@ func Test_deduceVariables(t *testing.T) {
 
 func TestRunCiSteps(t *testing.T) {
 	type args struct {
-		stepType                   StepType
-		steps                      []*helper.StepObject
-		refStageMap                map[int][]*helper.StepObject
+		stageType                  StepType
+		req                        *helper.CiRequest
 		globalEnvironmentVariables map[string]string
 		preeCiStageVariable        map[int]map[string]*helper.VariableObject
 	}
 	tests := []struct {
-		name           string
-		args           args
-		wantOutVars    map[int]map[string]*helper.VariableObject
-		wantFailedStep *helper.StepObject
-		wantErr        bool
+		name                       string
+		args                       args
+		wantPreeCiStageVariableOut map[int]map[string]*helper.VariableObject
+		wantPostCiStageVariable    map[int]map[string]*helper.VariableObject
+		wantErr                    bool
 	}{
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotOutVars, gotFailedStep, err := RunCiSteps(tt.args.stepType, tt.args.steps, tt.args.refStageMap, tt.args.globalEnvironmentVariables, tt.args.preeCiStageVariable)
+			gotPreeCiStageVariableOut, gotPostCiStageVariable, err := RunCiCdSteps(tt.args.stageType, tt.args.req.PreCiSteps, nil, tt.args.globalEnvironmentVariables, tt.args.preeCiStageVariable)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("RunCiSteps() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("RunCiCdSteps() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(gotOutVars, tt.wantOutVars) {
-				t.Errorf("RunCiSteps() gotOutVars = %v, want %v", gotOutVars, tt.wantOutVars)
+			if !reflect.DeepEqual(gotPreeCiStageVariableOut, tt.wantPreeCiStageVariableOut) {
+				t.Errorf("RunCiCdSteps() gotPreeCiStageVariableOut = %v, want %v", gotPreeCiStageVariableOut, tt.wantPreeCiStageVariableOut)
 			}
-			if !reflect.DeepEqual(gotFailedStep, tt.wantFailedStep) {
-				t.Errorf("RunCiSteps() gotFailedStep = %v, want %v", gotFailedStep, tt.wantFailedStep)
+			if !reflect.DeepEqual(gotPostCiStageVariable, tt.wantPostCiStageVariable) {
+				t.Errorf("RunCiCdSteps() gotPostCiStageVariable = %v, want %v", gotPostCiStageVariable, tt.wantPostCiStageVariable)
 			}
 		})
 	}

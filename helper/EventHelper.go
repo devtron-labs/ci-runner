@@ -184,6 +184,9 @@ type CdRequest struct {
 	CiRunnerDockerMtuValue     int                               `json:"ciRunnerDockerMtuValue"`
 	DeploymentReleaseCounter   int                               `json:"deploymentReleaseCounter,omitempty"`
 	IsDryRun                   bool                              `json:"isDryRun"`
+	PrePostDeploySteps         []*StepObject                     `json:"prePostDeploySteps"`
+	RefPlugins                 []*RefPluginObject                `json:"refPlugins"`
+	StageType                  string                            `json:"stageType"`
 }
 
 type CiCdTriggerEvent struct {
