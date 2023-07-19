@@ -23,8 +23,6 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["APP_NAME"] = cicdRequest.CiRequest.AppName
 		envs["TRIGGER_BY_AUTHOR"] = cicdRequest.CiRequest.TriggerByAuthor
 		envs["DOCKER_IMAGE"] = image
-		//envs["IMAGE_RETRY_COUNT"] = strconv.Itoa(cicdRequest.CiRequest.ImageRetryCount)
-		//envs["IMAGE_RETRY_INTERVAL"] = strconv.Itoa(cicdRequest.CiRequest.ImageRetryInterval)
 
 		//adding GIT_MATERIAL_REQUEST in env for semgrep plugin
 		CiMaterialRequestArr := ""
