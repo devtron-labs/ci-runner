@@ -33,7 +33,7 @@ func HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	if artifactUploadErr != nil {
 		log.Println(util.DEVTRON, artifactUploadErr)
 		if ciCdRequest.CiRequest.IsExtRun {
-			log.Println(util.DEVTRON, "Ignoring artifactUploadErr and not uploading cache")
+			log.Println(util.DEVTRON, "Ignoring artifactUploadErr")
 			return
 		}
 		*exitCode = util.DefaultErrorCode
@@ -45,6 +45,10 @@ func HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	err = helper.SyncCache(ciRequest)
 	if err != nil {
 		log.Println(err)
+		if ciCdRequest.CiRequest.IsExtRun {
+			log.Println(util.DEVTRON, "Ignoring cache upload")
+			return
+		}
 		*exitCode = util.DefaultErrorCode
 		return
 	}
@@ -225,7 +229,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	artifactUploaded, err = helper.ZipAndUpload(ciCdRequest.CiRequest.BlobStorageConfigured, ciCdRequest.CiRequest.BlobStorageS3Config, ciCdRequest.CiRequest.CiArtifactFileName, ciCdRequest.CiRequest.CloudProvider, ciCdRequest.CiRequest.AzureBlobConfig, ciCdRequest.CiRequest.GcpBlobConfig)
 
 	if err != nil {
-		return artifactUploaded, err
+		return artifactUploaded, nil
 	}
 	//else {
 	//	artifactUploaded = true
