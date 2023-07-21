@@ -32,6 +32,9 @@ func HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 
 	if artifactUploadErr != nil {
 		log.Println(util.DEVTRON, artifactUploadErr)
+		if ciCdRequest.CiRequest.IsExtRun {
+			return
+		}
 		*exitCode = util.DefaultErrorCode
 		return
 	}
