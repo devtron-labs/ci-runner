@@ -33,6 +33,7 @@ func HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	if artifactUploadErr != nil {
 		log.Println(util.DEVTRON, artifactUploadErr)
 		if ciCdRequest.CiRequest.IsExtRun {
+			log.Println(util.DEVTRON, "Ignoring artifactUploadErr and not uploading cache")
 			return
 		}
 		*exitCode = util.DefaultErrorCode
