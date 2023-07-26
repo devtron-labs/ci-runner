@@ -1,5 +1,5 @@
 ####--------------
-FROM golang:1.20-alpine3.18  AS build-env
+FROM golang:1.20.6-alpine3.17  AS build-env
 
 RUN apk add --no-cache git gcc musl-dev
 RUN apk add --update make
