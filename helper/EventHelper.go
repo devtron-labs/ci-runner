@@ -272,9 +272,7 @@ type CdRequest struct {
 }
 
 type CiCdTriggerEvent struct {
-	Type string `json:"type"`
-	//CommonWorkflowRequest *CommonWorkflowRequest `json:"ciRequest"`
-	//CommonWorkflowRequest *CommonWorkflowRequest `json:"cdRequest"`
+	Type                  string                 `json:"type"`
 	CommonWorkflowRequest *CommonWorkflowRequest `json:"commonWorkflowRequest"`
 }
 
