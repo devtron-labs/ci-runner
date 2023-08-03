@@ -283,7 +283,7 @@ func runScanningAndPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent) error {
 	}
 	log.Println(util.DEVTRON, "ExtractDigestUsingPull -> ", digest)
 	if len(ciCdRequest.CiRequest.PostCiSteps) > 0 {
-		util.LogStage("running PRE-CI steps")
+		util.LogStage("running POST-CI steps")
 		// run pre artifact processing
 		_, _, err := RunCiCdSteps(STEP_TYPE_POST, ciCdRequest.CiRequest.PostCiSteps, refStageMap, nil, nil)
 		if err != nil {
