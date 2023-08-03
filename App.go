@@ -93,6 +93,8 @@ func processEvent(args string) {
 	defer handleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
 	if ciCdRequest.Type == util.CIEVENT {
 		HandleCIEvent(ciCdRequest, &exitCode)
+	} else if ciCdRequest.Type == util.WEBHOOK {
+		runScanningAndPostCiSteps(ciCdRequest)
 	} else {
 		HandleCDEvent(ciCdRequest, &exitCode)
 	}

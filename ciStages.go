@@ -269,6 +269,42 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	return artifactUploaded, nil
 }
 
+func runScanningAndPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent) error {
+	log.Println("runScanningAndPostCiSteps", ciCdRequest)
+	refStageMap := make(map[int][]*helper.StepObject)
+	scriptEnvs, err := getGlobalEnvVariables(ciCdRequest)
+	if err != nil {
+		return err
+	}
+	for _, ref := range ciCdRequest.CiRequest.RefPlugins {
+		refStageMap[ref.Id] = ref.Steps
+	}
+	digest, err := helper.ExtractDigestUsingPull(ciCdRequest.CiRequest.Image)
+	if len(ciCdRequest.CiRequest.PostCiSteps) > 0 {
+		util.LogStage("running PRE-CI steps")
+		// run pre artifact processing
+		_, _, err := RunCiCdSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest.PostCiSteps, refStageMap, scriptEnvs, nil)
+		if err != nil {
+			log.Println(err)
+			return err
+
+		}
+	}
+	if ciCdRequest.CiRequest.ScanEnabled {
+		util.LogStage("IMAGE SCAN")
+		log.Println(util.DEVTRON, " /image-scanner")
+		scanEvent := &helper.ScanEvent{Image: ciCdRequest.CiRequest.Image, ImageDigest: digest}
+		err = helper.SendEventToClairUtility(scanEvent)
+		if err != nil {
+			log.Println(err)
+			return err
+
+		}
+		log.Println(util.DEVTRON, " /image-scanner")
+	}
+	return nil
+}
+
 func getPostCiStepToRunOnCiFail(postCiSteps []*helper.StepObject) []*helper.StepObject {
 	var postCiStepsToTriggerOnCiFail []*helper.StepObject
 	if len(postCiSteps) > 0 {
