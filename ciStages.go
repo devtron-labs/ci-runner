@@ -270,7 +270,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 }
 
 func runScanningAndPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent) error {
-	log.Println("runScanningAndPostCiSteps", ciCdRequest)
+	log.Println(util.DEVTRON, "runScanningAndPostCiSteps", ciCdRequest)
 	refStageMap := make(map[int][]*helper.StepObject)
 	scriptEnvs, err := getGlobalEnvVariables(ciCdRequest)
 	if err != nil {
