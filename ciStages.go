@@ -272,18 +272,20 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 func runScanningAndPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent) error {
 	log.Println(util.DEVTRON, "runScanningAndPostCiSteps", ciCdRequest)
 	refStageMap := make(map[int][]*helper.StepObject)
-	scriptEnvs, err := getGlobalEnvVariables(ciCdRequest)
-	if err != nil {
-		return err
-	}
 	for _, ref := range ciCdRequest.CiRequest.RefPlugins {
 		refStageMap[ref.Id] = ref.Steps
 	}
+	log.Println(util.DEVTRON, "ExtractDigestUsingPull", ciCdRequest.CiRequest.Image)
 	digest, err := helper.ExtractDigestUsingPull(ciCdRequest.CiRequest.Image)
+	if err != nil {
+		log.Println(util.DEVTRON, "Error in digest", err)
+		return err
+	}
+	log.Println(util.DEVTRON, "ExtractDigestUsingPull -> ", digest)
 	if len(ciCdRequest.CiRequest.PostCiSteps) > 0 {
 		util.LogStage("running PRE-CI steps")
 		// run pre artifact processing
-		_, _, err := RunCiCdSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest.PostCiSteps, refStageMap, scriptEnvs, nil)
+		_, _, err := RunCiCdSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest.PostCiSteps, refStageMap, nil, nil)
 		if err != nil {
 			log.Println(err)
 			return err
