@@ -285,7 +285,7 @@ func runScanningAndPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent) error {
 	if len(ciCdRequest.CiRequest.PostCiSteps) > 0 {
 		util.LogStage("running PRE-CI steps")
 		// run pre artifact processing
-		_, _, err := RunCiCdSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest.PostCiSteps, refStageMap, nil, nil)
+		_, _, err := RunCiCdSteps(STEP_TYPE_POST, ciCdRequest.CiRequest.PostCiSteps, refStageMap, nil, nil)
 		if err != nil {
 			log.Println(err)
 			return err
