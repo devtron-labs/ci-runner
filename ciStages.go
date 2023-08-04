@@ -276,12 +276,12 @@ func runScanningAndPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent) error {
 		refStageMap[ref.Id] = ref.Steps
 	}
 	log.Println(util.DEVTRON, "ExtractDigestUsingPull", ciCdRequest.CiRequest.Image)
-	digest, err := helper.ExtractDigestUsingPull(ciCdRequest.CiRequest.Image)
-	if err != nil {
-		log.Println(util.DEVTRON, "Error in digest", err)
-		return err
-	}
-	log.Println(util.DEVTRON, "ExtractDigestUsingPull -> ", digest)
+	//digest, err := helper.ExtractDigestUsingPull(ciCdRequest.CiRequest.Image)
+	//if err != nil {
+	//	log.Println(util.DEVTRON, "Error in digest", err)
+	//	return err
+	//}
+	//log.Println(util.DEVTRON, "ExtractDigestUsingPull -> ", digest)
 	if len(ciCdRequest.CiRequest.PostCiSteps) > 0 {
 		util.LogStage("running POST-CI steps")
 		// run pre artifact processing
@@ -292,18 +292,18 @@ func runScanningAndPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent) error {
 
 		}
 	}
-	if ciCdRequest.CiRequest.ScanEnabled {
-		util.LogStage("IMAGE SCAN")
-		log.Println(util.DEVTRON, " /image-scanner")
-		scanEvent := &helper.ScanEvent{Image: ciCdRequest.CiRequest.Image, ImageDigest: digest}
-		err = helper.SendEventToClairUtility(scanEvent)
-		if err != nil {
-			log.Println(err)
-			return err
-
-		}
-		log.Println(util.DEVTRON, " /image-scanner")
-	}
+	//if ciCdRequest.CiRequest.ScanEnabled {
+	//	util.LogStage("IMAGE SCAN")
+	//	log.Println(util.DEVTRON, " /image-scanner")
+	//	scanEvent := &helper.ScanEvent{Image: ciCdRequest.CiRequest.Image, ImageDigest: digest}
+	//	err = helper.SendEventToClairUtility(scanEvent)
+	//	if err != nil {
+	//		log.Println(err)
+	//		return err
+	//
+	//	}
+	//	log.Println(util.DEVTRON, " /image-scanner")
+	//}
 	return nil
 }
 
