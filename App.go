@@ -44,116 +44,10 @@ func handleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *int, source st
 }
 
 func main() {
-	//args := `{"type":"WEBHOOK","ciRequest":{"workflowNamePrefix":"ci","pipelineName":"","pipelineId":4,"dockerImageTag":"","dockerRegistryId":"","dockerRegistryType":"","dockerRegistryURL":"","dockerConnection":"","dockerCert":"","dockerRepository":"","checkoutPath":"","dockerUsername":"","dockerPassword":"","awsRegion":"","accessKey":"","secretKey":"","ciCacheLocation":"","ciCacheRegion":"","ciCacheFileName":"","ciProjectDetails":null,"containerResources":{"minCpu":"","maxCpu":"","minStorage":"","maxStorage":"","minEphStorage":"","maxEphStorage":"","minMem":"","maxMem":""},"activeDeadlineSeconds":0,"ciImage":"ashexp/test:002a2133-47-115","namespace":"devtron-ci","workflowId":0,"triggeredBy":4,"cacheLimit":5000000000,"beforeDockerBuildScripts":null,"afterDockerBuildScripts":null,"ciArtifactLocation":"","ciArtifactBucket":"","ciArtifactFileName":"","ciArtifactRegion":"","scanEnabled":true,"cloudProvider":"S3","blobStorageConfigured":false,"blobStorageS3Config":null,"azureBlobConfig":null,"gcpBlobConfig":null,"blobStorageLogsKey":"arsenal-v1/ci","inAppLoggingEnabled":false,"defaultAddressPoolBaseCidr":"","defaultAddressPoolSize":0,"preCiSteps":null,"postCiSteps":[{"name":"Task1","index":1,"stepType":"INLINE","executorType":"SHELL","script":"#!/bin/shset -eo pipefail #set -v  ## uncomment this to debug the scriptecho \"HelloWorld\"","inputVars":null,"exposedPorts":null,"outputVars":null,"triggerSkipConditions":null,"successFailureConditions":null,"dockerImage":"","command":"","args":null,"customScriptMount":null,"sourceCodeMount":null,"extraVolumeMounts":null,"artifactPaths":null,"triggerIfParentStageFail":false}],"refPlugins":null,"appName":"","triggerByAuthor":"","ciBuildConfig":null,"ciBuildDockerMtuValue":-1,"ignoreDockerCachePush":false,"ignoreDockerCachePull":false,"cacheInvalidate":false,"IsPvcMounted":false,"extraEnvironmentVariables":null,"enableBuildContext":false,"appId":55,"environmentId":0,"orchestratorHost":"http://devtroncd-orchestrator-service-prod.devtroncd/webhook/msg/nats","orchestratorToken":"","isExtRun":false,"imageRetryCount":0,"imageRetryInterval":5,"image":"ashexp/test:002a2133-47-115"},"cdRequest":null}`
-	//	args := `'{"name":"ci","inputs":{},"outputs":{},"metadata":{},"container":{"name":"","image":"quay.io/devtron/test:75949ec6-890-6954","ports":[{"name":"app-data","containerPort":9102}],"env":[{"name":"IMAGE_SCANNER_ENDPOINT","value":"http://image-scanner-service.devtroncd:80"},{"name":"CI_CD_EVENT","value":"{\"type\":\"WEBHOOK\",\"ciRequest\":{\"workflowNamePrefix\":\"ci\",\"pipelineName\":\"\",\"pipelineId\":4,\"dockerImageTag\":\"\",\"dockerRegistryId\":\"\",\"dockerRegistryType\":\"\",\"dockerRegistryURL\":\"\",\"dockerConnection\":\"\",\"dockerCert\":\"\",\"dockerRepository\":\"\",\"checkoutPath\":\"\",\"dockerUsername\":\"\",\"dockerPassword\":\"\",\"awsRegion\":\"\",\"accessKey\":\"\",\"secretKey\":\"\",\"ciCacheLocation\":\"\",\"ciCacheRegion\":\"\",\"ciCacheFileName\":\"\",\"ciProjectDetails\":null,\"containerResources\":{\"minCpu\":\"\",\"maxCpu\":\"\",\"minStorage\":\"\",\"maxStorage\":\"\",\"minEphStorage\":\"\",\"maxEphStorage\":\"\",\"minMem\":\"\",\"maxMem\":\"\"},\"activeDeadlineSeconds\":0,\"ciImage\":\"quay.io/devtron/test:75949ec6-890-6954\",\"namespace\":\"devtron-ci\",\"workflowId\":0,\"triggeredBy\":4,\"cacheLimit\":5000000000,\"beforeDockerBuildScripts\":null,\"afterDockerBuildScripts\":null,\"ciArtifactLocation\":\"\",\"ciArtifactBucket\":\"\",\"ciArtifactFileName\":\"\",\"ciArtifactRegion\":\"\",\"scanEnabled\":true,\"cloudProvider\":\"\",\"blobStorageConfigured\":false,\"blobStorageS3Config\":null,\"azureBlobConfig\":null,\"gcpBlobConfig\":null,\"blobStorageLogsKey\":\"devtron/ci\",\"inAppLoggingEnabled\":true,\"defaultAddressPoolBaseCidr\":\"\",\"defaultAddressPoolSize\":0,\"preCiSteps\":null,\"postCiSteps\":[{\"name\":\"Task
-	//      1\",\"index\":1,\"stepType\":\"INLINE\",\"executorType\":\"SHELL\",\"script\":\"#!/bin/sh
-	//      \set -eo pipefail \#set -v  ## uncomment this to debug the script
-	//      \\echo \\\"Hello
-	//      World\\\"\",\"inputVars\":null,\"exposedPorts\":null,\"outputVars\":null,\"triggerSkipConditions\":null,\"successFailureConditions\":null,\"dockerImage\":\"\",\"command\":\"\",\"args\":null,\"customScriptMount\":null,\"sourceCodeMount\":null,\"extraVolumeMounts\":null,\"artifactPaths\":null,\"triggerIfParentStageFail\":false}],\"refPlugins\":null,\"appName\":\"\",\"triggerByAuthor\":\"\",\"ciBuildConfig\":null,\"ciBuildDockerMtuValue\":-1,\"ignoreDockerCachePush\":false,\"ignoreDockerCachePull\":false,\"cacheInvalidate\":false,\"IsPvcMounted\":false,\"extraEnvironmentVariables\":null,\"enableBuildContext\":true,\"appId\":55,\"environmentId\":0,\"orchestratorHost\":\"http://20.231.45.51:32267/orchestrator/webhook/msg/nats\",\"orchestratorToken\":\"cCtrbHF2ditXTDZ5UEkza1dVTXUyZXcrUWljPQo\",\"isExtRun\":false,\"imageRetryCount\":0,\"imageRetryInterval\":5,\"image\":\"quay.io/devtron/test:75949ec6-890-6954\"},\"cdRequest\":null}"},{"name":"IN_APP_LOGGING","value":"true"}],"resources":{"limits":{"cpu":"500m","memory":"3G"},"requests":{"cpu":"500m","memory":"1G"}},"securityContext":{"privileged":true}},"archiveLocation":{"archiveLogs":false},"activeDeadlineSeconds":2147483632}'`
 	//args := `{"type":"CI","ciRequest":{"DockerBuildTargetPlatform":"linux/arm64", "workflowNamePrefix":"16-ci-25-w5x1-70","pipelineName":"ci-25-w5x1","pipelineId":70,"dockerImageTag":"da3ba326-70-17","dockerRegistryId":"devtron-quay","dockerRegistryType":"other","dockerRegistryURL":"https://quay.io/devtron","dockerConnection":"secure","dockerCert":"","dockerBuildArgs":"{}","dockerRepository":"test","dockerfileLocation":"Dockerfile","dockerUsername":"devtron+devtest","dockerPassword":"5WEDXDJMP6RV1CG1KKFJQL3MQOLC64JKM6K684WPEBKVWKOZ4LSMBHEHJU1HBGXK","awsRegion":"","accessKey":"","secretKey":"","ciCacheLocation":"","ciCacheRegion":"","ciCacheFileName":"ci-25-w5x1-70.tar.gz","ciProjectDetails":[{"gitRepository":"https://github.com/devtron-labs/getting-started-nodejs","materialName":"1-getting-started-nodejs","checkoutPath":"./","fetchSubmodules":false,"commitHash":"da3ba3254712965b5944a6271e71bff91fe51f20","gitTag":"","commitTime":"2022-04-12T20:26:08+05:30","type":"SOURCE_TYPE_BRANCH_FIXED","message":"Update README.md","author":"Prakarsh \u003c71125043+prakarsh-dt@users.noreply.github.com\u003e","gitOptions":{"userName":"","password":"","sshPrivateKey":"","accessToken":"","authMode":"ANONYMOUS"},"sourceType":"SOURCE_TYPE_BRANCH_FIXED","sourceValue":"master","WebhookData":{"Id":0,"EventActionType":"","Data":null}}],"containerResources":{"minCpu":"","maxCpu":"","minStorage":"","maxStorage":"","minEphStorage":"","maxEphStorage":"","minMem":"","maxMem":""},"activeDeadlineSeconds":3600,"ciImage":"quay.io/devtron/ci-runner:1290cf23-182-8015","namespace":"devtron-ci","workflowId":16,"triggeredBy":8,"cacheLimit":5000000000,"beforeDockerBuildScripts":null,"afterDockerBuildScripts":null,"ciArtifactLocation":"","invalidateCache":true,"scanEnabled":false,"cloudProvider":"AZURE","azureBlobConfig":{"enabled":true,"accountName":"devtrondemoblob","blobContainerCiLog":"","blobContainerCiCache":"cache","accountKey":"y1/K13YMp/v7uuvZNkKJ4dS3CyGc37bPIN9Hv8MVhog6OkG0joV05proQReMQIJQ8qXp0JVpj+mz+AStHNKR3Q=="},"minioEndpoint":"","defaultAddressPoolBaseCidr":"","defaultAddressPoolSize":0,"preCiSteps":[{"name":"Task 1","index":1,"stepType":"INLINE","executorType":"SHELL","refPluginId":0,"script":"echo $","inputVars":null,"exposedPorts":{"0":0},"outputVars":null,"triggerSkipConditions":null,"successFailureConditions":null,"dockerImage":"","command":"","args":null,"customScriptMountDestinationPath":{"sourcePath":"","destinationPath":""},"sourceCodeMountDestinationPath":{"sourcePath":"","destinationPath":""},"extraVolumeMounts":null,"artifactPaths":null}],"postCiSteps":null,"refPlugins":null},"cdRequest":null}`
 	//args := `{"type":"DryRun","dryRunRequest":{"buildPackParams":{"builderId":"gcr.io/buildpacks/builder:v1"},"DockerBuildTargetPlatform":"", "workflowNamePrefix":"16-ci-25-w5x1-70","pipelineName":"ci-25-w5x1","pipelineId":70,"dockerImageTag":"da3ba326-70-17","dockerRegistryId":"devtron-quay","dockerRegistryType":"other","dockerRegistryURL":"https://quay.io/devtron","dockerConnection":"secure","dockerCert":"","dockerBuildArgs":"{}","dockerRepository":"test","dockerfileLocation":"Dockerfile","dockerUsername":"devtron+devtest","dockerPassword":"5WEDXDJMP6RV1CG1KKFJQL3MQOLC64JKM6K684WPEBKVWKOZ4LSMBHEHJU1HBGXK","awsRegion":"","accessKey":"","secretKey":"","ciCacheLocation":"","ciCacheRegion":"","ciCacheFileName":"ci-25-w5x1-70.tar.gz","ciProjectDetails":[{"gitRepository":"https://github.com/devtron-labs/sample-go-app","materialName":"1-getting-started-nodejs","checkoutPath":"./","fetchSubmodules":false,"commitHash":"8654623ec2bd9efd663935cb8332c8c765541837","gitTag":"","commitTime":"2022-04-12T20:26:08+05:30","type":"SOURCE_TYPE_BRANCH_FIXED","message":"Update README.md","author":"Prakarsh \u003c71125043+prakarsh-dt@users.noreply.github.com\u003e","gitOptions":{"userName":"","password":"","sshPrivateKey":"","accessToken":"","authMode":"ANONYMOUS"},"sourceType":"SOURCE_TYPE_BRANCH_FIXED","sourceValue":"master","WebhookData":{"Id":0,"EventActionType":"","Data":null}}],"containerResources":{"minCpu":"","maxCpu":"","minStorage":"","maxStorage":"","minEphStorage":"","maxEphStorage":"","minMem":"","maxMem":""},"activeDeadlineSeconds":3600,"ciImage":"quay.io/devtron/ci-runner:1290cf23-182-8015","namespace":"devtron-ci","workflowId":16,"triggeredBy":8,"cacheLimit":5000000000,"beforeDockerBuildScripts":null,"afterDockerBuildScripts":null,"ciArtifactLocation":"","invalidateCache":true,"scanEnabled":false,"cloudProvider":"AZURE","azureBlobConfig":{"enabled":true,"accountName":"devtrondemoblob","blobContainerCiLog":"","blobContainerCiCache":"cache","accountKey":"y1/K13YMp/v7uuvZNkKJ4dS3CyGc37bPIN9Hv8MVhog6OkG0joV05proQReMQIJQ8qXp0JVpj+mz+AStHNKR3Q=="},"minioEndpoint":"","defaultAddressPoolBaseCidr":"","defaultAddressPoolSize":0,"preCiSteps":[{"name":"Task 1","index":1,"stepType":"INLINE","executorType":"SHELL","refPluginId":0,"script":"echo $","inputVars":null,"exposedPorts":{"0":0},"outputVars":null,"triggerSkipConditions":null,"successFailureConditions":null,"dockerImage":"","command":"","args":null,"customScriptMountDestinationPath":{"sourcePath":"","destinationPath":""},"sourceCodeMountDestinationPath":{"sourcePath":"","destinationPath":""},"extraVolumeMounts":null,"artifactPaths":null}],"postCiSteps":null,"refPlugins":null},"cdRequest":null}`
 	//' {"workflowNamePrefix":"55-suraj-23-ci-suraj-test-pipeline-8","pipelineName":"suraj-23-ci-suraj-test-pipeline","pipelineId":8,"dockerImageTag":"a6b809c4be87c217feba4af15cf5ebc3cafe21e0","dockerRegistryURL":"686244538589.dkr.ecr.us-east-2.amazonaws.com","dockerRepository":"test/suraj-23","dockerfileLocation":"./notifier/Dockerfile","awsRegion":"us-east-2","ciCacheLocation":"ci-caching","ciCacheFileName":"suraj-23-ci-suraj-test-pipeline.tar.gz","ciProjectDetails":[{"gitRepository":"https://gitlab.com/devtron/notifier.git","materialName":"1-notifier","checkoutPath":"./notifier","commitHash":"d4df38bcd065004014d255c2203d592a91585955","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"test-commit","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":"USERNAME_PASSWORD"}},{"gitRepository":"https://gitlab.com/devtron/orchestrator.git","materialName":"2-orchestrator","checkoutPath":"./orch","commitHash":"","commitTime":"0001-01-01T00:00:00Z","branch":"ci_with_argo","type":"SOURCE_TYPE_BRANCH_FIXED","message":"","gitOptions":{"userName":"Suraj24","password":"Devtron@1234","sshKey":"","accessToken":"","authMode":""}}],"ciImage":"686244538589.dkr.ecr.us-east-2.amazonaws.com/cirunner:latest","namespace":"default"}'
 
-	//	args := `{
-	//    "type": "WEBHOOK",
-	//    "ciRequest": {
-	//        "workflowNamePrefix": "ci",
-	//        "pipelineName": "",
-	//        "pipelineId": 4,
-	//        "dockerImageTag": "",
-	//        "dockerRegistryId": "",
-	//        "dockerRegistryType": "",
-	//        "dockerRegistryURL": "",
-	//        "dockerConnection": "",
-	//        "dockerCert": "",
-	//        "dockerRepository": "",
-	//        "checkoutPath": "",
-	//        "dockerUsername": "",
-	//        "dockerPassword": "",
-	//        "awsRegion": "",
-	//        "accessKey": "",
-	//        "secretKey": "",
-	//        "ciCacheLocation": "",
-	//        "ciCacheRegion": "",
-	//        "ciCacheFileName": "",
-	//        "ciProjectDetails": null,
-	//        "containerResources": {
-	//            "minCpu": "",
-	//            "maxCpu": "",
-	//            "minStorage": "",
-	//            "maxStorage": "",
-	//            "minEphStorage": "",
-	//            "maxEphStorage": "",
-	//            "minMem": "",
-	//            "maxMem": ""
-	//        },
-	//        "activeDeadlineSeconds": 0,
-	//        "ciImage": "ashexp/test:002a2133-47-115",
-	//        "namespace": "devtron-ci",
-	//        "workflowId": 0,
-	//        "triggeredBy": 4,
-	//        "cacheLimit": 5000000000,
-	//        "beforeDockerBuildScripts": null,
-	//        "afterDockerBuildScripts": null,
-	//        "ciArtifactLocation": "",
-	//        "ciArtifactBucket": "",
-	//        "ciArtifactFileName": "",
-	//        "ciArtifactRegion": "",
-	//        "scanEnabled": true,
-	//        "cloudProvider": "",
-	//        "blobStorageConfigured": false,
-	//        "blobStorageS3Config": null,
-	//        "azureBlobConfig": null,
-	//        "gcpBlobConfig": null,
-	//        "blobStorageLogsKey": "devtron/ci",
-	//        "inAppLoggingEnabled": true,
-	//        "defaultAddressPoolBaseCidr": "",
-	//        "defaultAddressPoolSize": 0,
-	//        "preCiSteps": null,
-	//        "postCiSteps": [
-	//            {
-	//                "name": "Task1",
-	//                "index": 1,
-	//                "stepType": "INLINE",
-	//                "executorType": "SHELL",
-	//                "script": "#!/bin/shset -eo pipefail #set -v  ## uncomment this to debug the script echo ",
-	//                "inputVars": null,
-	//                "exposedPorts": null,
-	//                "outputVars": null,
-	//                "triggerSkipConditions": null,
-	//                "successFailureConditions": null,
-	//                "dockerImage": "",
-	//                "command": "",
-	//                "args": null,
-	//                "customScriptMount": null,
-	//                "sourceCodeMount": null,
-	//                "extraVolumeMounts": null,
-	//                "artifactPaths": null,
-	//                "triggerIfParentStageFail": false
-	//            }
-	//        ],
-	//        "refPlugins": null,
-	//        "appName": "",
-	//        "triggerByAuthor": "",
-	//        "ciBuildConfig": null,
-	//        "ciBuildDockerMtuValue": -1,
-	//        "ignoreDockerCachePush": false,
-	//        "ignoreDockerCachePull": false,
-	//        "cacheInvalidate": false,
-	//        "IsPvcMounted": false,
-	//        "extraEnvironmentVariables": null,
-	//        "enableBuildContext": true,
-	//        "appId": 55,
-	//        "environmentId": 0,
-	//        "orchestratorHost": "http://20.231.45.51:32267/orchestrator/webhook/msg/nats",
-	//        "orchestratorToken": "cCtrbHF2ditXTDZ5UEkza1dVTXUyZXcrUWljPQo",
-	//        "isExtRun": false,
-	//        "imageRetryCount": 0,
-	//        "imageRetryInterval": 5,
-	//        "image": "ashexp/test:002a2133-47-115"
-	//    },
-	//    "cdRequest": null
-	//}`
 	LoggingMode := "RunMode"
 	if len(os.Args) > 1 {
 		LoggingMode = os.Args[1]
@@ -199,8 +93,6 @@ func processEvent(args string) {
 	defer handleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
 	if ciCdRequest.Type == util.CIEVENT {
 		HandleCIEvent(ciCdRequest, &exitCode)
-	} else if ciCdRequest.Type == util.WEBHOOK {
-		runScanningAndPostCiSteps(ciCdRequest)
 	} else {
 		HandleCDEvent(ciCdRequest, &exitCode)
 	}
