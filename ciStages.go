@@ -97,16 +97,17 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 	// git handling
 	log.Println(util.DEVTRON, " git")
-	err = helper.CloneAndCheckout(ciCdRequest.CiRequest.CiProjectDetails)
-	if err != nil {
-		log.Println(util.DEVTRON, "clone err: ", err)
-		return artifactUploaded, err
+	if ciCdRequest.CiRequest.Type != util.WEBHOOK {
+		err = helper.CloneAndCheckout(ciCdRequest.CiRequest.CiProjectDetails)
+		if err != nil {
+			log.Println(util.DEVTRON, "clone err: ", err)
+			return artifactUploaded, err
+		}
+		log.Println(util.DEVTRON, " /git")
+
+		// Start docker daemon
+		log.Println(util.DEVTRON, " docker-build")
 	}
-	log.Println(util.DEVTRON, " /git")
-
-	// Start docker daemon
-	log.Println(util.DEVTRON, " docker-build")
-
 	helper.StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert, ciCdRequest.CiRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CiRequest.DefaultAddressPoolSize, ciCdRequest.CiRequest.CiBuildDockerMtuValue)
 	scriptEnvs, err := getGlobalEnvVariables(ciCdRequest)
 	if err != nil {
@@ -133,18 +134,18 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		refStageMap[ref.Id] = ref.Steps
 	}
 
-	var preeCiStageOutVariable map[int]map[string]*helper.VariableObject
+	var preCiStageOutVariable map[int]map[string]*helper.VariableObject
 	var step *helper.StepObject
 	var preCiDuration float64
 	start = time.Now()
 	metrics.PreCiStartTime = start
-	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
+	buildSkipEnabled := (ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE) || ciCdRequest.CiRequest.Type == util.WEBHOOK
 	if len(ciCdRequest.CiRequest.PreCiSteps) > 0 {
 		if !buildSkipEnabled {
 			util.LogStage("running PRE-CI steps")
 		}
 		// run pre artifact processing
-		preeCiStageOutVariable, step, err = RunCiCdSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
+		preCiStageOutVariable, step, err = RunCiCdSteps(STEP_TYPE_PRE, ciCdRequest.CiRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
 		preCiDuration = time.Since(start).Seconds()
 		if err != nil {
 			log.Println(err)
@@ -169,7 +170,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 				// build success will always be false
 				scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
 				// run post artifact processing
-				RunCiCdSteps(STEP_TYPE_POST, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preeCiStageOutVariable)
+				RunCiCdSteps(STEP_TYPE_POST, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preCiStageOutVariable)
 			}
 			// code-block ends
 			return sendFailureNotification(string(Build), ciCdRequest.CiRequest, "", "", metrics, artifactUploaded, err)
@@ -184,7 +185,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		// sending build success as true always as post-ci triggers only if ci gets success
 		scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "true"
 		// run post artifact processing
-		_, step, err = RunCiCdSteps(STEP_TYPE_POST, ciCdRequest.CiRequest.PostCiSteps, refStageMap, scriptEnvs, preeCiStageOutVariable)
+		_, step, err = RunCiCdSteps(STEP_TYPE_POST, ciCdRequest.CiRequest.PostCiSteps, refStageMap, scriptEnvs, preCiStageOutVariable)
 		postCiDuration = time.Since(start).Seconds()
 		if err != nil {
 			return sendFailureNotification(string(PostCi)+step.Name, ciCdRequest.CiRequest, "", "", metrics, artifactUploaded, err)
@@ -267,45 +268,6 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		return artifactUploaded, err
 	}
 	return artifactUploaded, nil
-}
-
-func runScanningAndPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent) error {
-	log.Println(util.DEVTRON, "runScanningAndPostCiSteps", ciCdRequest)
-	refStageMap := make(map[int][]*helper.StepObject)
-	for _, ref := range ciCdRequest.CiRequest.RefPlugins {
-		refStageMap[ref.Id] = ref.Steps
-	}
-	helper.StartDockerDaemon(ciCdRequest.CiRequest.DockerConnection, ciCdRequest.CiRequest.DockerRegistryURL, ciCdRequest.CiRequest.DockerCert, ciCdRequest.CiRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CiRequest.DefaultAddressPoolSize, ciCdRequest.CiRequest.CiBuildDockerMtuValue)
-	log.Println(util.DEVTRON, "ExtractDigestUsingPull", ciCdRequest.CiRequest.Image)
-	digest, err := helper.ExtractDigestUsingPull(ciCdRequest.CiRequest.Image)
-	if err != nil {
-		log.Println(util.DEVTRON, "Error in digest", err)
-		return err
-	}
-	log.Println(util.DEVTRON, "ExtractDigestUsingPull -> ", digest)
-	if len(ciCdRequest.CiRequest.PostCiSteps) > 0 {
-		util.LogStage("running POST-CI steps")
-		// run pre artifact processing
-		_, _, err := RunCiCdSteps(STEP_TYPE_POST, ciCdRequest.CiRequest.PostCiSteps, refStageMap, nil, nil)
-		if err != nil {
-			log.Println(err)
-			return err
-
-		}
-	}
-	if ciCdRequest.CiRequest.ScanEnabled {
-		util.LogStage("IMAGE SCAN")
-		log.Println(util.DEVTRON, " /image-scanner")
-		scanEvent := &helper.ScanEvent{Image: ciCdRequest.CiRequest.Image, ImageDigest: digest}
-		err = helper.SendEventToClairUtility(scanEvent)
-		if err != nil {
-			log.Println(err)
-			return err
-
-		}
-		log.Println(util.DEVTRON, " /image-scanner")
-	}
-	return nil
 }
 
 func getPostCiStepToRunOnCiFail(postCiSteps []*helper.StepObject) []*helper.StepObject {
