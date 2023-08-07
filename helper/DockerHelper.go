@@ -205,6 +205,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		}
 		dockerBuildConfig := ciBuildConfig.DockerBuildConfig
 		isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
+		fmt.Print("dockerBuildConfig : ", dockerBuildConfig)
 		useBuildx := dockerBuildConfig.CheckForBuildX()
 		useBuildxK8sDriver := dockerBuildConfig.CheckForBuildXK8sDriver()
 		if useBuildxK8sDriver {
