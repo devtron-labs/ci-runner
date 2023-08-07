@@ -206,9 +206,15 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		dockerBuildConfig := ciBuildConfig.DockerBuildConfig
 		isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
 		useBuildx := dockerBuildConfig.CheckForBuildX()
-
+		useBuildxK8sDriver := dockerBuildConfig.CheckForBuildXK8sDriver()
+		if useBuildxK8sDriver {
+			err = CreateBuildXK8sDriver(dockerBuildConfig.BuildxK8sDriverOptions)
+			if err != nil {
+				return "", err
+			}
+		}
 		dockerBuildxBuild := "docker buildx build "
-		if useBuildx {
+		if useBuildx || useBuildxK8sDriver {
 			if ciRequest.CacheInvalidate && ciRequest.IsPvcMounted {
 				dockerBuild = dockerBuildxBuild + "--no-cache "
 			} else {
@@ -246,7 +252,9 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			dockerBuildConfig.BuildContext = ROOT_PATH
 		}
 		dockerBuildConfig.BuildContext = path.Join(ROOT_PATH, dockerBuildConfig.BuildContext)
-		if useBuildx {
+		if useBuildxK8sDriver {
+			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push %s", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
+		} else if useBuildx {
 			err = installAllSupportedPlatforms()
 			if err != nil {
 				return "", err
@@ -577,6 +585,43 @@ func readImageDigestFromManifest(manifestFilePath string) (string, error) {
 		return "", nil
 	}
 	return imageDigest.(string), nil
+}
+
+func CreateBuildXK8sDriver(builderNodes []BuildxK8sDriverOptions) error {
+	if len(builderNodes) == 0 {
+		return errors.New("atleast one node is expected for builder with kubernetes driver")
+	}
+	defaultNodeOpts := &builderNodes[0]
+	buildxCreate := "docker buildx create --name=devtron-buildx-builder --driver=kubernetes --node=%s "
+	buildxCreate = fmt.Sprintf(buildxCreate, defaultNodeOpts.DeploymentName)
+	if len(defaultNodeOpts.NodeSelector) > 0 || len(defaultNodeOpts.Namespace) > 0 {
+		buildxCreate += " --driver-opt=%s "
+		buildxCreate = fmt.Sprintf(buildxCreate, defaultNodeOpts.ToString())
+	}
+	buildxCreate += " --bootstrap --use"
+	builderCreateCmd := exec.Command("/bin/sh", "-c", buildxCreate)
+	err := builderCreateCmd.Run()
+	if err != nil {
+		return err
+	}
+
+	//appending other nodes to the builder
+	for i := 1; i < len(builderNodes); i++ {
+		nodeOpts := &builderNodes[i]
+		appendNode := "docker buildx create --name=devtron-buildx-builder --driver=kubernetes --node=%s "
+		appendNode = fmt.Sprintf(appendNode, nodeOpts.DeploymentName)
+		if len(nodeOpts.NodeSelector) > 0 || len(nodeOpts.Namespace) > 0 {
+			appendNode += " --driver-opt=%s "
+			appendNode = fmt.Sprintf(appendNode, nodeOpts.ToString())
+		}
+		appendNode += "--append"
+		appendNodeCmd := exec.Command("/bin/sh", "-c", appendNode)
+		err = appendNodeCmd.Run()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func StopDocker() error {

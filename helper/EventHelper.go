@@ -54,13 +54,41 @@ type CiBuildConfigBean struct {
 }
 
 type DockerBuildConfig struct {
-	DockerfilePath     string            `json:"dockerfileRelativePath,omitempty" validate:"required"`
-	DockerfileContent  string            `json:"DockerfileContent"`
-	Args               map[string]string `json:"args,omitempty"`
-	DockerBuildOptions map[string]string `json:"dockerBuildOptions"`
-	TargetPlatform     string            `json:"targetPlatform,omitempty"`
-	BuildContext       string            `json:"buildContext,omitempty"`
-	UseBuildx          bool              `json:"useBuildx"`
+	DockerfilePath         string                   `json:"dockerfileRelativePath,omitempty" validate:"required"`
+	DockerfileContent      string                   `json:"DockerfileContent"`
+	Args                   map[string]string        `json:"args,omitempty"`
+	DockerBuildOptions     map[string]string        `json:"dockerBuildOptions"`
+	TargetPlatform         string                   `json:"targetPlatform,omitempty"`
+	BuildContext           string                   `json:"buildContext,omitempty"`
+	UseBuildx              bool                     `json:"useBuildx"`
+	UseBuildxK8sDriver     bool                     `json:"useBuildxK8sDriver"`
+	BuildxK8sDriverOptions []BuildxK8sDriverOptions `json:"buildxK8SDriverOptions"`
+}
+
+type BuildxK8sDriverOptions struct {
+	DeploymentName string `json:"deploymentName"` //this is node name in docker buildx create command
+	Namespace      string `json:"namespace"`
+	NodeSelector   string `json:"nodeSelector"`
+	//add other k8s driver options https://docs.docker.com/engine/reference/commandline/buildx_create/
+}
+
+func (options *BuildxK8sDriverOptions) ToString() string {
+	opts := `"%s"`
+	optsStr := ""
+	if len(options.Namespace) > 0 {
+		optsStr = fmt.Sprintf("namespace=%s", options.Namespace)
+	}
+
+	if len(options.NodeSelector) > 0 {
+		nodeSelectorOpt := fmt.Sprintf("nodeselector=%s", options.NodeSelector)
+		if len(optsStr) > 0 {
+			optsStr = optsStr + "," + nodeSelectorOpt
+		}
+	}
+
+	opts = fmt.Sprintf(opts, optsStr)
+
+	return opts
 }
 
 type BuildPackConfig struct {
@@ -433,5 +461,9 @@ type ScanEvent struct {
 }
 
 func (dockerBuildConfig *DockerBuildConfig) CheckForBuildX() bool {
-	return dockerBuildConfig.TargetPlatform != "" || dockerBuildConfig.UseBuildx
+	return (dockerBuildConfig.TargetPlatform != "" && !dockerBuildConfig.UseBuildxK8sDriver) || dockerBuildConfig.UseBuildx
+}
+
+func (dockerBuildConfig *DockerBuildConfig) CheckForBuildXK8sDriver() bool {
+	return dockerBuildConfig.UseBuildxK8sDriver
 }
