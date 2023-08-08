@@ -289,7 +289,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 
-		if !useBuildx {
+		if !(useBuildx || useBuildxK8sDriver) {
 			err = tagDockerBuild(ciRequest.DockerRepository, dest)
 			if err != nil {
 				return "", err
