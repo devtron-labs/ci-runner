@@ -604,6 +604,7 @@ func CreateBuildXK8sDriver(builderNodes []BuildxK8sDriverOptions) error {
 		buildxCreate = fmt.Sprintf(buildxCreate, defaultNodeOpts.ToString())
 	}
 	buildxCreate += " --bootstrap --use"
+	fmt.Println("buildxCreate : ", buildxCreate)
 	builderCreateCmd := exec.Command("/bin/sh", "-c", buildxCreate)
 	err := builderCreateCmd.Run()
 	if err != nil {
@@ -620,6 +621,7 @@ func CreateBuildXK8sDriver(builderNodes []BuildxK8sDriverOptions) error {
 			appendNode = fmt.Sprintf(appendNode, nodeOpts.ToString())
 		}
 		appendNode += "--append"
+		fmt.Println("appendNode : ", appendNode)
 		appendNodeCmd := exec.Command("/bin/sh", "-c", appendNode)
 		err = appendNodeCmd.Run()
 		if err != nil {
