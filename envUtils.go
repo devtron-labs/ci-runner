@@ -67,10 +67,8 @@ func getSystemEnvVariables() map[string]string {
 	//get all environment variables
 	envVars := os.Environ()
 	for _, envVar := range envVars {
-		before, after, found := strings.Cut(envVar, "=")
-		if found {
-			envs[before] = after
-		}
+		subs := strings.SplitN(envVar, "=", 2)
+		envs[subs[0]] = subs[1]
 	}
 	return envs
 }
