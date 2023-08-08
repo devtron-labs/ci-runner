@@ -194,7 +194,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	var digest string
 
 	if !buildSkipEnabled {
-		isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && ciBuildConfigBean.DockerBuildConfig.CheckForBuildX()
+		isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && (ciBuildConfigBean.DockerBuildConfig.CheckForBuildX() || ciBuildConfigBean.DockerBuildConfig.CheckForBuildXK8sDriver())
 		if isBuildX {
 			digest, err = helper.ExtractDigestForBuildx(dest)
 		} else {
