@@ -210,7 +210,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		if useBuildxK8sDriver {
 			err = CreateBuildXK8sDriver(dockerBuildConfig.BuildxK8sDriverOptions)
 			if err != nil {
-				fmt.Println("error in creating buildxDriver , err : ", err.Error())
+				fmt.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 				return "", err
 			}
 		}
@@ -602,9 +602,11 @@ func CreateBuildXK8sDriver(builderNodes []BuildxK8sDriverOptions) error {
 	buildxCreate += " --bootstrap --use"
 
 	builderCreateCmd := exec.Command("/bin/sh", "-c", buildxCreate)
+	errBuf := &bytes.Buffer{}
+	builderCreateCmd.Stderr = errBuf
 	err := builderCreateCmd.Run()
 	if err != nil {
-		fmt.Println(util.DEVTRON, "buildxCreate : ", buildxCreate, "\n ")
+		fmt.Println(util.DEVTRON, "buildxCreate : ", buildxCreate, " err : ", err, " error : ", errBuf.String(), "\n ")
 		return err
 	}
 
@@ -619,9 +621,10 @@ func CreateBuildXK8sDriver(builderNodes []BuildxK8sDriverOptions) error {
 		}
 		appendNode += "--append"
 		appendNodeCmd := exec.Command("/bin/sh", "-c", appendNode)
+		appendNodeCmd.Stderr = errBuf
 		err = appendNodeCmd.Run()
 		if err != nil {
-			fmt.Println(util.DEVTRON, " appendNode : ", appendNode, "\n ")
+			fmt.Println(util.DEVTRON, " appendNode : ", appendNode, " err : ", err, " error : ", errBuf.String(), "\n ")
 			return err
 		}
 	}
