@@ -465,6 +465,5 @@ func (dockerBuildConfig *DockerBuildConfig) CheckForBuildX() bool {
 }
 
 func (dockerBuildConfig *DockerBuildConfig) CheckForBuildXK8sDriver() bool {
-	fmt.Print("dockerBuildConfig : ", dockerBuildConfig)
 	return dockerBuildConfig.UseBuildxK8sDriver
 }

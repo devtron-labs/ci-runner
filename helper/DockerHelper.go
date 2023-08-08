@@ -205,14 +205,12 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		}
 		dockerBuildConfig := ciBuildConfig.DockerBuildConfig
 		isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
-		fmt.Print("dockerBuildConfig : ", dockerBuildConfig)
 		useBuildx := dockerBuildConfig.CheckForBuildX()
 		useBuildxK8sDriver := dockerBuildConfig.CheckForBuildXK8sDriver()
 		if useBuildxK8sDriver {
 			err = CreateBuildXK8sDriver(dockerBuildConfig.BuildxK8sDriverOptions)
 			if err != nil {
 				fmt.Println("error in creating buildxDriver , err : ", err.Error())
-				time.Sleep(3600 * time.Second)
 				return "", err
 			}
 		}
@@ -256,7 +254,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		}
 		dockerBuildConfig.BuildContext = path.Join(ROOT_PATH, dockerBuildConfig.BuildContext)
 		if useBuildxK8sDriver {
-			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push %s", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
+			dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
 		} else if useBuildx {
 			err = installAllSupportedPlatforms()
 			if err != nil {
@@ -606,7 +604,7 @@ func CreateBuildXK8sDriver(builderNodes []BuildxK8sDriverOptions) error {
 	builderCreateCmd := exec.Command("/bin/sh", "-c", buildxCreate)
 	err := builderCreateCmd.Run()
 	if err != nil {
-		fmt.Println("buildxCreate : ", buildxCreate)
+		fmt.Println(util.DEVTRON, "buildxCreate : ", buildxCreate, "\n ")
 		return err
 	}
 
@@ -623,7 +621,7 @@ func CreateBuildXK8sDriver(builderNodes []BuildxK8sDriverOptions) error {
 		appendNodeCmd := exec.Command("/bin/sh", "-c", appendNode)
 		err = appendNodeCmd.Run()
 		if err != nil {
-			fmt.Println("appendNode : ", appendNode)
+			fmt.Println(util.DEVTRON, " appendNode : ", appendNode, "\n ")
 			return err
 		}
 	}
