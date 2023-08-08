@@ -83,6 +83,8 @@ func (options *BuildxK8sDriverOptions) ToString() string {
 		nodeSelectorOpt := fmt.Sprintf("nodeselector=%s", options.NodeSelector)
 		if len(optsStr) > 0 {
 			optsStr = optsStr + "," + nodeSelectorOpt
+		} else {
+			optsStr = nodeSelectorOpt
 		}
 	}
 
