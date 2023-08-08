@@ -212,9 +212,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			err = CreateBuildXK8sDriver(dockerBuildConfig.BuildxK8sDriverOptions)
 			if err != nil {
 				fmt.Println("error in creating buildxDriver , err : ", err.Error())
-				for {
-					fmt.Println("container waiting for debugging...")
-				}
+				time.Sleep(3600 * time.Second)
 				return "", err
 			}
 		}
