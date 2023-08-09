@@ -254,7 +254,19 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		}
 		dockerBuildConfig.BuildContext = path.Join(ROOT_PATH, dockerBuildConfig.BuildContext)
 		if useBuildxK8sDriver {
-			dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
+			if ciRequest.IsPvcMounted || ciRequest.BlobStorageConfigured {
+				log.Println(" -----> Setting up cache directory for Buildx")
+				oldCacheBuildxPath := util.LOCAL_BUILDX_LOCATION + "/old"
+				localCachePath := util.LOCAL_BUILDX_CACHE_LOCATION
+				err = setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
+				if err != nil {
+					return "", err
+				}
+				oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
+				dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext, localCachePath, oldCacheBuildxPath)
+			} else {
+				dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
+			}
 		} else if useBuildx {
 			err = installAllSupportedPlatforms()
 			if err != nil {
