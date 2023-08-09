@@ -463,7 +463,7 @@ type ScanEvent struct {
 }
 
 func (dockerBuildConfig *DockerBuildConfig) CheckForBuildX() bool {
-	return (dockerBuildConfig.TargetPlatform != "" && !dockerBuildConfig.UseBuildxK8sDriver) || dockerBuildConfig.UseBuildx
+	return dockerBuildConfig.TargetPlatform != "" || dockerBuildConfig.UseBuildx || dockerBuildConfig.CheckForBuildXK8sDriver()
 }
 
 func (dockerBuildConfig *DockerBuildConfig) CheckForBuildXK8sDriver() bool {

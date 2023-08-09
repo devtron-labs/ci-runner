@@ -215,7 +215,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			}
 		}
 		dockerBuildxBuild := "docker buildx build "
-		if useBuildx || useBuildxK8sDriver {
+		if useBuildx {
 			if ciRequest.CacheInvalidate && ciRequest.IsPvcMounted {
 				dockerBuild = dockerBuildxBuild + "--no-cache "
 			} else {
@@ -301,7 +301,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 
-		if !(useBuildx || useBuildxK8sDriver) {
+		if !useBuildx {
 			err = tagDockerBuild(ciRequest.DockerRepository, dest)
 			if err != nil {
 				return "", err
