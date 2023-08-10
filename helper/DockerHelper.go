@@ -605,18 +605,10 @@ func CreateBuildXK8sDriver(builderNodes []map[string]string) error {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
 	defaultNodeOpts := builderNodes[0]
-	buildxCreate := "docker buildx create --name=devtron-buildx-builder --driver=kubernetes --node=%s "
-	buildxCreate = fmt.Sprintf(buildxCreate, defaultNodeOpts["node"])
-	if len(defaultNodeOpts["driverOptions"]) > 0 {
-		buildxCreate += " --driver-opt=%s "
-		buildxCreate = fmt.Sprintf(buildxCreate, defaultNodeOpts["driverOptions"])
-	}
+	buildxCreate := getBuildxK8sDriverCmd(defaultNodeOpts)
 	buildxCreate += " --bootstrap --use"
 
-	builderCreateCmd := exec.Command("/bin/sh", "-c", buildxCreate)
-	errBuf := &bytes.Buffer{}
-	builderCreateCmd.Stderr = errBuf
-	err := builderCreateCmd.Run()
+	err, errBuf := runCmd(buildxCreate)
 	if err != nil {
 		fmt.Println(util.DEVTRON, "buildxCreate : ", buildxCreate, " err : ", err, " error : ", errBuf.String(), "\n ")
 		return err
@@ -625,22 +617,34 @@ func CreateBuildXK8sDriver(builderNodes []map[string]string) error {
 	//appending other nodes to the builder
 	for i := 1; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
-		appendNode := "docker buildx create --name=devtron-buildx-builder --driver=kubernetes --node=%s "
-		appendNode = fmt.Sprintf(appendNode, nodeOpts["node"])
-		if len(nodeOpts["driverOptions"]) > 0 {
-			appendNode += " --driver-opt=%s "
-			appendNode = fmt.Sprintf(appendNode, nodeOpts["driverOptions"])
-		}
+		appendNode := getBuildxK8sDriverCmd(nodeOpts)
 		appendNode += "--append"
-		appendNodeCmd := exec.Command("/bin/sh", "-c", appendNode)
-		appendNodeCmd.Stderr = errBuf
-		err = appendNodeCmd.Run()
+
+		err, errBuf = runCmd(appendNode)
 		if err != nil {
 			fmt.Println(util.DEVTRON, " appendNode : ", appendNode, " err : ", err, " error : ", errBuf.String(), "\n ")
 			return err
 		}
 	}
 	return nil
+}
+
+func runCmd(cmd string) (error, *bytes.Buffer) {
+	builderCreateCmd := exec.Command("/bin/sh", "-c", cmd)
+	errBuf := &bytes.Buffer{}
+	builderCreateCmd.Stderr = errBuf
+	err := builderCreateCmd.Run()
+	return err, errBuf
+}
+
+func getBuildxK8sDriverCmd(driverOpts map[string]string) string {
+	buildxCreate := "docker buildx create --name=devtron-buildx-builder --driver=kubernetes --node=%s "
+	buildxCreate = fmt.Sprintf(buildxCreate, driverOpts["node"])
+	if len(driverOpts["driverOptions"]) > 0 {
+		buildxCreate += " --driver-opt=%s "
+		buildxCreate = fmt.Sprintf(buildxCreate, driverOpts["driverOptions"])
+	}
+	return buildxCreate
 }
 
 func StopDocker() error {
