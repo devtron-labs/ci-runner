@@ -600,16 +600,16 @@ func readImageDigestFromManifest(manifestFilePath string) (string, error) {
 	return imageDigest.(string), nil
 }
 
-func CreateBuildXK8sDriver(builderNodes []BuildxK8sDriverOptions) error {
+func CreateBuildXK8sDriver(builderNodes []map[string]string) error {
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
-	defaultNodeOpts := &builderNodes[0]
+	defaultNodeOpts := builderNodes[0]
 	buildxCreate := "docker buildx create --name=devtron-buildx-builder --driver=kubernetes --node=%s "
-	buildxCreate = fmt.Sprintf(buildxCreate, defaultNodeOpts.DeploymentName)
-	if len(defaultNodeOpts.NodeSelector) > 0 || len(defaultNodeOpts.Namespace) > 0 {
+	buildxCreate = fmt.Sprintf(buildxCreate, defaultNodeOpts["node"])
+	if len(defaultNodeOpts["driverOptions"]) > 0 {
 		buildxCreate += " --driver-opt=%s "
-		buildxCreate = fmt.Sprintf(buildxCreate, defaultNodeOpts.ToString())
+		buildxCreate = fmt.Sprintf(buildxCreate, defaultNodeOpts["driverOptions"])
 	}
 	buildxCreate += " --bootstrap --use"
 
@@ -624,12 +624,12 @@ func CreateBuildXK8sDriver(builderNodes []BuildxK8sDriverOptions) error {
 
 	//appending other nodes to the builder
 	for i := 1; i < len(builderNodes); i++ {
-		nodeOpts := &builderNodes[i]
+		nodeOpts := builderNodes[i]
 		appendNode := "docker buildx create --name=devtron-buildx-builder --driver=kubernetes --node=%s "
-		appendNode = fmt.Sprintf(appendNode, nodeOpts.DeploymentName)
-		if len(nodeOpts.NodeSelector) > 0 || len(nodeOpts.Namespace) > 0 {
+		appendNode = fmt.Sprintf(appendNode, nodeOpts["node"])
+		if len(nodeOpts["driverOptions"]) > 0 {
 			appendNode += " --driver-opt=%s "
-			appendNode = fmt.Sprintf(appendNode, nodeOpts.ToString())
+			appendNode = fmt.Sprintf(appendNode, nodeOpts["driverOptions"])
 		}
 		appendNode += "--append"
 		appendNodeCmd := exec.Command("/bin/sh", "-c", appendNode)
