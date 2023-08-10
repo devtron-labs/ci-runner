@@ -620,7 +620,7 @@ func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string) error {
 	}
 	defaultNodeOpts := builderNodes[0]
 	buildxCreate := getBuildxK8sDriverCmd(defaultNodeOpts)
-	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--bootstrap --use")
+	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--use")
 
 	err, errBuf := runCmd(buildxCreate)
 	if err != nil {
@@ -652,7 +652,7 @@ func runCmd(cmd string) (error, *bytes.Buffer) {
 }
 
 func getBuildxK8sDriverCmd(driverOpts map[string]string) string {
-	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s "
+	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	buildxCreate = fmt.Sprintf(buildxCreate, BUILDX_K8S_DRIVER_NAME, driverOpts["node"])
 	if len(driverOpts["driverOptions"]) > 0 {
 		buildxCreate += " --driver-opt=%s "
