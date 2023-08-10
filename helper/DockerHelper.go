@@ -207,14 +207,6 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		dockerBuildConfig := ciBuildConfig.DockerBuildConfig
 		isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
 		useBuildx := dockerBuildConfig.CheckForBuildX()
-		useBuildxK8sDriver := dockerBuildConfig.CheckForBuildXK8sDriver()
-		if useBuildxK8sDriver {
-			err = CreateBuildXK8sDriver(dockerBuildConfig.BuildxK8sDriverOptions)
-			if err != nil {
-				fmt.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
-				return "", err
-			}
-		}
 		dockerBuildxBuild := "docker buildx build "
 		if useBuildx {
 			if ciRequest.CacheInvalidate && ciRequest.IsPvcMounted {
@@ -254,41 +246,36 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			dockerBuildConfig.BuildContext = ROOT_PATH
 		}
 		dockerBuildConfig.BuildContext = path.Join(ROOT_PATH, dockerBuildConfig.BuildContext)
-		if useBuildxK8sDriver {
-			if ciRequest.IsPvcMounted || ciRequest.BlobStorageConfigured {
+		if useBuildx {
+			useBuildxK8sDriver := dockerBuildConfig.CheckForBuildXK8sDriver()
+			if useBuildxK8sDriver {
+				err = createBuildxBuilderWithK8sDriver(dockerBuildConfig.BuildxK8sDriverOptions)
+				if err != nil {
+					fmt.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
+					return "", err
+				}
+			} else {
+				err = createBuildxBuilderForMultiArchBuild()
+				if err != nil {
+					return "", err
+				}
+			}
+
+			cacheEnabled := (ciRequest.IsPvcMounted || ciRequest.BlobStorageConfigured)
+			oldCacheBuildxPath, localCachePath := "", ""
+
+			if cacheEnabled {
 				log.Println(" -----> Setting up cache directory for Buildx")
-				oldCacheBuildxPath := util.LOCAL_BUILDX_LOCATION + "/old"
-				localCachePath := util.LOCAL_BUILDX_CACHE_LOCATION
+				oldCacheBuildxPath = util.LOCAL_BUILDX_LOCATION + "/old"
+				localCachePath = util.LOCAL_BUILDX_CACHE_LOCATION
 				err = setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
 				if err != nil {
 					return "", err
 				}
 				oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
-				dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext, localCachePath, oldCacheBuildxPath)
-			} else {
-				dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
-			}
-		} else if useBuildx {
-			err = installAllSupportedPlatforms()
-			if err != nil {
-				return "", err
 			}
 
-			err = createBuildxBuilder()
-			if err != nil {
-				return "", err
-			}
-
-			log.Println(" -----> Setting up cache directory for Buildx")
-			oldCacheBuildxPath := util.LOCAL_BUILDX_LOCATION + "/old"
-			localCachePath := util.LOCAL_BUILDX_CACHE_LOCATION
-			err = setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
-			if err != nil {
-				return "", err
-			}
-			oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
-			manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push %s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s --allow network.host --allow security.insecure --metadata-file %s", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext, localCachePath, oldCacheBuildxPath, manifestLocation)
+			dockerBuild = getBuildxBuildCommand(useBuildxK8sDriver, cacheEnabled, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig)
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerBuildConfig.DockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
@@ -340,6 +327,20 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	}
 
 	return dest, nil
+}
+
+func getBuildxBuildCommand(useBuildxK8sDriver, cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig) string {
+	dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
+	if cacheEnabled {
+		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s", dockerBuild, localCachePath, oldCacheBuildxPath)
+	}
+
+	if !useBuildxK8sDriver {
+		manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
+		dockerBuild = fmt.Sprintf("%s --metadata-file %s", dockerBuild, manifestLocation)
+	}
+
+	return dockerBuild
 }
 
 func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig) {
@@ -601,13 +602,25 @@ func readImageDigestFromManifest(manifestFilePath string) (string, error) {
 	return imageDigest.(string), nil
 }
 
-func CreateBuildXK8sDriver(builderNodes []map[string]string) error {
+func createBuildxBuilderForMultiArchBuild() error {
+	err := installAllSupportedPlatforms()
+	if err != nil {
+		return err
+	}
+	err = createBuildxBuilder()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string) error {
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
 	defaultNodeOpts := builderNodes[0]
 	buildxCreate := getBuildxK8sDriverCmd(defaultNodeOpts)
-	buildxCreate += " --bootstrap --use"
+	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--bootstrap --use")
 
 	err, errBuf := runCmd(buildxCreate)
 	if err != nil {
@@ -619,7 +632,7 @@ func CreateBuildXK8sDriver(builderNodes []map[string]string) error {
 	for i := 1; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
 		appendNode := getBuildxK8sDriverCmd(nodeOpts)
-		appendNode += "--append"
+		appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
 
 		err, errBuf = runCmd(appendNode)
 		if err != nil {
@@ -639,7 +652,7 @@ func runCmd(cmd string) (error, *bytes.Buffer) {
 }
 
 func getBuildxK8sDriverCmd(driverOpts map[string]string) string {
-	buildxCreate := "docker buildx create --name=%s --driver=kubernetes --node=%s "
+	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s "
 	buildxCreate = fmt.Sprintf(buildxCreate, BUILDX_K8S_DRIVER_NAME, driverOpts["node"])
 	if len(driverOpts["driverOptions"]) > 0 {
 		buildxCreate += " --driver-opt=%s "
