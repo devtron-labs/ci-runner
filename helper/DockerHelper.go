@@ -49,6 +49,7 @@ const (
 	DEVTRON_ENV_VAR_PREFIX = "$devtron_env_"
 	BUILD_ARG_FLAG         = "--build-arg"
 	ROOT_PATH              = "."
+	BUILDX_K8S_DRIVER_NAME = "devtron-buildx-builder"
 )
 
 func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int, ciRunnerDockerMtuValue int) {
@@ -638,8 +639,8 @@ func runCmd(cmd string) (error, *bytes.Buffer) {
 }
 
 func getBuildxK8sDriverCmd(driverOpts map[string]string) string {
-	buildxCreate := "docker buildx create --name=devtron-buildx-builder --driver=kubernetes --node=%s "
-	buildxCreate = fmt.Sprintf(buildxCreate, driverOpts["node"])
+	buildxCreate := "docker buildx create --name=%s --driver=kubernetes --node=%s "
+	buildxCreate = fmt.Sprintf(buildxCreate, BUILDX_K8S_DRIVER_NAME, driverOpts["node"])
 	if len(driverOpts["driverOptions"]) > 0 {
 		buildxCreate += " --driver-opt=%s "
 		buildxCreate = fmt.Sprintf(buildxCreate, driverOpts["driverOptions"])

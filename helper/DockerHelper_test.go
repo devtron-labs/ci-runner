@@ -12,7 +12,7 @@ func TestCreateBuildXK8sDriver(t *testing.T) {
 	buildxOpts = append(buildxOpts, map[string]string{"node": "builder-amd64-test", "driverOptions": "namespace=devtron-ci,nodeselector=kubernetes.io/arch:amd64"})
 	err := CreateBuildXK8sDriver(buildxOpts)
 	t.Cleanup(func() {
-		buildxDelete := "docker buildx rm devtron-buildx-builder"
+		buildxDelete := fmt.Sprintf("docker buildx rm %s", BUILDX_K8S_DRIVER_NAME)
 		builderRemoveCmd := exec.Command("/bin/sh", "-c", buildxDelete)
 		builderRemoveCmd.Run()
 	})
