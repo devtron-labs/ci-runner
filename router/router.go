@@ -22,5 +22,6 @@ func InitRouter(ciCdRequest *helper.CiCdTriggerEvent) {
 
 func registerRoutes(ciCdRequest *helper.CiCdTriggerEvent, r *mux.Router) {
 	buildxCleanerHandler := resthandlers.NewBuildxCleanerHandler(ciCdRequest.CiRequest)
-	r.HandleFunc("/cleanK8sDriver", buildxCleanerHandler.CleanBuildxK8sDriver).Methods("DELETE")
+	//this is get method, since it is used in prestop lifecycle hook in the container and the lifecycle allows only GET api
+	r.HandleFunc("/cleanK8sDriver", buildxCleanerHandler.CleanBuildxK8sDriver).Methods("GET")
 }
