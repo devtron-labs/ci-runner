@@ -289,6 +289,13 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 
+		if dockerBuildConfig.CheckForBuildXK8sDriver() {
+			err = CleanBuildxK8sDriver(dockerBuildConfig.BuildxK8sDriverOptions)
+			if err != nil {
+				log.Println(util.DEVTRON, " error in cleaning buildx K8s driver ", " err: ", err)
+			}
+		}
+
 		if !useBuildx {
 			err = tagDockerBuild(ciRequest.DockerRepository, dest)
 			if err != nil {
@@ -643,6 +650,41 @@ func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string) error {
 	return nil
 }
 
+func CleanBuildxK8sDriver(nodes []map[string]string) error {
+	nodeNames := make([]string, 0)
+	for _, nOptsMp := range nodes {
+		if _, ok := nOptsMp["createdByMe"]; !ok {
+			nodeNames = append(nodeNames, nOptsMp["node"])
+		}
+	}
+	err, errBuf := leaveNodesFromBuildxK8sDriver(nodeNames)
+	if err != nil {
+		log.Println("error in deleting nodes created by ci-runner , err : ", errBuf.String())
+	}
+	return err
+}
+
+func leaveNodesFromBuildxK8sDriver(nodeNames []string) (error, *bytes.Buffer) {
+	var err error
+	var errBuf *bytes.Buffer
+	defer func() {
+		removeCmd := fmt.Sprintf("docker buildx rm %s", BUILDX_K8S_DRIVER_NAME)
+		err, errBuf = runCmd(removeCmd)
+		if err != nil {
+			log.Println("error in removing docker buildx err : ", errBuf.String())
+		}
+	}()
+	for _, node := range nodeNames {
+		cmds := fmt.Sprintf("docker buildx create --name=%s --node=%s --leave", BUILDX_K8S_DRIVER_NAME, node)
+		err, errBuf = runCmd(cmds)
+		if err != nil {
+			log.Println("error in leaving node : ", errBuf.String())
+			return err, errBuf
+		}
+	}
+	return err, errBuf
+}
+
 func runCmd(cmd string) (error, *bytes.Buffer) {
 	builderCreateCmd := exec.Command("/bin/sh", "-c", cmd)
 	errBuf := &bytes.Buffer{}
@@ -731,4 +773,8 @@ func DockerdUpCheck() error {
 	dockerCheckCmd := exec.Command("/bin/sh", "-c", dockerCheck)
 	err := dockerCheckCmd.Run()
 	return err
+}
+
+func ValidBuildxK8sDriverOptions(ciRequest *CiRequest) bool {
+	return !(ciRequest == nil || ciRequest.CiBuildConfig == nil || ciRequest.CiBuildConfig.DockerBuildConfig == nil || len(ciRequest.CiBuildConfig.DockerBuildConfig.BuildxK8sDriverOptions) == 0)
 }

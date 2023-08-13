@@ -8,6 +8,7 @@ require (
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/devtron-labs/common-lib v0.0.0-20230315131305-fec0462d2074
 	github.com/go-resty/resty/v2 v2.7.0
+	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.4.0
 	github.com/otiai10/copy v1.7.0
 	gopkg.in/src-d/go-git.v4 v4.13.1

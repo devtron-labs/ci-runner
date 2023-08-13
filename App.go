@@ -22,6 +22,7 @@ import (
 	"fmt"
 	_ "github.com/aws/aws-sdk-go/aws"
 	"github.com/devtron-labs/ci-runner/helper"
+	"github.com/devtron-labs/ci-runner/router"
 	"github.com/devtron-labs/ci-runner/util"
 	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 	"log"
@@ -72,7 +73,7 @@ func processEvent(args string) {
 		exitCode = util.DefaultErrorCode
 		return
 	}
-
+	go router.InitRouter(ciCdRequest)
 	// Create a channel to receive the SIGTERM signal
 	sigTerm := make(chan os.Signal, 1)
 	signal.Notify(sigTerm, syscall.SIGTERM)
