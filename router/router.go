@@ -22,5 +22,5 @@ func InitRouter(ciCdRequest *helper.CiCdTriggerEvent) {
 
 func registerRoutes(ciCdRequest *helper.CiCdTriggerEvent, r *mux.Router) {
 	buildxCleanerHandler := resthandlers.NewBuildxCleanerHandler(ciCdRequest.CiRequest)
-	r.HandleFunc("/cleanK8sDriver", buildxCleanerHandler.CleanBuildxK8sDriver)
+	r.HandleFunc("/cleanK8sDriver", buildxCleanerHandler.CleanBuildxK8sDriver).Methods("DELETE")
 }
