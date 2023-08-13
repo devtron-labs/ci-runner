@@ -22,6 +22,7 @@ func NewBuildxCleanerHandler(ciRequest *helper.CiRequest) BuildxCleanerHandler {
 }
 
 func (impl BuildxCleanerHandlerImpl) CleanBuildxK8sDriver(w http.ResponseWriter, r *http.Request) {
+	log.Println(util.DEVTRON, "got request to CleanBuildxK8sDriver ")
 	if !helper.ValidBuildxK8sDriverOptions(impl.ciRequest) {
 		w.WriteHeader(http.StatusOK)
 		return

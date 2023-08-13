@@ -74,6 +74,7 @@ func processEvent(args string) {
 		return
 	}
 	go router.InitRouter(ciCdRequest)
+
 	// Create a channel to receive the SIGTERM signal
 	sigTerm := make(chan os.Signal, 1)
 	signal.Notify(sigTerm, syscall.SIGTERM)
