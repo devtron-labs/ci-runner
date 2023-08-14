@@ -660,7 +660,7 @@ func CleanBuildxK8sDriver(nodes []map[string]string) error {
 	}
 	err, errBuf := leaveNodesFromBuildxK8sDriver(nodeNames)
 	if err != nil {
-		log.Println("error in deleting nodes created by ci-runner , err : ", errBuf.String())
+		log.Println(util.DEVTRON, " error in deleting nodes created by ci-runner , err : ", errBuf.String())
 		return err
 	}
 	log.Println(util.DEVTRON, "successfully cleaned up buildx k8s driver")
