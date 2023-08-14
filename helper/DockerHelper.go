@@ -700,7 +700,7 @@ func getBuildxK8sDriverCmd(driverOpts map[string]string) string {
 	if nodeName == "" {
 		nodeName = BUILDX_NODE_NAME + util.Generate(5)
 	}
-	buildxCreate = fmt.Sprintf(buildxCreate, BUILDX_K8S_DRIVER_NAME, driverOpts["node"])
+	buildxCreate = fmt.Sprintf(buildxCreate, BUILDX_K8S_DRIVER_NAME, nodeName)
 	if len(driverOpts["driverOptions"]) > 0 {
 		buildxCreate += " --driver-opt=%s "
 		buildxCreate = fmt.Sprintf(buildxCreate, driverOpts["driverOptions"])
