@@ -781,5 +781,5 @@ func DockerdUpCheck() error {
 }
 
 func ValidBuildxK8sDriverOptions(ciRequest *CiRequest) bool {
-	return ciRequest != nil && ciRequest.CiBuildConfig != nil && ciRequest.CiBuildConfig.DockerBuildConfig != nil && len(ciRequest.CiBuildConfig.DockerBuildConfig.BuildxK8sDriverOptions) > 0
+	return ciRequest != nil && ciRequest.CiBuildConfig != nil && ciRequest.CiBuildConfig.DockerBuildConfig != nil && ciRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildXK8sDriver()
 }
