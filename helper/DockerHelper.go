@@ -674,14 +674,14 @@ func leaveNodesFromBuildxK8sDriver(nodeNames []string) (error, *bytes.Buffer) {
 		removeCmd := fmt.Sprintf("docker buildx rm %s", BUILDX_K8S_DRIVER_NAME)
 		err, errBuf = runCmd(removeCmd)
 		if err != nil {
-			log.Println("error in removing docker buildx err : ", errBuf.String())
+			log.Println(util.DEVTRON, "error in removing docker buildx err : ", errBuf.String())
 		}
 	}()
 	for _, node := range nodeNames {
 		cmds := fmt.Sprintf("docker buildx create --name=%s --node=%s --leave", BUILDX_K8S_DRIVER_NAME, node)
 		err, errBuf = runCmd(cmds)
 		if err != nil {
-			log.Println("error in leaving node : ", errBuf.String())
+			log.Println(util.DEVTRON, "error in leaving node : ", errBuf.String())
 			return err, errBuf
 		}
 	}
