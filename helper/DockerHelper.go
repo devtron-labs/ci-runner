@@ -654,7 +654,7 @@ func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string) error {
 func CleanBuildxK8sDriver(nodes []map[string]string) error {
 	nodeNames := make([]string, 0)
 	for _, nOptsMp := range nodes {
-		if _, ok := nOptsMp["createdByMe"]; !ok {
+		if nodeName, ok := nOptsMp["node"]; !ok || nodeName == "" {
 			nodeNames = append(nodeNames, nOptsMp["node"])
 		}
 	}
