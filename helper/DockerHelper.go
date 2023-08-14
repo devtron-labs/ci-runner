@@ -50,6 +50,7 @@ const (
 	BUILD_ARG_FLAG         = "--build-arg"
 	ROOT_PATH              = "."
 	BUILDX_K8S_DRIVER_NAME = "devtron-buildx-builder"
+	BUILDX_NODE_NAME       = "devtron-buildx-node-"
 )
 
 func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int, ciRunnerDockerMtuValue int) {
@@ -695,6 +696,10 @@ func runCmd(cmd string) (error, *bytes.Buffer) {
 
 func getBuildxK8sDriverCmd(driverOpts map[string]string) string {
 	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
+	nodeName := driverOpts["node"]
+	if nodeName == "" {
+		nodeName = BUILDX_NODE_NAME + util.Generate(5)
+	}
 	buildxCreate = fmt.Sprintf(buildxCreate, BUILDX_K8S_DRIVER_NAME, driverOpts["node"])
 	if len(driverOpts["driverOptions"]) > 0 {
 		buildxCreate += " --driver-opt=%s "

@@ -73,7 +73,9 @@ func processEvent(args string) {
 		exitCode = util.DefaultErrorCode
 		return
 	}
-	go router.InitRouter(ciCdRequest)
+	if helper.ValidBuildxK8sDriverOptions(ciCdRequest.CiRequest) {
+		go router.InitRouter(ciCdRequest)
+	}
 
 	// Create a channel to receive the SIGTERM signal
 	sigTerm := make(chan os.Signal, 1)
