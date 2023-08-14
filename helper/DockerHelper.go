@@ -252,7 +252,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			if useBuildxK8sDriver {
 				err = createBuildxBuilderWithK8sDriver(dockerBuildConfig.BuildxK8sDriverOptions)
 				if err != nil {
-					fmt.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
+					log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 					return "", err
 				}
 			} else {
