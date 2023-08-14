@@ -655,7 +655,7 @@ func CleanBuildxK8sDriver(nodes []map[string]string) error {
 	nodeNames := make([]string, 0)
 	for _, nOptsMp := range nodes {
 		if nodeName, ok := nOptsMp["node"]; ok && nodeName != "" {
-			nodeNames = append(nodeNames, nOptsMp["node"])
+			nodeNames = append(nodeNames, nodeName)
 		}
 	}
 	err, errBuf := leaveNodesFromBuildxK8sDriver(nodeNames)
