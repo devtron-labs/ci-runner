@@ -106,6 +106,7 @@ func processEvent(args string) {
 func cleanUpBuildxK8sDriver(ciCdRequest helper.CiCdTriggerEvent, wg *sync.WaitGroup) {
 	defer wg.Done()
 	if helper.ValidBuildxK8sDriverOptions(ciCdRequest.CiRequest) {
+		log.Println(util.DEVTRON, "starting buildx k8s driver clean up ,before terminating ci-runner")
 		err := helper.CleanBuildxK8sDriver(ciCdRequest.CiRequest.CiBuildConfig.DockerBuildConfig.BuildxK8sDriverOptions)
 		if err != nil {
 			log.Println(util.DEVTRON, "error in cleaning up buildx K8s driver, err : ", err)
