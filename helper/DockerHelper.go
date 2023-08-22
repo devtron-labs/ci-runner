@@ -248,6 +248,11 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 		}
 		dockerBuildConfig.BuildContext = path.Join(ROOT_PATH, dockerBuildConfig.BuildContext)
 		if useBuildx {
+			err := checkAndCreateDirectory(util.LOCAL_BUILDX_LOCATION)
+			if err != nil {
+				log.Println(util.DEVTRON, " error in creating LOCAL_BUILDX_LOCATION ", util.LOCAL_BUILDX_LOCATION)
+				return "", err
+			}
 			useBuildxK8sDriver := dockerBuildConfig.CheckForBuildXK8sDriver()
 			if useBuildxK8sDriver {
 				err = createBuildxBuilderWithK8sDriver(dockerBuildConfig.BuildxK8sDriverOptions)
