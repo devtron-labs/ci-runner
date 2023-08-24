@@ -36,8 +36,12 @@ var handleOnce sync.Once
 
 func handleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *int, source string) {
 	handleOnce.Do(func() {
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+		go cleanUpBuildxK8sDriver(ciCdRequest, wg)
 		log.Println(util.DEVTRON, " CI-Runner cleanup executed with exit Code", *exitCode, source)
 		uploadLogs(ciCdRequest, exitCode)
+		wg.Wait()
 		log.Println(util.DEVTRON, " Exiting with exit code ", *exitCode)
 		os.Exit(*exitCode)
 	})
@@ -97,6 +101,17 @@ func processEvent(args string) {
 		HandleCDEvent(ciCdRequest, &exitCode)
 	}
 	return
+}
+
+func cleanUpBuildxK8sDriver(ciCdRequest helper.CiCdTriggerEvent, wg *sync.WaitGroup) {
+	defer wg.Done()
+	if helper.ValidBuildxK8sDriverOptions(ciCdRequest.CiRequest) {
+		log.Println(util.DEVTRON, "starting buildx k8s driver clean up ,before terminating ci-runner")
+		err := helper.CleanBuildxK8sDriver(ciCdRequest.CiRequest.CiBuildConfig.DockerBuildConfig.BuildxK8sDriverOptions)
+		if err != nil {
+			log.Println(util.DEVTRON, "error in cleaning up buildx K8s driver, err : ", err)
+		}
+	}
 }
 
 func uploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
