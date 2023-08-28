@@ -20,10 +20,10 @@ func NewGitUtil() *GitUtil {
 
 const GIT_AKS_PASS = "/git-ask-pass.sh"
 
-func (impl *GitUtil) Fetch(rootDir string, username string, password string) (response, errMsg string, err error) {
+func (impl *GitUtil) Fetch(gitContext GitContext, rootDir string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git fetch ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
-	output, errMsg, err := impl.runCommandWithCred(cmd, username, password)
+	output, errMsg, err := impl.runCommandWithCred(cmd, gitContext.auth.Username, gitContext.auth.Password)
 	log.Println(util.DEVTRON, "fetch output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, "", nil
 }
@@ -89,13 +89,13 @@ func (impl *GitUtil) Init(rootDir string, remoteUrl string, isBare bool) error {
 	return err
 }
 
-func (impl *GitUtil) Clone(rootDir string, remoteUrl string, username string, password string) (response, errMsg string, err error) {
+func (impl *GitUtil) Clone(gitContext GitContext, rootDir string, remoteUrl string) (response, errMsg string, err error) {
 	err = impl.Init(rootDir, remoteUrl, false)
 	if err != nil {
 		return "", "", err
 	}
 
-	response, errMsg, err = impl.Fetch(rootDir, username, password)
+	response, errMsg, err = impl.Fetch(gitContext, rootDir)
 	return response, errMsg, err
 }
 

@@ -18,6 +18,7 @@
 package helper
 
 import (
+	"context"
 	"log"
 	"os"
 	"path/filepath"
@@ -39,6 +40,11 @@ type WebhookData struct {
 	Id              int               `json:"id"`
 	EventActionType string            `json:"eventActionType"`
 	Data            map[string]string `json:"data"`
+}
+
+type GitContext struct {
+	context.Context // Embedding original Go context
+	auth            *http.BasicAuth
 }
 
 type AuthMode string
@@ -89,6 +95,9 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			auth = &http.BasicAuth{}
 		}
 
+		gitContext := GitContext{
+			auth: auth,
+		}
 		// create ssh private key on disk
 		if authMode == AUTH_MODE_SSH {
 			cErr = util.CreateSshPrivateKeyOnDisk(index, prj.GitOptions.SshPrivateKey)
@@ -97,7 +106,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			}
 		}
 
-		_, msgMsg, cErr := gitCli.Clone(filepath.Join(util.WORKINGDIR, prj.CheckoutPath), prj.GitRepository, auth.Username, auth.Password)
+		_, msgMsg, cErr := gitCli.Clone(gitContext, filepath.Join(util.WORKINGDIR, prj.CheckoutPath), prj.GitRepository)
 		if cErr != nil {
 			log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
 		}
@@ -115,7 +124,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 				checkoutSource = prj.SourceValue
 			}
 			log.Println("checkout commit in branch fix : ", checkoutSource)
-			msgMsg, cErr = Checkout(gitCli, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, auth.Username, auth.Password, prj.GitRepository)
+			msgMsg, cErr = Checkout(gitContext, gitCli, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 			}
@@ -133,7 +142,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			log.Println("checkout commit in webhook : ", targetCheckout)
 
 			// checkout target hash
-			msgMsg, cErr = Checkout(gitCli, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, auth.Username, auth.Password, prj.GitRepository)
+			msgMsg, cErr = Checkout(gitContext, gitCli, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
 				return cErr
@@ -165,7 +174,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 	return nil
 }
 
-func Checkout(gitCli *GitUtil, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, username string, password string, gitRepository string) (errMsg string, error error) {
+func Checkout(gitContext GitContext, gitCli *GitUtil, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, gitRepository string) (errMsg string, error error) {
 
 	rootDir := filepath.Join(util.WORKINGDIR, checkoutPath)
 
@@ -187,7 +196,7 @@ func Checkout(gitCli *GitUtil, checkoutPath string, targetCheckout string, authM
 				modifiedUrl = modifiedUrl[strings.Index(modifiedUrl, "bitbucket.org"):]
 			}
 			// build url
-			modifiedUrl = "https://" + username + ":" + password + "@" + modifiedUrl
+			modifiedUrl = "https://" + gitContext.auth.Username + ":" + gitContext.auth.Password + "@" + modifiedUrl
 
 			_, errMsg, cErr = gitCli.UpdateCredentialHelper(rootDir)
 			if cErr != nil {
