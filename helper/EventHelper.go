@@ -142,6 +142,8 @@ type CiRequest struct {
 	OrchestratorToken           string                            `json:"orchestratorToken"`
 	ImageRetryCount             int                               `json:"imageRetryCount"`
 	ImageRetryInterval          int                               `json:"imageRetryInterval"`
+	Image                       string                            `json:"image"`
+	Type                        string                            `json:"type"`
 }
 
 type CdRequest struct {
