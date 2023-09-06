@@ -54,13 +54,14 @@ type CiBuildConfigBean struct {
 }
 
 type DockerBuildConfig struct {
-	DockerfilePath     string            `json:"dockerfileRelativePath,omitempty" validate:"required"`
-	DockerfileContent  string            `json:"DockerfileContent"`
-	Args               map[string]string `json:"args,omitempty"`
-	DockerBuildOptions map[string]string `json:"dockerBuildOptions"`
-	TargetPlatform     string            `json:"targetPlatform,omitempty"`
-	BuildContext       string            `json:"buildContext,omitempty"`
-	UseBuildx          bool              `json:"useBuildx"`
+	DockerfilePath         string              `json:"dockerfileRelativePath,omitempty" validate:"required"`
+	DockerfileContent      string              `json:"DockerfileContent"`
+	Args                   map[string]string   `json:"args,omitempty"`
+	DockerBuildOptions     map[string]string   `json:"dockerBuildOptions"`
+	TargetPlatform         string              `json:"targetPlatform,omitempty"`
+	BuildContext           string              `json:"buildContext,omitempty"`
+	UseBuildx              bool                `json:"useBuildx"`
+	BuildxK8sDriverOptions []map[string]string `json:"buildxK8SDriverOptions"`
 }
 
 type BuildPackConfig struct {
@@ -515,4 +516,8 @@ type ScanEvent struct {
 
 func (dockerBuildConfig *DockerBuildConfig) CheckForBuildX() bool {
 	return dockerBuildConfig.TargetPlatform != "" || dockerBuildConfig.UseBuildx
+}
+
+func (dockerBuildConfig *DockerBuildConfig) CheckForBuildXK8sDriver() bool {
+	return dockerBuildConfig.CheckForBuildX() && len(dockerBuildConfig.BuildxK8sDriverOptions) > 0
 }

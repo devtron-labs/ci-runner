@@ -49,6 +49,8 @@ const (
 	DEVTRON_ENV_VAR_PREFIX = "$devtron_env_"
 	BUILD_ARG_FLAG         = "--build-arg"
 	ROOT_PATH              = "."
+	BUILDX_K8S_DRIVER_NAME = "devtron-buildx-builder"
+	BUILDX_NODE_NAME       = "devtron-buildx-node-"
 )
 
 func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int, ciRunnerDockerMtuValue int) {
@@ -206,7 +208,6 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 		dockerBuildConfig := ciBuildConfig.DockerBuildConfig
 		isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
 		useBuildx := dockerBuildConfig.CheckForBuildX()
-
 		dockerBuildxBuild := "docker buildx build "
 		if useBuildx {
 			if ciRequest.CacheInvalidate && ciRequest.IsPvcMounted {
@@ -247,26 +248,40 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 		}
 		dockerBuildConfig.BuildContext = path.Join(ROOT_PATH, dockerBuildConfig.BuildContext)
 		if useBuildx {
-			err = installAllSupportedPlatforms()
+			err := checkAndCreateDirectory(util.LOCAL_BUILDX_LOCATION)
 			if err != nil {
+				log.Println(util.DEVTRON, " error in creating LOCAL_BUILDX_LOCATION ", util.LOCAL_BUILDX_LOCATION)
 				return "", err
+			}
+			useBuildxK8sDriver := dockerBuildConfig.CheckForBuildXK8sDriver()
+			if useBuildxK8sDriver {
+				err = createBuildxBuilderWithK8sDriver(dockerBuildConfig.BuildxK8sDriverOptions)
+				if err != nil {
+					log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
+					return "", err
+				}
+			} else {
+				err = createBuildxBuilderForMultiArchBuild()
+				if err != nil {
+					return "", err
+				}
 			}
 
-			err = createBuildxBuilder()
-			if err != nil {
-				return "", err
+			cacheEnabled := (ciRequest.IsPvcMounted || ciRequest.BlobStorageConfigured)
+			oldCacheBuildxPath, localCachePath := "", ""
+
+			if cacheEnabled {
+				log.Println(" -----> Setting up cache directory for Buildx")
+				oldCacheBuildxPath = util.LOCAL_BUILDX_LOCATION + "/old"
+				localCachePath = util.LOCAL_BUILDX_CACHE_LOCATION
+				err = setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
+				if err != nil {
+					return "", err
+				}
+				oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
 			}
 
-			log.Println(" -----> Setting up cache directory for Buildx")
-			oldCacheBuildxPath := util.LOCAL_BUILDX_LOCATION + "/old"
-			localCachePath := util.LOCAL_BUILDX_CACHE_LOCATION
-			err = setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
-			if err != nil {
-				return "", err
-			}
-			oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
-			manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s --push %s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s --allow network.host --allow security.insecure --metadata-file %s", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext, localCachePath, oldCacheBuildxPath, manifestLocation)
+			dockerBuild = getBuildxBuildCommand(useBuildxK8sDriver, cacheEnabled, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig)
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerBuildConfig.DockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
@@ -278,6 +293,13 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 		err = executeCmd(dockerBuild)
 		if err != nil {
 			return "", err
+		}
+
+		if dockerBuildConfig.CheckForBuildXK8sDriver() {
+			err = CleanBuildxK8sDriver(dockerBuildConfig.BuildxK8sDriverOptions)
+			if err != nil {
+				log.Println(util.DEVTRON, " error in cleaning buildx K8s driver ", " err: ", err)
+			}
 		}
 
 		if !useBuildx {
@@ -318,6 +340,20 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 	}
 
 	return dest, nil
+}
+
+func getBuildxBuildCommand(useBuildxK8sDriver, cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig) string {
+	dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
+	if cacheEnabled {
+		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s", dockerBuild, localCachePath, oldCacheBuildxPath)
+	}
+
+	if !useBuildxK8sDriver {
+		manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
+		dockerBuild = fmt.Sprintf("%s --metadata-file %s", dockerBuild, manifestLocation)
+	}
+
+	return dockerBuild
 }
 
 func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig) {
@@ -579,6 +615,106 @@ func readImageDigestFromManifest(manifestFilePath string) (string, error) {
 	return imageDigest.(string), nil
 }
 
+func createBuildxBuilderForMultiArchBuild() error {
+	err := installAllSupportedPlatforms()
+	if err != nil {
+		return err
+	}
+	err = createBuildxBuilder()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string) error {
+	if len(builderNodes) == 0 {
+		return errors.New("atleast one node is expected for builder with kubernetes driver")
+	}
+	defaultNodeOpts := builderNodes[0]
+	buildxCreate := getBuildxK8sDriverCmd(defaultNodeOpts)
+	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--use")
+
+	err, errBuf := runCmd(buildxCreate)
+	if err != nil {
+		fmt.Println(util.DEVTRON, "buildxCreate : ", buildxCreate, " err : ", err, " error : ", errBuf.String(), "\n ")
+		return err
+	}
+
+	//appending other nodes to the builder
+	for i := 1; i < len(builderNodes); i++ {
+		nodeOpts := builderNodes[i]
+		appendNode := getBuildxK8sDriverCmd(nodeOpts)
+		appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
+
+		err, errBuf = runCmd(appendNode)
+		if err != nil {
+			fmt.Println(util.DEVTRON, " appendNode : ", appendNode, " err : ", err, " error : ", errBuf.String(), "\n ")
+			return err
+		}
+	}
+	return nil
+}
+
+func CleanBuildxK8sDriver(nodes []map[string]string) error {
+	nodeNames := make([]string, 0)
+	for _, nOptsMp := range nodes {
+		if nodeName, ok := nOptsMp["node"]; ok && nodeName != "" {
+			nodeNames = append(nodeNames, nodeName)
+		}
+	}
+	err, errBuf := leaveNodesFromBuildxK8sDriver(nodeNames)
+	if err != nil {
+		log.Println(util.DEVTRON, " error in deleting nodes created by ci-runner , err : ", errBuf.String())
+		return err
+	}
+	log.Println(util.DEVTRON, "successfully cleaned up buildx k8s driver")
+	return nil
+}
+
+func leaveNodesFromBuildxK8sDriver(nodeNames []string) (error, *bytes.Buffer) {
+	var err error
+	var errBuf *bytes.Buffer
+	defer func() {
+		removeCmd := fmt.Sprintf("docker buildx rm %s", BUILDX_K8S_DRIVER_NAME)
+		err, errBuf = runCmd(removeCmd)
+		if err != nil {
+			log.Println(util.DEVTRON, "error in removing docker buildx err : ", errBuf.String())
+		}
+	}()
+	for _, node := range nodeNames {
+		cmds := fmt.Sprintf("docker buildx create --name=%s --node=%s --leave", BUILDX_K8S_DRIVER_NAME, node)
+		err, errBuf = runCmd(cmds)
+		if err != nil {
+			log.Println(util.DEVTRON, "error in leaving node : ", errBuf.String())
+			return err, errBuf
+		}
+	}
+	return err, errBuf
+}
+
+func runCmd(cmd string) (error, *bytes.Buffer) {
+	builderCreateCmd := exec.Command("/bin/sh", "-c", cmd)
+	errBuf := &bytes.Buffer{}
+	builderCreateCmd.Stderr = errBuf
+	err := builderCreateCmd.Run()
+	return err, errBuf
+}
+
+func getBuildxK8sDriverCmd(driverOpts map[string]string) string {
+	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
+	nodeName := driverOpts["node"]
+	if nodeName == "" {
+		nodeName = BUILDX_NODE_NAME + util.Generate(5)
+	}
+	buildxCreate = fmt.Sprintf(buildxCreate, BUILDX_K8S_DRIVER_NAME, nodeName)
+	if len(driverOpts["driverOptions"]) > 0 {
+		buildxCreate += " '--driver-opt=%s' "
+		buildxCreate = fmt.Sprintf(buildxCreate, driverOpts["driverOptions"])
+	}
+	return buildxCreate
+}
+
 func StopDocker() error {
 	out, err := exec.Command("docker", "ps", "-a", "-q").Output()
 	if err != nil {
@@ -649,4 +785,8 @@ func DockerdUpCheck() error {
 	dockerCheckCmd := exec.Command("/bin/sh", "-c", dockerCheck)
 	err := dockerCheckCmd.Run()
 	return err
+}
+
+func ValidBuildxK8sDriverOptions(ciRequest *CommonWorkflowRequest) bool {
+	return ciRequest != nil && ciRequest.CiBuildConfig != nil && ciRequest.CiBuildConfig.DockerBuildConfig != nil && ciRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildXK8sDriver()
 }
