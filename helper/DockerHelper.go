@@ -349,10 +349,10 @@ func getBuildxBuildCommand(useBuildxK8sDriver, cacheEnabled bool, dockerBuild, o
 		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s", dockerBuild, localCachePath, oldCacheBuildxPath)
 	}
 
-	if !useBuildxK8sDriver {
-		manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-		dockerBuild = fmt.Sprintf("%s --metadata-file %s", dockerBuild, manifestLocation)
-	}
+	//if !useBuildxK8sDriver {
+	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
+	dockerBuild = fmt.Sprintf("%s --metadata-file %s", dockerBuild, manifestLocation)
+	//}
 
 	return dockerBuild
 }
