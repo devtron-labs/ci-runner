@@ -353,7 +353,7 @@ func getBuildxBuildCommand(useBuildxK8sDriver, cacheEnabled bool, dockerBuild, o
 		//--provinance is set to true by default by docker. this will add some build related data in generated build manifest.it also adds some
 		// unknown:unknown key:value pair which may not be compatible by some container registries.
 
-		//with buildx k8s driver , --provinenance=true is causing manifest push to quay registry, so setting it to false
+		//with buildx k8s driver , --provinenance=true is causing issue when push manifest to quay registry, so setting it to false
 		dockerBuild = fmt.Sprintf("%s --provenance=false", dockerBuild)
 	}
 
