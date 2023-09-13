@@ -206,6 +206,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			dockerBuild = dockerBuild + "--no-cache "
 		}
 		dockerBuildConfig := ciBuildConfig.DockerBuildConfig
+
 		isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
 		useBuildx := dockerBuildConfig.CheckForBuildX()
 		dockerBuildxBuild := "docker buildx build "
@@ -255,7 +256,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			}
 			useBuildxK8sDriver := dockerBuildConfig.CheckForBuildXK8sDriver()
 			if useBuildxK8sDriver {
-				err = createBuildxBuilderWithK8sDriver(dockerBuildConfig.BuildxK8sDriverOptions)
+				err = createBuildxBuilderWithK8sDriverForTargetPlatforms(dockerBuildConfig.BuildxK8sDriverOptions, dockerBuildConfig.TargetPlatform)
 				if err != nil {
 					log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 					return "", err
@@ -627,11 +628,61 @@ func createBuildxBuilderForMultiArchBuild() error {
 	return nil
 }
 
-func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string) error {
+func findDefaultBuildxNode(builderNodes []map[string]string) (map[string]string, int) {
+	defaultNodeIndex := 0
+	for i, builderNode := range builderNodes {
+		if isDefault, ok := builderNode[util.DEFAULT_KEY]; (isDefault == "true") && ok {
+			defaultNodeIndex = i
+			break
+		}
+	}
+	return builderNodes[defaultNodeIndex], defaultNodeIndex
+}
+
+func getTargetPlatformSet(targetPlatformStr string) map[string]bool {
+	targetPlatformSet := make(map[string]bool)
+	platforms := strings.Split(targetPlatformStr, ",")
+	for _, platform := range platforms {
+		targetPlatformSet[platform] = true
+	}
+	return targetPlatformSet
+}
+
+func filterBuilderNodes(builderNodes []map[string]string, targetPlatformSet map[string]bool) []map[string]string {
+	filteredBuilderNodes := make([]map[string]string, 0)
+	for _, builderNode := range builderNodes {
+		platformStr := builderNode["platform"]
+		for _, platform := range strings.Split(platformStr, ",") {
+			if targetPlatformSet[platform] {
+				filteredBuilderNodes = append(filteredBuilderNodes, builderNode)
+			}
+		}
+	}
+	return filteredBuilderNodes
+}
+
+func createBuildxBuilderWithK8sDriverForTargetPlatforms(builderNodes []map[string]string, targetPlatformStr string) error {
+	if targetPlatformStr == "" {
+		err := createBuildxBuilderWithK8sDriver(builderNodes, targetPlatformStr)
+		return err
+	}
+	targetPlatformSet := getTargetPlatformSet(targetPlatformStr)
+	filteredBuilderNodes := filterBuilderNodes(builderNodes, targetPlatformSet)
+	if len(filteredBuilderNodes) == 0 {
+		return errors.New("no builder node supports the selected platforms")
+	}
+	err := createBuildxBuilderWithK8sDriver(filteredBuilderNodes, targetPlatformStr)
+	return err
+
+}
+
+func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string, targetPlatformStr string) error {
+
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
-	defaultNodeOpts := builderNodes[0]
+	defaultNodeOpts, defaultNodeIndex := findDefaultBuildxNode(builderNodes)
+
 	buildxCreate := getBuildxK8sDriverCmd(defaultNodeOpts)
 	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--use")
 
@@ -641,16 +692,22 @@ func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string) error {
 		return err
 	}
 
-	//appending other nodes to the builder
-	for i := 1; i < len(builderNodes); i++ {
-		nodeOpts := builderNodes[i]
-		appendNode := getBuildxK8sDriverCmd(nodeOpts)
-		appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
+	//just use default driver node if no targetPlatform is provided
+	if targetPlatformStr != "" {
+		//appending other nodes to the builder,except default node ,since we already added it
+		for i := 0; i < len(builderNodes); i++ {
+			if i == defaultNodeIndex {
+				continue
+			}
+			nodeOpts := builderNodes[i]
+			appendNode := getBuildxK8sDriverCmd(nodeOpts)
+			appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
 
-		err, errBuf = runCmd(appendNode)
-		if err != nil {
-			fmt.Println(util.DEVTRON, " appendNode : ", appendNode, " err : ", err, " error : ", errBuf.String(), "\n ")
-			return err
+			err, errBuf = runCmd(appendNode)
+			if err != nil {
+				fmt.Println(util.DEVTRON, " appendNode : ", appendNode, " err : ", err, " error : ", errBuf.String(), "\n ")
+				return err
+			}
 		}
 	}
 	return nil
@@ -694,6 +751,7 @@ func leaveNodesFromBuildxK8sDriver(nodeNames []string) (error, *bytes.Buffer) {
 }
 
 func runCmd(cmd string) (error, *bytes.Buffer) {
+	fmt.Println(util.DEVTRON, " cmd : ", cmd)
 	builderCreateCmd := exec.Command("/bin/sh", "-c", cmd)
 	errBuf := &bytes.Buffer{}
 	builderCreateCmd.Stderr = errBuf
@@ -708,6 +766,11 @@ func getBuildxK8sDriverCmd(driverOpts map[string]string) string {
 		nodeName = BUILDX_NODE_NAME + util.Generate(5)
 	}
 	buildxCreate = fmt.Sprintf(buildxCreate, BUILDX_K8S_DRIVER_NAME, nodeName)
+	platforms := driverOpts["platform"]
+	if platforms != "" {
+		buildxCreate += " --platform=%s "
+		buildxCreate = fmt.Sprintf(buildxCreate, platforms)
+	}
 	if len(driverOpts["driverOptions"]) > 0 {
 		buildxCreate += " '--driver-opt=%s' "
 		buildxCreate = fmt.Sprintf(buildxCreate, driverOpts["driverOptions"])

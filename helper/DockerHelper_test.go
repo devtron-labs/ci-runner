@@ -10,7 +10,8 @@ func TestCreateBuildXK8sDriver(t *testing.T) {
 	buildxOpts := make([]map[string]string, 0)
 	buildxOpts = append(buildxOpts, map[string]string{"node": "builder-amd64", "driverOptions": "namespace=devtron-ci,nodeselector=kubernetes.io/arch:amd64"})
 	buildxOpts = append(buildxOpts, map[string]string{"node": "builder-amd64-test", "driverOptions": "namespace=devtron-ci,nodeselector=kubernetes.io/arch:amd64"})
-	err := createBuildxBuilderWithK8sDriver(buildxOpts)
+	targetPlatform := "linux/amd64"
+	err := createBuildxBuilderWithK8sDriver(buildxOpts, targetPlatform)
 	t.Cleanup(func() {
 		buildxDelete := fmt.Sprintf("docker buildx rm %s", BUILDX_K8S_DRIVER_NAME)
 		builderRemoveCmd := exec.Command("/bin/sh", "-c", buildxDelete)
@@ -26,7 +27,8 @@ func TestCleanBuildxK8sDriver(t *testing.T) {
 	buildxOpts := make([]map[string]string, 0)
 	buildxOpts = append(buildxOpts, map[string]string{"node": "", "driverOptions": "namespace=devtron-ci,nodeselector=kubernetes.io/arch:amd64"})
 	buildxOpts = append(buildxOpts, map[string]string{"node": "builder-amd64-test", "driverOptions": "namespace=devtron-ci,nodeselector=kubernetes.io/arch:amd64"})
-	err := createBuildxBuilderWithK8sDriver(buildxOpts)
+	targetPlatform := "linux/amd64"
+	err := createBuildxBuilderWithK8sDriver(buildxOpts, targetPlatform)
 	if err != nil {
 		fmt.Println(err.Error())
 		t.Fail()

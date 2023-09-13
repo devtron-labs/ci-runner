@@ -20,6 +20,7 @@ package util
 import "path/filepath"
 
 const DEVTRON = "DEVTRON"
+const DEFAULT_KEY = "default"
 
 const INSECURE = "insecure"
 const SECUREWITHCERT = "secure-with-cert"
