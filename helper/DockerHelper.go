@@ -349,10 +349,16 @@ func getBuildxBuildCommand(useBuildxK8sDriver, cacheEnabled bool, dockerBuild, o
 		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s", dockerBuild, localCachePath, oldCacheBuildxPath)
 	}
 
-	//if !useBuildxK8sDriver {
+	if useBuildxK8sDriver {
+		//--provinance is set to true by default by docker. this will add some build related data in generated build manifest.it also adds some
+		// unknown:unknown key:value pair which may not be compatible by some container registries.
+
+		//with buildx k8s driver , --provinenance=true is causing manifest push to quay registry, so setting it to false
+		dockerBuild = fmt.Sprintf("%s --provenance=false", dockerBuild)
+	}
+
 	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
 	dockerBuild = fmt.Sprintf("%s --metadata-file %s", dockerBuild, manifestLocation)
-	//}
 
 	return dockerBuild
 }
