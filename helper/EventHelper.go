@@ -453,13 +453,10 @@ func (dockerBuildConfig *DockerBuildConfig) CheckForBuildX() bool {
 }
 
 func (dockerBuildConfig *DockerBuildConfig) CheckForBuildXK8sDriver() (bool, []map[string]string) {
-	useBuildxK8sDriver := dockerBuildConfig.CheckForBuildX() && len(dockerBuildConfig.BuildxK8sDriverOptions) > 0
-	if useBuildxK8sDriver {
-		eligibleK8sNodes := dockerBuildConfig.GetEligibleK8sDriverNodes()
-		useBuildxK8sDriver = useBuildxK8sDriver && len(eligibleK8sNodes) > 0
-		return useBuildxK8sDriver, eligibleK8sNodes
-	}
-	return useBuildxK8sDriver, nil
+	buildxEnabled := dockerBuildConfig.CheckForBuildX()
+	eligibleK8sNodes := dockerBuildConfig.GetEligibleK8sDriverNodes()
+	useBuildxK8sDriver := buildxEnabled && len(eligibleK8sNodes) > 0
+	return useBuildxK8sDriver, eligibleK8sNodes
 }
 
 func (dockerBuildConfig *DockerBuildConfig) GetEligibleK8sDriverNodes() []map[string]string {
