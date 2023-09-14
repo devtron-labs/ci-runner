@@ -19,41 +19,38 @@ package util
 
 import "path/filepath"
 
-const DEVTRON = "DEVTRON"
-const DEFAULT_KEY = "default"
-
-const INSECURE = "insecure"
-const SECUREWITHCERT = "secure-with-cert"
-const RETRYCOUNT = 10
-const WORKINGDIR = "/devtroncd"
-const LOCAL_BUILDX_LOCATION = "/var/lib/devtron/buildx"
-const LOCAL_BUILDX_CACHE_LOCATION = LOCAL_BUILDX_LOCATION + "/cache"
-
-const CIEVENT = "CI"
-const CDSTAGE = "CD"
-const DRY_RUN = "DryRun"
-const ENV_VARIABLE_BUILD_SUCCESS = "BUILD_SUCCESS"
-
-var TmpArtifactLocation = "./job-artifact"
-var TmpLogLocation = "/main.log"
-
-const CiCdEventEnvKey = "CI_CD_EVENT"
-
-const Source_Signal = "Source_Signal"
-const Source_Defer = "Source_Defer"
-
-const DefaultErrorCode = 1
-const AbortErrorCode = 143
-const CiStageFailErrorCode = 2
-const InAppLogging = "IN_APP_LOGGING"
-const CiRunnerCommand = "./cirunner"
-const TeeCommand = "tee"
-const LogFileName = "main.log"
-
-const NewLineChar = "\n"
+const (
+	DEVTRON                     = "DEVTRON"
+	DEFAULT_KEY                 = "default"
+	INSECURE                    = "insecure"
+	SECUREWITHCERT              = "secure-with-cert"
+	RETRYCOUNT                  = 10
+	WORKINGDIR                  = "/devtroncd"
+	LOCAL_BUILDX_LOCATION       = "/var/lib/devtron/buildx"
+	LOCAL_BUILDX_CACHE_LOCATION = LOCAL_BUILDX_LOCATION + "/cache"
+	CIEVENT                     = "CI"
+	CDSTAGE                     = "CD"
+	DRY_RUN                     = "DryRun"
+	ENV_VARIABLE_BUILD_SUCCESS  = "BUILD_SUCCESS"
+	CiCdEventEnvKey             = "CI_CD_EVENT"
+	Source_Signal               = "Source_Signal"
+	Source_Defer                = "Source_Defer"
+	DefaultErrorCode            = 1
+	AbortErrorCode              = 143
+	CiStageFailErrorCode        = 2
+	InAppLogging                = "IN_APP_LOGGING"
+	CiRunnerCommand             = "./cirunner"
+	TeeCommand                  = "tee"
+	LogFileName                 = "main.log"
+	NewLineChar                 = "\n"
+	PROVENANCE_MODE_MIN         = "min"
+	PROVENANCE_MODE_MAX         = "max"
+)
 
 var (
-	Output_path = filepath.Join(WORKINGDIR, "./process")
+	TmpArtifactLocation = "./job-artifact"
+	TmpLogLocation      = "/main.log"
+	Output_path         = filepath.Join(WORKINGDIR, "./process")
 
 	Bash_script = filepath.Join("_script.sh")
 )

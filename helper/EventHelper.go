@@ -61,6 +61,7 @@ type DockerBuildConfig struct {
 	TargetPlatform         string              `json:"targetPlatform,omitempty"`
 	BuildContext           string              `json:"buildContext,omitempty"`
 	UseBuildx              bool                `json:"useBuildx"`
+	BuildxProvenanceMode   string              `json:"buildxProvenanceMode"`
 	BuildxK8sDriverOptions []map[string]string `json:"buildxK8SDriverOptions"`
 }
 

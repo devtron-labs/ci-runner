@@ -282,7 +282,7 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 				oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
 			}
 
-			dockerBuild = getBuildxBuildCommand(useBuildxK8sDriver, cacheEnabled, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig)
+			dockerBuild = getBuildxBuildCommand(cacheEnabled, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig)
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerBuildConfig.DockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
@@ -343,17 +343,20 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 	return dest, nil
 }
 
-func getBuildxBuildCommand(useBuildxK8sDriver, cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig) string {
+func getBuildxBuildCommand(cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig) string {
 	dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
 	if cacheEnabled {
 		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s", dockerBuild, localCachePath, oldCacheBuildxPath)
 	}
-
-	if useBuildxK8sDriver {
-		//--provinance is set to true by default by docker. this will add some build related data in generated build manifest.it also adds some
+	// if provenance mode is provided, set provenance, else set to false
+	if dockerBuildConfig.BuildxProvenanceMode == util.PROVENANCE_MODE_MIN || dockerBuildConfig.BuildxProvenanceMode == util.PROVENANCE_MODE_MAX {
+		dockerBuild = fmt.Sprintf("%s --provenance=true --provenance=mode=%s ", dockerBuild, dockerBuildConfig.BuildxProvenanceMode)
+	} else {
+		// --provinance is set to true by default by docker. this will add some build related data in generated build manifest.it also adds some
 		// unknown:unknown key:value pair which may not be compatible by some container registries.
 
-		//with buildx k8s driver , --provinenance=true is causing issue when push manifest to quay registry, so setting it to false
+		// with buildx k8s driver , --provinenance=true is causing issue when push manifest to quay registry, so setting it to false
+		// above issue is being tracked in https://github.com/moby/buildkit/issues/3222
 		dockerBuild = fmt.Sprintf("%s --provenance=false", dockerBuild)
 	}
 
