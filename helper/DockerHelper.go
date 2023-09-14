@@ -254,9 +254,9 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 				log.Println(util.DEVTRON, " error in creating LOCAL_BUILDX_LOCATION ", util.LOCAL_BUILDX_LOCATION)
 				return "", err
 			}
-			useBuildxK8sDriver := dockerBuildConfig.CheckForBuildXK8sDriver()
+			useBuildxK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver()
 			if useBuildxK8sDriver {
-				err = createBuildxBuilderWithK8sDriverForTargetPlatforms(dockerBuildConfig.BuildxK8sDriverOptions, dockerBuildConfig.TargetPlatform)
+				err = createBuildxBuilderWithK8sDriver(eligibleK8sDriverNodes)
 				if err != nil {
 					log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 					return "", err
@@ -296,8 +296,8 @@ func BuildArtifact(ciRequest *CiRequest) (string, error) {
 			return "", err
 		}
 
-		if dockerBuildConfig.CheckForBuildXK8sDriver() {
-			err = CleanBuildxK8sDriver(dockerBuildConfig.BuildxK8sDriverOptions)
+		if useBuildK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver(); useBuildK8sDriver {
+			err = CleanBuildxK8sDriver(eligibleK8sDriverNodes)
 			if err != nil {
 				log.Println(util.DEVTRON, " error in cleaning buildx K8s driver ", " err: ", err)
 			}
@@ -348,18 +348,9 @@ func getBuildxBuildCommand(cacheEnabled bool, dockerBuild, oldCacheBuildxPath, l
 	if cacheEnabled {
 		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s", dockerBuild, localCachePath, oldCacheBuildxPath)
 	}
-	// if provenance mode is provided, set provenance, else set to false
-	if dockerBuildConfig.BuildxProvenanceMode == util.PROVENANCE_MODE_MIN || dockerBuildConfig.BuildxProvenanceMode == util.PROVENANCE_MODE_MAX {
-		dockerBuild = fmt.Sprintf("%s --provenance=true --provenance=mode=%s ", dockerBuild, dockerBuildConfig.BuildxProvenanceMode)
-	} else {
-		// --provinance is set to true by default by docker. this will add some build related data in generated build manifest.it also adds some
-		// unknown:unknown key:value pair which may not be compatible by some container registries.
 
-		// with buildx k8s driver , --provinenance=true is causing issue when push manifest to quay registry, so setting it to false
-		// above issue is being tracked in https://github.com/moby/buildkit/issues/3222
-		dockerBuild = fmt.Sprintf("%s --provenance=false", dockerBuild)
-	}
-
+	provenanceFlag := dockerBuildConfig.GetProvenanceFlag()
+	dockerBuild = fmt.Sprintf("%s %s", dockerBuild, provenanceFlag)
 	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
 	dockerBuild = fmt.Sprintf("%s --metadata-file %s", dockerBuild, manifestLocation)
 
@@ -637,60 +628,12 @@ func createBuildxBuilderForMultiArchBuild() error {
 	return nil
 }
 
-func findDefaultBuildxNode(builderNodes []map[string]string) (map[string]string, int) {
-	defaultNodeIndex := 0
-	for i, builderNode := range builderNodes {
-		if isDefault, ok := builderNode[util.DEFAULT_KEY]; (isDefault == "true") && ok {
-			defaultNodeIndex = i
-			break
-		}
-	}
-	return builderNodes[defaultNodeIndex], defaultNodeIndex
-}
-
-func getTargetPlatformSet(targetPlatformStr string) map[string]bool {
-	targetPlatformSet := make(map[string]bool)
-	platforms := strings.Split(targetPlatformStr, ",")
-	for _, platform := range platforms {
-		targetPlatformSet[platform] = true
-	}
-	return targetPlatformSet
-}
-
-func filterBuilderNodes(builderNodes []map[string]string, targetPlatformSet map[string]bool) []map[string]string {
-	filteredBuilderNodes := make([]map[string]string, 0)
-	for _, builderNode := range builderNodes {
-		platformStr := builderNode["platform"]
-		for _, platform := range strings.Split(platformStr, ",") {
-			if targetPlatformSet[platform] {
-				filteredBuilderNodes = append(filteredBuilderNodes, builderNode)
-			}
-		}
-	}
-	return filteredBuilderNodes
-}
-
-func createBuildxBuilderWithK8sDriverForTargetPlatforms(builderNodes []map[string]string, targetPlatformStr string) error {
-	if targetPlatformStr == "" {
-		err := createBuildxBuilderWithK8sDriver(builderNodes, targetPlatformStr)
-		return err
-	}
-	targetPlatformSet := getTargetPlatformSet(targetPlatformStr)
-	filteredBuilderNodes := filterBuilderNodes(builderNodes, targetPlatformSet)
-	if len(filteredBuilderNodes) == 0 {
-		return errors.New("no builder node supports the selected platforms")
-	}
-	err := createBuildxBuilderWithK8sDriver(filteredBuilderNodes, targetPlatformStr)
-	return err
-
-}
-
-func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string, targetPlatformStr string) error {
+func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string) error {
 
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
-	defaultNodeOpts, defaultNodeIndex := findDefaultBuildxNode(builderNodes)
+	defaultNodeOpts := builderNodes[0]
 
 	buildxCreate := getBuildxK8sDriverCmd(defaultNodeOpts)
 	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--use")
@@ -701,24 +644,19 @@ func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string, targetPl
 		return err
 	}
 
-	//just use default driver node if no targetPlatform is provided
-	if targetPlatformStr != "" {
-		//appending other nodes to the builder,except default node ,since we already added it
-		for i := 0; i < len(builderNodes); i++ {
-			if i == defaultNodeIndex {
-				continue
-			}
-			nodeOpts := builderNodes[i]
-			appendNode := getBuildxK8sDriverCmd(nodeOpts)
-			appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
+	//appending other nodes to the builder,except default node ,since we already added it
+	for i := 1; i < len(builderNodes); i++ {
+		nodeOpts := builderNodes[i]
+		appendNode := getBuildxK8sDriverCmd(nodeOpts)
+		appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
 
-			err, errBuf = runCmd(appendNode)
-			if err != nil {
-				fmt.Println(util.DEVTRON, " appendNode : ", appendNode, " err : ", err, " error : ", errBuf.String(), "\n ")
-				return err
-			}
+		err, errBuf = runCmd(appendNode)
+		if err != nil {
+			fmt.Println(util.DEVTRON, " appendNode : ", appendNode, " err : ", err, " error : ", errBuf.String(), "\n ")
+			return err
 		}
 	}
+
 	return nil
 }
 
@@ -859,6 +797,10 @@ func DockerdUpCheck() error {
 	return err
 }
 
-func ValidBuildxK8sDriverOptions(ciRequest *CiRequest) bool {
-	return ciRequest != nil && ciRequest.CiBuildConfig != nil && ciRequest.CiBuildConfig.DockerBuildConfig != nil && ciRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildXK8sDriver()
+func ValidBuildxK8sDriverOptions(ciRequest *CiRequest) (bool, []map[string]string) {
+	valid := ciRequest != nil && ciRequest.CiBuildConfig != nil && ciRequest.CiBuildConfig.DockerBuildConfig != nil
+	if valid {
+		return ciRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildXK8sDriver()
+	}
+	return false, nil
 }

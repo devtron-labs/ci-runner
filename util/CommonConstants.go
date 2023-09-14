@@ -43,8 +43,6 @@ const (
 	TeeCommand                  = "tee"
 	LogFileName                 = "main.log"
 	NewLineChar                 = "\n"
-	PROVENANCE_MODE_MIN         = "min"
-	PROVENANCE_MODE_MAX         = "max"
 )
 
 var (
