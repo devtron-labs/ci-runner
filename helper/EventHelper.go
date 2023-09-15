@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
@@ -61,6 +62,7 @@ type DockerBuildConfig struct {
 	TargetPlatform         string              `json:"targetPlatform,omitempty"`
 	BuildContext           string              `json:"buildContext,omitempty"`
 	UseBuildx              bool                `json:"useBuildx"`
+	BuildxProvenanceMode   string              `json:"buildxProvenanceMode"`
 	BuildxK8sDriverOptions []map[string]string `json:"buildxK8SDriverOptions"`
 }
 
@@ -514,10 +516,68 @@ type ScanEvent struct {
 	DockerRegistryId string `json:"dockerRegistryId"`
 }
 
+func (dockerBuildConfig *DockerBuildConfig) GetProvenanceFlag() string {
+	// if provenance mode is provided, set provenance, else set to false
+	if dockerBuildConfig.BuildxProvenanceMode != "" {
+		return fmt.Sprintf("--provenance=mode=%s ", dockerBuildConfig.BuildxProvenanceMode)
+	}
+
+	// --provinance is set to true by default by docker. this will add some build related data in generated build manifest.it also adds some
+	// unknown:unknown key:value pair which may not be compatible by some container registries.
+
+	// with buildx k8s driver , --provinenance=true is causing issue when push manifest to quay registry, so setting it to false
+	// above issue is being tracked in https://github.com/moby/buildkit/issues/3222
+	return "--provenance=false"
+}
 func (dockerBuildConfig *DockerBuildConfig) CheckForBuildX() bool {
 	return dockerBuildConfig.TargetPlatform != "" || dockerBuildConfig.UseBuildx
 }
 
-func (dockerBuildConfig *DockerBuildConfig) CheckForBuildXK8sDriver() bool {
-	return dockerBuildConfig.CheckForBuildX() && len(dockerBuildConfig.BuildxK8sDriverOptions) > 0
+func (dockerBuildConfig *DockerBuildConfig) CheckForBuildXK8sDriver() (bool, []map[string]string) {
+	buildxEnabled := dockerBuildConfig.CheckForBuildX()
+	eligibleK8sNodes := dockerBuildConfig.GetEligibleK8sDriverNodes()
+	useBuildxK8sDriver := buildxEnabled && len(eligibleK8sNodes) > 0
+	return useBuildxK8sDriver, eligibleK8sNodes
+}
+
+func (dockerBuildConfig *DockerBuildConfig) GetEligibleK8sDriverNodes() []map[string]string {
+	if dockerBuildConfig.TargetPlatform == "" {
+		return findDefaultBuildxNodes(dockerBuildConfig.BuildxK8sDriverOptions)
+	}
+	return filterBuilderNodes(dockerBuildConfig.BuildxK8sDriverOptions, dockerBuildConfig.TargetPlatform)
+}
+
+func filterBuilderNodes(builderNodes []map[string]string, targetPlatformStr string) []map[string]string {
+	filteredBuilderNodes := make([]map[string]string, 0)
+	requiredTargetPlatformSet := make(map[string]bool)   //user requested platforms for build
+	canBeBuildTargetPlatformSet := make(map[string]bool) //platforms that can be built with provided k8s Driver Nodes
+	for _, platform := range strings.Split(targetPlatformStr, ",") {
+		requiredTargetPlatformSet[platform] = true
+	}
+	for _, builderNode := range builderNodes {
+		platformStr := builderNode["platform"]
+		for _, platform := range strings.Split(platformStr, ",") {
+			if requiredTargetPlatformSet[platform] {
+				canBeBuildTargetPlatformSet[platform] = true
+				filteredBuilderNodes = append(filteredBuilderNodes, builderNode) //filtering out required k8s Driver nodes only
+			}
+		}
+	}
+	if len(requiredTargetPlatformSet) != len(canBeBuildTargetPlatformSet) {
+		fmt.Println(util.DEVTRON, " Docker k8s driver nodes required to build for these platforms ", targetPlatformStr, " are not present, so not using docker k8s driver for this build ")
+		return nil
+	}
+	return filteredBuilderNodes
+}
+
+func findDefaultBuildxNodes(builderNodes []map[string]string) []map[string]string {
+
+	defaultNodes := make([]map[string]string, 0)
+	for _, builderNode := range builderNodes {
+		if isDefault, _ := builderNode[util.DEFAULT_KEY]; isDefault == "true" {
+			defaultNodes = append(defaultNodes, builderNode)
+			break
+		}
+	}
+	return builderNodes
 }

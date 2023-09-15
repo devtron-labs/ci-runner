@@ -8,7 +8,7 @@ WORKDIR /go/src/github.com/devtron-labs/cirunner
 ADD . /go/src/github.com/devtron-labs/cirunner/
 COPY . .
 # Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /go/bin/cirunner
+RUN CGO_ENABLED=0 GOOS=linux go build -buildvcs=false -a -installsuffix cgo -o /go/bin/cirunner
 
 
 FROM docker:20.10.24-dind
