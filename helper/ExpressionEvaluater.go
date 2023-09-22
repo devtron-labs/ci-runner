@@ -7,7 +7,7 @@ import (
 )
 
 type ConditionObject struct {
-	ConditionType            ConditionType `json:"conditionType"`       //TRIGGER, SKIP, SUCCESS, FAIL
+	ConditionType            ConditionType `json:"conditionType"`       //TRIGGER, SKIP, PASS, FAIL
 	ConditionOnVariable      string        `json:"conditionOnVariable"` //name of variable
 	ConditionalOperator      string        `json:"conditionalOperator"`
 	ConditionalValue         string        `json:"conditionalValue"`
@@ -41,7 +41,7 @@ func StageIsSuccess(conditions []*ConditionObject, variables []*VariableObject) 
 		}
 		status = status && result
 	}
-	if conditionType == SUCCESS {
+	if conditionType == PASS {
 		return status, nil // success if all success
 	} else {
 		return !status, nil //fail if all success
