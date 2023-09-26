@@ -17,6 +17,7 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -105,7 +106,7 @@ STAGE:  %s
 
 var chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
-//Generates random string
+// Generates random string
 func Generate(size int) string {
 	rand.Seed(time.Now().UnixNano())
 	var b strings.Builder
@@ -114,4 +115,17 @@ func Generate(size int) string {
 	}
 	str := b.String()
 	return str
+}
+
+func CheckFileExists(filename string) (bool, error) {
+	if _, err := os.Stat(filename); err == nil {
+		// exists
+		return true, nil
+	} else if errors.Is(err, os.ErrNotExist) {
+		// not exists
+		return false, nil
+	} else {
+		// Some other error
+		return false, err
+	}
 }
