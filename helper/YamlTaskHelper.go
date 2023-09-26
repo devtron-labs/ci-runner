@@ -62,7 +62,7 @@ type AppliesTo struct {
 
 const BRANCH_FIXED = "BRANCH_FIXED"
 
-func GetBeforeDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task, error) {
+func GetBeforeDockerBuildTasks(ciRequest *CommonWorkflowRequest, taskYaml *TaskYaml) ([]*Task, error) {
 	if taskYaml == nil {
 		log.Println(util.DEVTRON, "no tasks, devtron-ci yaml missing")
 		return nil, nil
@@ -105,7 +105,7 @@ func GetBeforeDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Tas
 	return tasks, nil
 }
 
-func GetAfterDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task, error) {
+func GetAfterDockerBuildTasks(ciRequest *CommonWorkflowRequest, taskYaml *TaskYaml) ([]*Task, error) {
 	if taskYaml == nil {
 		log.Println(util.DEVTRON, "no tasks, devtron-ci yaml missing")
 		return nil, nil
@@ -153,7 +153,7 @@ func GetAfterDockerBuildTasks(ciRequest *CiRequest, taskYaml *TaskYaml) ([]*Task
 	return tasks, nil
 }
 
-func isValidBranch(ciRequest *CiRequest, a AppliesTo) bool {
+func isValidBranch(ciRequest *CommonWorkflowRequest, a AppliesTo) bool {
 	branches := a.Value
 	branchesMap := make(map[string]bool)
 	for _, b := range branches {
@@ -170,7 +170,7 @@ func isValidBranch(ciRequest *CiRequest, a AppliesTo) bool {
 	return isValidBranch
 }
 
-func isValidTag(ciRequest *CiRequest, a AppliesTo) bool {
+func isValidTag(ciRequest *CommonWorkflowRequest, a AppliesTo) bool {
 	tagsRegex := a.Value
 	for _, prj := range ciRequest.CiProjectDetails {
 		for _, t := range tagsRegex {

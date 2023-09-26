@@ -13,21 +13,21 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 	envs := make(map[string]string)
 	envs["WORKING_DIRECTORY"] = util.WORKINGDIR
 	if cicdRequest.Type == util.CIEVENT {
-		image, err := helper.BuildDockerImagePath(cicdRequest.CiRequest)
+		image, err := helper.BuildDockerImagePath(cicdRequest.CommonWorkflowRequest)
 		if err != nil {
 			return nil, err
 		}
-		envs["DOCKER_IMAGE_TAG"] = cicdRequest.CiRequest.DockerImageTag
-		envs["DOCKER_REPOSITORY"] = cicdRequest.CiRequest.DockerRepository
-		envs["DOCKER_REGISTRY_URL"] = cicdRequest.CiRequest.DockerRegistryURL
-		envs["APP_NAME"] = cicdRequest.CiRequest.AppName
-		envs["TRIGGER_BY_AUTHOR"] = cicdRequest.CiRequest.TriggerByAuthor
+		envs["DOCKER_IMAGE_TAG"] = cicdRequest.CommonWorkflowRequest.DockerImageTag
+		envs["DOCKER_REPOSITORY"] = cicdRequest.CommonWorkflowRequest.DockerRepository
+		envs["DOCKER_REGISTRY_URL"] = cicdRequest.CommonWorkflowRequest.DockerRegistryURL
+		envs["APP_NAME"] = cicdRequest.CommonWorkflowRequest.AppName
+		envs["TRIGGER_BY_AUTHOR"] = cicdRequest.CommonWorkflowRequest.TriggerByAuthor
 		envs["DOCKER_IMAGE"] = image
 
 		//adding GIT_MATERIAL_REQUEST in env for semgrep plugin
 		CiMaterialRequestArr := ""
-		if cicdRequest.CiRequest.CiProjectDetails != nil {
-			for _, ciProjectDetail := range cicdRequest.CiRequest.CiProjectDetails {
+		if cicdRequest.CommonWorkflowRequest.CiProjectDetails != nil {
+			for _, ciProjectDetail := range cicdRequest.CommonWorkflowRequest.CiProjectDetails {
 				GitRepoSplit := strings.Split(ciProjectDetail.GitRepository, "/")
 				GitRepoName := ""
 				if len(GitRepoSplit) > 0 {
@@ -41,21 +41,21 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		fmt.Println(envs["GIT_MATERIAL_REQUEST"])
 
 		// setting extraEnvironmentVariables
-		for k, v := range cicdRequest.CiRequest.ExtraEnvironmentVariables {
+		for k, v := range cicdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables {
 			envs[k] = v
 		}
 	} else {
-		envs["DOCKER_IMAGE"] = cicdRequest.CdRequest.CiArtifactDTO.Image
-		envs["DEPLOYMENT_RELEASE_ID"] = strconv.Itoa(cicdRequest.CdRequest.DeploymentReleaseCounter)
-		envs["DEPLOYMENT_UNIQUE_ID"] = strconv.Itoa(cicdRequest.CdRequest.WorkflowRunnerId)
-		envs["CD_TRIGGERED_BY"] = cicdRequest.CdRequest.DeploymentTriggeredBy
-		envs["CD_TRIGGER_TIME"] = cicdRequest.CdRequest.DeploymentTriggerTime.String()
+		envs["DOCKER_IMAGE"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
+		envs["DEPLOYMENT_RELEASE_ID"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.DeploymentReleaseCounter)
+		envs["DEPLOYMENT_UNIQUE_ID"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.WorkflowRunnerId)
+		envs["CD_TRIGGERED_BY"] = cicdRequest.CommonWorkflowRequest.DeploymentTriggeredBy
+		envs["CD_TRIGGER_TIME"] = cicdRequest.CommonWorkflowRequest.DeploymentTriggerTime.String()
 
 		// to support legacy yaml based script trigger
-		envs["DEVTRON_CD_TRIGGERED_BY"] = cicdRequest.CdRequest.DeploymentTriggeredBy
-		envs["DEVTRON_CD_TRIGGER_TIME"] = cicdRequest.CdRequest.DeploymentTriggerTime.String()
+		envs["DEVTRON_CD_TRIGGERED_BY"] = cicdRequest.CommonWorkflowRequest.DeploymentTriggeredBy
+		envs["DEVTRON_CD_TRIGGER_TIME"] = cicdRequest.CommonWorkflowRequest.DeploymentTriggerTime.String()
 
-		for k, v := range cicdRequest.CdRequest.ExtraEnvironmentVariables {
+		for k, v := range cicdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables {
 			envs[k] = v
 		}
 	}

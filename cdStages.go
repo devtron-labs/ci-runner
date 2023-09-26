@@ -9,17 +9,17 @@ import (
 
 func HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	err := runCDStages(ciCdRequest)
-	artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CdRequest)
+	artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CommonWorkflowRequest)
 	if err != nil || artifactUploadErr != nil {
 		log.Println(err)
 		*exitCode = util.DefaultErrorCode
 	}
 }
 
-func collectAndUploadCDArtifacts(cdRequest *helper.CdRequest) error {
+func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) error {
 
 	if cdRequest.PrePostDeploySteps != nil && len(cdRequest.PrePostDeploySteps) > 0 {
-		_, err := helper.ZipAndUpload(cdRequest.BlobStorageConfigured, cdRequest.BlobStorageS3Config, cdRequest.ArtifactFileName, cdRequest.CloudProvider, cdRequest.AzureBlobConfig, cdRequest.GcpBlobConfig)
+		_, err := helper.ZipAndUpload(cdRequest.BlobStorageConfigured, cdRequest.BlobStorageS3Config, cdRequest.CiArtifactFileName, cdRequest.CloudProvider, cdRequest.AzureBlobConfig, cdRequest.GcpBlobConfig)
 		return err
 	}
 
@@ -43,7 +43,7 @@ func collectAndUploadCDArtifacts(cdRequest *helper.CdRequest) error {
 		}
 	}
 	log.Println(util.DEVTRON, " artifacts", artifactFiles)
-	return helper.UploadArtifact(cdRequest.BlobStorageConfigured, artifactFiles, cdRequest.BlobStorageS3Config, cdRequest.ArtifactFileName, cdRequest.CloudProvider, cdRequest.AzureBlobConfig, cdRequest.GcpBlobConfig)
+	return helper.UploadArtifact(cdRequest.BlobStorageConfigured, artifactFiles, cdRequest.BlobStorageS3Config, cdRequest.CiArtifactFileName, cdRequest.CloudProvider, cdRequest.AzureBlobConfig, cdRequest.GcpBlobConfig)
 }
 
 func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
@@ -61,7 +61,7 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	}
 	// git handling
 	log.Println(util.DEVTRON, " git")
-	err = helper.CloneAndCheckout(cicdRequest.CdRequest.CiProjectDetails)
+	err = helper.CloneAndCheckout(cicdRequest.CommonWorkflowRequest.CiProjectDetails)
 	if err != nil {
 		log.Println(util.DEVTRON, "clone err: ", err)
 		return err
@@ -70,16 +70,16 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
-	helper.StartDockerDaemon(cicdRequest.CdRequest.DockerConnection, cicdRequest.CdRequest.DockerRegistryURL, cicdRequest.CdRequest.DockerCert, cicdRequest.CdRequest.DefaultAddressPoolBaseCidr, cicdRequest.CdRequest.DefaultAddressPoolSize, -1)
+	helper.StartDockerDaemon(cicdRequest.CommonWorkflowRequest.DockerConnection, cicdRequest.CommonWorkflowRequest.DockerRegistryURL, cicdRequest.CommonWorkflowRequest.DockerCert, cicdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr, cicdRequest.CommonWorkflowRequest.DefaultAddressPoolSize, -1)
 
 	err = helper.DockerLogin(&helper.DockerCredentials{
-		DockerUsername:     cicdRequest.CdRequest.DockerUsername,
-		DockerPassword:     cicdRequest.CdRequest.DockerPassword,
-		AwsRegion:          cicdRequest.CdRequest.AwsRegion,
-		AccessKey:          cicdRequest.CdRequest.AccessKey,
-		SecretKey:          cicdRequest.CdRequest.SecretKey,
-		DockerRegistryURL:  cicdRequest.CdRequest.DockerRegistryURL,
-		DockerRegistryType: cicdRequest.CdRequest.DockerRegistryType,
+		DockerUsername:     cicdRequest.CommonWorkflowRequest.DockerUsername,
+		DockerPassword:     cicdRequest.CommonWorkflowRequest.DockerPassword,
+		AwsRegion:          cicdRequest.CommonWorkflowRequest.AwsRegion,
+		AccessKey:          cicdRequest.CommonWorkflowRequest.AccessKey,
+		SecretKey:          cicdRequest.CommonWorkflowRequest.SecretKey,
+		DockerRegistryURL:  cicdRequest.CommonWorkflowRequest.DockerRegistryURL,
+		DockerRegistryType: cicdRequest.CommonWorkflowRequest.DockerRegistryType,
 	})
 	if err != nil {
 		return err
@@ -87,25 +87,25 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 
 	scriptEnvs, err := getGlobalEnvVariables(cicdRequest)
 
-	if len(cicdRequest.CdRequest.PrePostDeploySteps) > 0 {
+	if len(cicdRequest.CommonWorkflowRequest.PrePostDeploySteps) > 0 {
 		refStageMap := make(map[int][]*helper.StepObject)
-		for _, ref := range cicdRequest.CdRequest.RefPlugins {
+		for _, ref := range cicdRequest.CommonWorkflowRequest.RefPlugins {
 			refStageMap[ref.Id] = ref.Steps
 		}
-		var stage = StepType(cicdRequest.CdRequest.StageType)
-		_, _, err = RunCiCdSteps(stage, cicdRequest.CdRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
+		var stage = StepType(cicdRequest.CommonWorkflowRequest.StageType)
+		_, _, err = RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
 	} else {
 
 		// Get devtron-cd yaml
-		taskYaml, err := helper.ToTaskYaml([]byte(cicdRequest.CdRequest.StageYaml))
+		taskYaml, err := helper.ToTaskYaml([]byte(cicdRequest.CommonWorkflowRequest.StageYaml))
 		if err != nil {
 			log.Println(err)
 			return err
 		}
-		cicdRequest.CdRequest.TaskYaml = taskYaml
+		cicdRequest.CommonWorkflowRequest.TaskYaml = taskYaml
 
 		// run post artifact processing
 		log.Println(util.DEVTRON, " stage yaml", taskYaml)
@@ -125,9 +125,9 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	}
 
 	// dry run flag indicates that ci runner image is being run from external helm chart
-	if !cicdRequest.CdRequest.IsDryRun {
+	if !cicdRequest.CommonWorkflowRequest.IsDryRun {
 		log.Println(util.DEVTRON, " event")
-		err = helper.SendCDEvent(cicdRequest.CdRequest)
+		err = helper.SendCDEvent(cicdRequest.CommonWorkflowRequest)
 		if err != nil {
 			log.Println(err)
 			return err
