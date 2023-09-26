@@ -46,7 +46,7 @@ const (
 )
 
 const (
-	ResultsDirInCIRunnerPath = "/output/results.json"
+	ResultsDirInCIRunnerPath = "/polling-plugin/results.json"
 	PathInPollingPlugin      = "/tmp/results.json"
 )
 
