@@ -97,7 +97,11 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 	// git handling
 	log.Println(util.DEVTRON, " git")
-	err = helper.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
+	ciBuildConfigBean := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
+	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
+	if !buildSkipEnabled {
+		err = helper.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
+	}
 	if err != nil {
 		log.Println(util.DEVTRON, "clone err: ", err)
 		return artifactUploaded, err
@@ -120,7 +124,6 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		return artifactUploaded, err
 	}
 	ciCdRequest.CommonWorkflowRequest.TaskYaml = taskYaml
-	ciBuildConfigBean := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
 	if ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.MANAGED_DOCKERFILE_BUILD_TYPE {
 		err = makeDockerfile(ciBuildConfigBean.DockerBuildConfig, ciCdRequest.CommonWorkflowRequest.CheckoutPath)
 		if err != nil {
@@ -138,7 +141,6 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	var preCiDuration float64
 	start = time.Now()
 	metrics.PreCiStartTime = start
-	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
 	if len(ciCdRequest.CommonWorkflowRequest.PreCiSteps) > 0 {
 		if !buildSkipEnabled {
 			util.LogStage("running PRE-CI steps")
