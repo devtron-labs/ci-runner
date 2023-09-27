@@ -105,7 +105,7 @@ func processEvent(args string) {
 
 func cleanUpBuildxK8sDriver(ciCdRequest helper.CiCdTriggerEvent, wg *sync.WaitGroup) {
 	defer wg.Done()
-	if valid, eligibleBuildxK8sDriverNodes := helper.ValidBuildxK8sDriverOptions(ciCdRequest.CiRequest); valid {
+	if valid, eligibleBuildxK8sDriverNodes := helper.ValidBuildxK8sDriverOptions(ciCdRequest.CommonWorkflowRequest); valid {
 		log.Println(util.DEVTRON, "starting buildx k8s driver clean up ,before terminating ci-runner")
 		err := helper.CleanBuildxK8sDriver(eligibleBuildxK8sDriverNodes)
 		if err != nil {
@@ -123,23 +123,23 @@ func uploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
 	var gcpBlobConfig *blob_storage.GcpBlobConfig
 	var inAppLoggingEnabled bool
 
-	if event.Type == util.CIEVENT && event.CiRequest.BlobStorageConfigured {
+	if event.Type == util.CIEVENT && event.CommonWorkflowRequest.BlobStorageConfigured {
 		storageModuleConfigured = true
-		blobStorageLogKey = event.CiRequest.BlobStorageLogsKey
-		cloudProvider = event.CiRequest.CloudProvider
-		blobStorageS3Config = event.CiRequest.BlobStorageS3Config
-		azureBlobConfig = event.CiRequest.AzureBlobConfig
-		gcpBlobConfig = event.CiRequest.GcpBlobConfig
-		inAppLoggingEnabled = event.CiRequest.InAppLoggingEnabled
+		blobStorageLogKey = event.CommonWorkflowRequest.BlobStorageLogsKey
+		cloudProvider = event.CommonWorkflowRequest.CloudProvider
+		blobStorageS3Config = event.CommonWorkflowRequest.BlobStorageS3Config
+		azureBlobConfig = event.CommonWorkflowRequest.AzureBlobConfig
+		gcpBlobConfig = event.CommonWorkflowRequest.GcpBlobConfig
+		inAppLoggingEnabled = event.CommonWorkflowRequest.InAppLoggingEnabled
 
-	} else if event.Type == util.CDSTAGE && event.CdRequest.BlobStorageConfigured {
+	} else if event.Type == util.CDSTAGE && event.CommonWorkflowRequest.BlobStorageConfigured {
 		storageModuleConfigured = true
-		blobStorageLogKey = event.CdRequest.BlobStorageLogsKey
-		cloudProvider = event.CdRequest.CloudProvider
-		blobStorageS3Config = event.CdRequest.BlobStorageS3Config
-		azureBlobConfig = event.CdRequest.AzureBlobConfig
-		gcpBlobConfig = event.CdRequest.GcpBlobConfig
-		inAppLoggingEnabled = event.CdRequest.InAppLoggingEnabled
+		blobStorageLogKey = event.CommonWorkflowRequest.BlobStorageLogsKey
+		cloudProvider = event.CommonWorkflowRequest.CloudProvider
+		blobStorageS3Config = event.CommonWorkflowRequest.BlobStorageS3Config
+		azureBlobConfig = event.CommonWorkflowRequest.AzureBlobConfig
+		gcpBlobConfig = event.CommonWorkflowRequest.GcpBlobConfig
+		inAppLoggingEnabled = event.CommonWorkflowRequest.InAppLoggingEnabled
 	}
 
 	if r := recover(); r != nil {
