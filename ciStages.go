@@ -144,6 +144,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	var preCiDuration float64
 	start = time.Now()
 	metrics.PreCiStartTime = start
+	var resultsFromPlugin *helper.ImageDetailsFromCR
 	if len(ciCdRequest.CommonWorkflowRequest.PreCiSteps) > 0 {
 		if !buildSkipEnabled {
 			util.LogStage("running PRE-CI steps")
@@ -155,6 +156,10 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 			log.Println(err)
 			return sendFailureNotification(string(PreCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", metrics, artifactUploaded, err)
 
+		}
+		resultsFromPlugin, err = extractOutResultsIfExists()
+		if err != nil {
+			log.Println("error in getting results", err.Error())
 		}
 	}
 	metrics.PreCiDuration = preCiDuration
@@ -184,7 +189,6 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	var postCiDuration float64
 	start = time.Now()
 	metrics.PostCiStartTime = start
-	var resultsFromPlugin *helper.ImageDetailsFromCR
 	if len(ciCdRequest.CommonWorkflowRequest.PostCiSteps) > 0 {
 		util.LogStage("running POST-CI steps")
 		// sending build success as true always as post-ci triggers only if ci gets success
@@ -194,10 +198,6 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		postCiDuration = time.Since(start).Seconds()
 		if err != nil {
 			return sendFailureNotification(string(PostCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", metrics, artifactUploaded, err)
-		}
-		resultsFromPlugin, err = extractOutResultsIfExists()
-		if err != nil {
-			log.Println("error in getting results", err.Error())
 		}
 	}
 	metrics.PostCiDuration = postCiDuration
