@@ -49,7 +49,7 @@ const (
 	BUILDPACK_BUILD_TYPE          CiBuildType = "buildpack-build"
 )
 
-const JOB_CI string = "JOB_CI"
+const CI_JOB string = "CI_JOB"
 
 type CiBuildConfigBean struct {
 	CiBuildType       CiBuildType        `json:"ciBuildType"`

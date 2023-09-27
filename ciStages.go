@@ -101,7 +101,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	log.Println(util.DEVTRON, " git")
 	ciBuildConfigBean := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
 	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
-	skipCheckout := ciBuildConfigBean != nil && ciBuildConfigBean.PipelineType == helper.JOB_CI
+	skipCheckout := ciBuildConfigBean != nil && ciBuildConfigBean.PipelineType == helper.CI_JOB
 	if !skipCheckout {
 		err = helper.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
 	}
