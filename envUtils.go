@@ -7,7 +7,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]string, error) {
@@ -45,7 +44,7 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["ACCESS_KEY"] = cicdRequest.CommonWorkflowRequest.AccessKey
 		envs["SECRET_KEY"] = cicdRequest.CommonWorkflowRequest.SecretKey
 		envs["AWS_REGION"] = cicdRequest.CommonWorkflowRequest.AwsRegion
-		envs["LAST_FETCHED_TIME"] = time.Now().String()
+		envs["LAST_FETCHED_TIME"] = cicdRequest.CommonWorkflowRequest.CiArtifactLastFetch.String()
 
 		// setting extraEnvironmentVariables
 		for k, v := range cicdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables {
