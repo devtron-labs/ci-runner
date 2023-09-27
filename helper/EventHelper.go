@@ -49,6 +49,8 @@ const (
 	BUILDPACK_BUILD_TYPE          CiBuildType = "buildpack-build"
 )
 
+const JOB_CI string = "JOB_CI"
+
 type CiBuildConfigBean struct {
 	CiBuildType       CiBuildType        `json:"ciBuildType"`
 	DockerBuildConfig *DockerBuildConfig `json:"dockerBuildConfig,omitempty"`
