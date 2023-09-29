@@ -159,7 +159,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		}
 		resultsFromPlugin, err = extractOutResultsIfExists()
 		if err != nil {
-			log.Println("error in getting results", err.Error())
+			log.Println("error in getting results", "err", err.Error())
 		}
 	}
 	metrics.PreCiDuration = preCiDuration
