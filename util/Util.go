@@ -117,6 +117,7 @@ func Generate(size int) string {
 	return str
 }
 
+// CheckFileExists returns boolean value of file existence else error (ignoring file does not exist error)
 func CheckFileExists(filename string) (bool, error) {
 	if _, err := os.Stat(filename); err == nil {
 		// exists
