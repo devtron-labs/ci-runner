@@ -157,6 +157,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 			return sendFailureNotification(string(PreCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", metrics, artifactUploaded, err)
 
 		}
+		// considering pull images from Container repo Plugin in Pre ci steps only.
 		resultsFromPlugin, err = extractOutResultsIfExists()
 		if err != nil {
 			log.Println("error in getting results", "err", err.Error())
@@ -291,6 +292,7 @@ func getPostCiStepToRunOnCiFail(postCiSteps []*helper.StepObject) []*helper.Step
 	return postCiStepsToTriggerOnCiFail
 }
 
+// extractOutResultsIfExists will unmarshall the results from file(json) (if file exist) into ImageDetailsFromCR
 func extractOutResultsIfExists() (*helper.ImageDetailsFromCR, error) {
 	exists, err := util.CheckFileExists(util.ResultsDirInCIRunnerPath)
 	if err != nil || !exists {
