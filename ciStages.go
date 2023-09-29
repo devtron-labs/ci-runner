@@ -158,6 +158,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 
 		}
 		// considering pull images from Container repo Plugin in Pre ci steps only.
+		// making it non-blocking if results are not available (in case of err)
 		resultsFromPlugin, err = extractOutResultsIfExists()
 		if err != nil {
 			log.Println("error in getting results", "err", err.Error())
