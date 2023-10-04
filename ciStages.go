@@ -188,21 +188,6 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		}
 		log.Println(util.DEVTRON, " /Build")
 	}
-	var postCiDuration float64
-	start = time.Now()
-	metrics.PostCiStartTime = start
-	if len(ciCdRequest.CommonWorkflowRequest.PostCiSteps) > 0 {
-		util.LogStage("running POST-CI steps")
-		// sending build success as true always as post-ci triggers only if ci gets success
-		scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "true"
-		// run post artifact processing
-		_, step, err = RunCiCdSteps(STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest.PostCiSteps, refStageMap, scriptEnvs, preeCiStageOutVariable)
-		postCiDuration = time.Since(start).Seconds()
-		if err != nil {
-			return sendFailureNotification(string(PostCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", metrics, artifactUploaded, err)
-		}
-	}
-	metrics.PostCiDuration = postCiDuration
 	var digest string
 
 	if !buildSkipEnabled {
@@ -234,6 +219,54 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	if err != nil {
 		return artifactUploaded, err
 	}
+	var postCiDuration float64
+	start = time.Now()
+	metrics.PostCiStartTime = start
+	if len(ciCdRequest.CommonWorkflowRequest.PostCiSteps) > 0 {
+		util.LogStage("running POST-CI steps")
+		// sending build success as true always as post-ci triggers only if ci gets success
+		scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "true"
+		scriptEnvs["DEST"] = dest
+		scriptEnvs["DIGEST"] = digest
+		// run post artifact processing
+		_, step, err = RunCiCdSteps(STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest.PostCiSteps, refStageMap, scriptEnvs, preeCiStageOutVariable)
+		postCiDuration = time.Since(start).Seconds()
+		if err != nil {
+			return sendFailureNotification(string(PostCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", metrics, artifactUploaded, err)
+		}
+	}
+	metrics.PostCiDuration = postCiDuration
+	//var digest string
+	//
+	//if !buildSkipEnabled {
+	//	isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && ciBuildConfigBean.DockerBuildConfig.CheckForBuildX()
+	//	if isBuildX {
+	//		digest, err = helper.ExtractDigestForBuildx(dest)
+	//	} else {
+	//		util.LogStage("docker push")
+	//		// push to dest
+	//		log.Println(util.DEVTRON, " docker-push")
+	//		imageRetryCountValue := ciCdRequest.CommonWorkflowRequest.ImageRetryCount
+	//		imageRetryIntervalValue := ciCdRequest.CommonWorkflowRequest.ImageRetryInterval
+	//		for i := 0; i < imageRetryCountValue+1; i++ {
+	//			if i != 0 {
+	//				time.Sleep(time.Duration(imageRetryIntervalValue) * time.Second)
+	//			}
+	//			err = helper.PushArtifact(dest)
+	//			if err == nil {
+	//				break
+	//			}
+	//		}
+	//		if err != nil {
+	//			return sendFailureNotification(string(Push), ciCdRequest.CommonWorkflowRequest, digest, dest, metrics, artifactUploaded, err)
+	//		}
+	//		digest, err = helper.ExtractDigestUsingPull(dest)
+	//	}
+	//}
+	//
+	//if err != nil {
+	//	return artifactUploaded, err
+	//}
 	log.Println(util.DEVTRON, " /docker-push")
 
 	log.Println(util.DEVTRON, " artifact-upload")
@@ -249,19 +282,19 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	log.Println(util.DEVTRON, " /artifact-upload")
 
 	// scan only if ci scan enabled
-	if ciCdRequest.CommonWorkflowRequest.ScanEnabled {
-		util.LogStage("IMAGE SCAN")
-		log.Println(util.DEVTRON, " /image-scanner")
-		scanEvent := &helper.ScanEvent{Image: dest, ImageDigest: digest, PipelineId: ciCdRequest.CommonWorkflowRequest.PipelineId, UserId: ciCdRequest.CommonWorkflowRequest.TriggeredBy}
-		scanEvent.DockerRegistryId = ciCdRequest.CommonWorkflowRequest.DockerRegistryId
-		err = helper.SendEventToClairUtility(scanEvent)
-		if err != nil {
-			log.Println(err)
-			return sendFailureNotification(string(Scan), ciCdRequest.CommonWorkflowRequest, digest, dest, metrics, artifactUploaded, err)
-
-		}
-		log.Println(util.DEVTRON, " /image-scanner")
-	}
+	//if ciCdRequest.CommonWorkflowRequest.ScanEnabled {
+	//	util.LogStage("IMAGE SCAN")
+	//	log.Println(util.DEVTRON, " /image-scanner")
+	//	scanEvent := &helper.ScanEvent{Image: dest, ImageDigest: digest, PipelineId: ciCdRequest.CommonWorkflowRequest.PipelineId, UserId: ciCdRequest.CommonWorkflowRequest.TriggeredBy}
+	//	scanEvent.DockerRegistryId = ciCdRequest.CommonWorkflowRequest.DockerRegistryId
+	//	err = helper.SendEventToClairUtility(scanEvent)
+	//	if err != nil {
+	//		log.Println(err)
+	//		return sendFailureNotification(string(Scan), ciCdRequest.CommonWorkflowRequest, digest, dest, metrics, artifactUploaded, err)
+	//
+	//	}
+	//	log.Println(util.DEVTRON, " /image-scanner")
+	//}
 
 	log.Println(util.DEVTRON, " event")
 	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
