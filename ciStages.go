@@ -236,37 +236,6 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		}
 	}
 	metrics.PostCiDuration = postCiDuration
-	//var digest string
-	//
-	//if !buildSkipEnabled {
-	//	isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && ciBuildConfigBean.DockerBuildConfig.CheckForBuildX()
-	//	if isBuildX {
-	//		digest, err = helper.ExtractDigestForBuildx(dest)
-	//	} else {
-	//		util.LogStage("docker push")
-	//		// push to dest
-	//		log.Println(util.DEVTRON, " docker-push")
-	//		imageRetryCountValue := ciCdRequest.CommonWorkflowRequest.ImageRetryCount
-	//		imageRetryIntervalValue := ciCdRequest.CommonWorkflowRequest.ImageRetryInterval
-	//		for i := 0; i < imageRetryCountValue+1; i++ {
-	//			if i != 0 {
-	//				time.Sleep(time.Duration(imageRetryIntervalValue) * time.Second)
-	//			}
-	//			err = helper.PushArtifact(dest)
-	//			if err == nil {
-	//				break
-	//			}
-	//		}
-	//		if err != nil {
-	//			return sendFailureNotification(string(Push), ciCdRequest.CommonWorkflowRequest, digest, dest, metrics, artifactUploaded, err)
-	//		}
-	//		digest, err = helper.ExtractDigestUsingPull(dest)
-	//	}
-	//}
-	//
-	//if err != nil {
-	//	return artifactUploaded, err
-	//}
 	log.Println(util.DEVTRON, " /docker-push")
 
 	log.Println(util.DEVTRON, " artifact-upload")
