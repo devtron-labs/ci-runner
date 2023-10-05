@@ -500,7 +500,6 @@ func SendEventToClairUtility(event *ScanEvent) error {
 
 	client := resty.New()
 	client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
-	//curl -X PUT http://image-scanner-service.devtroncd:80/scanner/image -H "Content-Type: application/json" -d '{image:'', imageDigest:'', pipelineId:'', userId: '', dockerRegistryId: ''}'
 
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").

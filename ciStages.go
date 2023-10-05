@@ -244,9 +244,10 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 
 	if err != nil {
 		return artifactUploaded, nil
-	} else {
-		artifactUploaded = true
 	}
+	//else {
+	//	artifactUploaded = true
+	//}
 	log.Println(util.DEVTRON, " /artifact-upload")
 
 	// scan only if ci scan enabled
