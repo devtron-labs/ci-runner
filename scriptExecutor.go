@@ -61,6 +61,11 @@ export {{ $key }}='{{ $value }}' ;
 
 func RunScripts(workDirectory string, scriptFileName string, script string, envInputVars map[string]string, outputVars []string) (map[string]string, error) {
 	log.Println("running script commands")
+	log.Println("work directory = ", workDirectory)
+	log.Println("script file name = ", scriptFileName)
+	log.Println("script = ", script)
+	log.Println("env input vars = ", envInputVars)
+	log.Println("output vars = ", outputVars)
 	envOutFileName := filepath.Join(workDirectory, fmt.Sprintf("%s_out.env", scriptFileName))
 
 	//------------
