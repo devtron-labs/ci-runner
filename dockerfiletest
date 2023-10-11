@@ -14,8 +14,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -buildvcs=false -a -installsuffix cgo -o /
 FROM docker:20.10.24-dind
 # All these steps will be cached
 #RUN apk add --no-cache ca-certificates
-RUN apk update && apk add --no-cache --virtual .build-deps && apk add bash make curl git zip jq iproute2 fuse-overlayfs
-
+RUN apk update && apk add --no-cache --virtual .build-deps && apk add bash && apk add make && apk add curl && apk add git && apk add zip && apk add jq
 RUN ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
 RUN apk -Uuv add groff less python3 py3-pip
 RUN pip3 install awscli
@@ -23,8 +22,22 @@ RUN apk --purge -v del py-pip
 RUN rm /var/cache/apk/*
 COPY --from=docker/compose:latest /usr/local/bin/docker-compose /usr/bin/docker-compose
 
+COPY ./buildpack.json /buildpack.json
+COPY ./git-ask-pass.sh /git-ask-pass.sh
+RUN chmod +x /git-ask-pass.sh
+
+RUN (curl -sSL "https://github.com/buildpacks/pack/releases/download/v0.27.0/pack-v0.27.0-linux.tgz" | tar -C /usr/local/bin/ --no-same-owner -xzv pack)
+
+COPY --from=build-env /go/bin/cirunner .
+COPY ./ssh-config /root/.ssh/config
+RUN chmod 644 /root/.ssh/config
+
+RUN apk add --no-cache iproute2 fuse-overlayfs
+
+# "/run/user/UID" will be used by default as the value of XDG_RUNTIME_DIR
 RUN mkdir /run/user && chmod 1777 /run/user
 
+# create a default user preconfigured for running rootless dockerd
 RUN set -eux; \
 	adduser -h /home/rootless -g 'Rootless' -D -u 1000 rootless; \
 	echo 'rootless:100000:65536' >> /etc/subuid; \
@@ -65,15 +78,6 @@ RUN set -eux; \
 
 VOLUME /home/rootless/.local/share/docker
 
-COPY ./buildpack.json /buildpack.json
-COPY ./git-ask-pass.sh /git-ask-pass.sh
-RUN chmod +x /git-ask-pass.sh
-
-RUN (curl -sSL "https://github.com/buildpacks/pack/releases/download/v0.27.0/pack-v0.27.0-linux.tgz" | tar -C /usr/local/bin/ --no-same-owner -xzv pack)
-
-COPY --from=build-env /go/bin/cirunner .
-COPY ./ssh-config /root/.ssh/config
-RUN chmod 644 /root/.ssh/config
 RUN mkdir /devtroncd
 
 RUN chown rootless:rootless ./cirunner
@@ -82,10 +86,11 @@ RUN chown rootless:rootless /git-ask-pass.sh
 RUN chown rootless:rootless /buildpack.json
 RUN chown rootless:rootless /devtroncd 
 
-#ENV DOCKER_HOST=unix:///run/user/1000/docker.sock
+RUN mkdir -p /var/run/user/
+RUN chown -R rootless:rootless /var/run/user/
 
 USER rootless
 
-ENTRYPOINT [ "sh" ]
+ENV DOCKER_HOST=unix:///run/user/1000/docker.sock
 # passing PARENT_MODE as argument to cirunner as default behavior
-#ENTRYPOINT ["./cirunner", "PARENT_MODE"]
+#ENTRYPOINT ["./cirunner", "PARENT_MODE"] 
