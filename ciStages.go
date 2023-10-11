@@ -156,20 +156,10 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		}
 	}
 	var dest string
-	if !buildSkipEnabled {
-
-		dest, err = runBuildArtifact(ciCdRequest, &metrics, refStageMap, scriptEnvs, artifactUploaded, preCiStageOutVariable)
-		if err != nil {
-			return artifactUploaded, err
-		}
-	}
-
 	var digest string
-
 	if !buildSkipEnabled {
-		digest, err = extractDigest(ciCdRequest, dest, &metrics, artifactUploaded)
+		dest, digest, err = getDestAndDigest(ciCdRequest, metrics, scriptEnvs, refStageMap, preCiStageOutVariable, artifactUploaded)
 		if err != nil {
-			log.Println("Error in extracting digest", "err", err)
 			return artifactUploaded, err
 		}
 	}
@@ -325,6 +315,19 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 	return nil
 }
 
+func getDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics helper.CIMetrics, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, artifactUploaded bool) (string, string, error) {
+	dest, err := runBuildArtifact(ciCdRequest, &metrics, refStageMap, scriptEnvs, artifactUploaded, preCiStageOutVariable)
+	if err != nil {
+		return "", "", err
+	}
+	digest, err := extractDigest(ciCdRequest, dest, &metrics, artifactUploaded)
+	if err != nil {
+		log.Println("Error in extracting digest", "err", err)
+		return "", "", err
+	}
+	return dest, digest, nil
+}
+
 func getPostCiStepToRunOnCiFail(postCiSteps []*helper.StepObject) []*helper.StepObject {
 	var postCiStepsToTriggerOnCiFail []*helper.StepObject
 	if len(postCiSteps) > 0 {
@@ -393,6 +396,9 @@ func pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest string, digest stri
 		err = helper.PushArtifact(dest)
 		if err == nil {
 			break
+		}
+		if err != nil {
+			log.Println("Error in pushing artifact", "err", err)
 		}
 	}
 	if err != nil {
