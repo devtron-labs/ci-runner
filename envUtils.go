@@ -40,6 +40,12 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["GIT_MATERIAL_REQUEST"] = CiMaterialRequestArr // GIT_MATERIAL_REQUEST will be of form "<repoName>/<checkoutPath>/<BranchName>/<CommitHash>"
 		fmt.Println(envs["GIT_MATERIAL_REQUEST"])
 
+		// adding ACCESS_KEY,SECRET_KEY, AWS_REGION, LAST_FETCHED_TIME for polling-plugin
+		envs["ACCESS_KEY"] = cicdRequest.CommonWorkflowRequest.AccessKey
+		envs["SECRET_KEY"] = cicdRequest.CommonWorkflowRequest.SecretKey
+		envs["AWS_REGION"] = cicdRequest.CommonWorkflowRequest.AwsRegion
+		envs["LAST_FETCHED_TIME"] = cicdRequest.CommonWorkflowRequest.CiArtifactLastFetch.String()
+
 		// setting extraEnvironmentVariables
 		for k, v := range cicdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables {
 			envs[k] = v

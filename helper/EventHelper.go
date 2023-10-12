@@ -27,6 +27,7 @@ import (
 
 	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 
+	"github.com/aws/aws-sdk-go-v2/service/ecr/types"
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/ci-runner/pubsub"
 	"github.com/devtron-labs/ci-runner/util"
@@ -48,10 +49,13 @@ const (
 	BUILDPACK_BUILD_TYPE          CiBuildType = "buildpack-build"
 )
 
+const CI_JOB string = "CI_JOB"
+
 type CiBuildConfigBean struct {
 	CiBuildType       CiBuildType        `json:"ciBuildType"`
 	DockerBuildConfig *DockerBuildConfig `json:"dockerBuildConfig,omitempty"`
 	BuildPackConfig   *BuildPackConfig   `json:"buildPackConfig"`
+	PipelineType      string             `json:"pipelineType"`
 }
 
 type DockerBuildConfig struct {
@@ -163,6 +167,7 @@ type CommonWorkflowRequest struct {
 	PrePostDeploySteps       []*StepObject `json:"prePostDeploySteps"`
 	TaskYaml                 *TaskYaml     `json:"-"`
 	IsDryRun                 bool          `json:"isDryRun"`
+	CiArtifactLastFetch      time.Time     `json:"ciArtifactLastFetch"`
 }
 
 type CiRequest struct {
@@ -295,20 +300,26 @@ type CiArtifactDTO struct {
 	WorkflowId   *int   `json:"workflowId"`
 }
 
+type ImageDetailsFromCR struct {
+	ImageDetails []types.ImageDetail `json:"imageDetails"`
+	Region       string              `json:"region"`
+}
+
 type CiCompleteEvent struct {
-	CiProjectDetails   []CiProjectDetails `json:"ciProjectDetails"`
-	DockerImage        string             `json:"dockerImage"`
-	Digest             string             `json:"digest"`
-	PipelineId         int                `json:"pipelineId"`
-	DataSource         string             `json:"dataSource"`
-	PipelineName       string             `json:"pipelineName"`
-	WorkflowId         int                `json:"workflowId"`
-	TriggeredBy        int                `json:"triggeredBy"`
-	MaterialType       string             `json:"materialType"`
-	Metrics            CIMetrics          `json:"metrics"`
-	AppName            string             `json:"appName"`
-	IsArtifactUploaded bool               `json:"isArtifactUploaded"`
-	FailureReason      string             `json:"failureReason"`
+	CiProjectDetails   []CiProjectDetails  `json:"ciProjectDetails"`
+	DockerImage        string              `json:"dockerImage"`
+	Digest             string              `json:"digest"`
+	PipelineId         int                 `json:"pipelineId"`
+	DataSource         string              `json:"dataSource"`
+	PipelineName       string              `json:"pipelineName"`
+	WorkflowId         int                 `json:"workflowId"`
+	TriggeredBy        int                 `json:"triggeredBy"`
+	MaterialType       string              `json:"materialType"`
+	Metrics            CIMetrics           `json:"metrics"`
+	AppName            string              `json:"appName"`
+	IsArtifactUploaded bool                `json:"isArtifactUploaded"`
+	FailureReason      string              `json:"failureReason"`
+	ImageDetailsFromCR *ImageDetailsFromCR `json:"imageDetailsFromCR"`
 }
 
 type CdStageCompleteEvent struct {
@@ -379,7 +390,7 @@ func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
 	return nil
 }
 
-func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failureReason string) error {
+func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failureReason string, imageDetailsFromCR *ImageDetailsFromCR) error {
 
 	event := CiCompleteEvent{
 		CiProjectDetails:   ciRequest.CiProjectDetails,
@@ -395,6 +406,7 @@ func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, m
 		AppName:            ciRequest.AppName,
 		IsArtifactUploaded: artifactUploaded,
 		FailureReason:      failureReason,
+		ImageDetailsFromCR: imageDetailsFromCR,
 	}
 
 	err := SendCiCompleteEvent(ciRequest, event)

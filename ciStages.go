@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -97,7 +99,12 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	}
 	// git handling
 	log.Println(util.DEVTRON, " git")
-	err = helper.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
+	ciBuildConfigBean := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
+	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
+	skipCheckout := ciBuildConfigBean != nil && ciBuildConfigBean.PipelineType == helper.CI_JOB
+	if !skipCheckout {
+		err = helper.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
+	}
 	if err != nil {
 		log.Println(util.DEVTRON, "clone err: ", err)
 		return artifactUploaded, err
@@ -120,7 +127,6 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 		return artifactUploaded, err
 	}
 	ciCdRequest.CommonWorkflowRequest.TaskYaml = taskYaml
-	ciBuildConfigBean := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
 	if ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.MANAGED_DOCKERFILE_BUILD_TYPE {
 		err = makeDockerfile(ciBuildConfigBean.DockerBuildConfig, ciCdRequest.CommonWorkflowRequest.CheckoutPath)
 		if err != nil {
@@ -138,7 +144,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	var preCiDuration float64
 	start = time.Now()
 	metrics.PreCiStartTime = start
-	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
+	var resultsFromPlugin *helper.ImageDetailsFromCR
 	if len(ciCdRequest.CommonWorkflowRequest.PreCiSteps) > 0 {
 		if !buildSkipEnabled {
 			util.LogStage("running PRE-CI steps")
@@ -150,6 +156,12 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 			log.Println(err)
 			return sendFailureNotification(string(PreCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", metrics, artifactUploaded, err)
 
+		}
+		// considering pull images from Container repo Plugin in Pre ci steps only.
+		// making it non-blocking if results are not available (in case of err)
+		resultsFromPlugin, err = extractOutResultsIfExists()
+		if err != nil {
+			log.Println("error in getting results", "err", err.Error())
 		}
 	}
 	metrics.PreCiDuration = preCiDuration
@@ -254,7 +266,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	log.Println(util.DEVTRON, " event")
 	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
 
-	err = helper.SendEvents(ciCdRequest.CommonWorkflowRequest, digest, dest, metrics, artifactUploaded, "")
+	err = helper.SendEvents(ciCdRequest.CommonWorkflowRequest, digest, dest, metrics, artifactUploaded, "", resultsFromPlugin)
 	if err != nil {
 		log.Println(err)
 		return artifactUploaded, err
@@ -281,6 +293,28 @@ func getPostCiStepToRunOnCiFail(postCiSteps []*helper.StepObject) []*helper.Step
 	return postCiStepsToTriggerOnCiFail
 }
 
+// extractOutResultsIfExists will unmarshall the results from file(json) (if file exist) into ImageDetailsFromCR
+func extractOutResultsIfExists() (*helper.ImageDetailsFromCR, error) {
+	exists, err := util.CheckFileExists(util.ResultsDirInCIRunnerPath)
+	if err != nil || !exists {
+		log.Println("err", err)
+		return nil, err
+	}
+	file, err := ioutil.ReadFile(util.ResultsDirInCIRunnerPath)
+	if err != nil {
+		log.Println("error in reading file", "err", err.Error())
+		return nil, err
+	}
+	imageDetailsFromCr := helper.ImageDetailsFromCR{}
+	err = json.Unmarshal(file, &imageDetailsFromCr)
+	if err != nil {
+		log.Println("error in unmarshalling imageDetailsFromCr results", "err", err.Error())
+		return nil, err
+	}
+	return &imageDetailsFromCr, nil
+
+}
+
 func makeDockerfile(config *helper.DockerBuildConfig, checkoutPath string) error {
 	dockerfileContent := config.DockerfileContent
 	dockerfilePath := filepath.Join(util.WORKINGDIR, checkoutPath, "./Dockerfile")
@@ -296,7 +330,7 @@ func makeDockerfile(config *helper.DockerBuildConfig, checkoutPath string) error
 func sendFailureNotification(failureMessage string, ciRequest *helper.CommonWorkflowRequest,
 	digest string, image string, ciMetrics helper.CIMetrics,
 	artifactUploaded bool, err error) (bool, error) {
-	e := helper.SendEvents(ciRequest, digest, image, ciMetrics, artifactUploaded, failureMessage)
+	e := helper.SendEvents(ciRequest, digest, image, ciMetrics, artifactUploaded, failureMessage, nil)
 	if e != nil {
 		log.Println(e)
 		return artifactUploaded, e
