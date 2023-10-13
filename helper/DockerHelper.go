@@ -170,7 +170,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 	}
 	return nil
 }
-func BuildArtifact(ciRequest *CiRequest) (string, error) {
+func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 	err := DockerLogin(&DockerCredentials{
 		DockerUsername:     ciRequest.DockerUsername,
 		DockerPassword:     ciRequest.DockerPassword,
@@ -517,7 +517,7 @@ func checkAndCreateDirectory(localCachePath string) error {
 	return nil
 }
 
-func BuildDockerImagePath(ciRequest *CiRequest) (string, error) {
+func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
 	dest := ""
 	if DOCKER_REGISTRY_TYPE_DOCKERHUB == ciRequest.DockerRegistryType {
 		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
@@ -797,7 +797,7 @@ func DockerdUpCheck() error {
 	return err
 }
 
-func ValidBuildxK8sDriverOptions(ciRequest *CiRequest) (bool, []map[string]string) {
+func ValidBuildxK8sDriverOptions(ciRequest *CommonWorkflowRequest) (bool, []map[string]string) {
 	valid := ciRequest != nil && ciRequest.CiBuildConfig != nil && ciRequest.CiBuildConfig.DockerBuildConfig != nil
 	if valid {
 		return ciRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildXK8sDriver()

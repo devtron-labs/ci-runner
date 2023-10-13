@@ -45,6 +45,11 @@ const (
 	NewLineChar                 = "\n"
 )
 
+const (
+	ResultsDirInCIRunnerPath = "/polling-plugin/results.json"
+	PathInPollingPlugin      = "/tmp/results.json"
+)
+
 var (
 	TmpArtifactLocation = "./job-artifact"
 	TmpLogLocation      = "/main.log"

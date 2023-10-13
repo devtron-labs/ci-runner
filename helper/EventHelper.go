@@ -27,6 +27,7 @@ import (
 
 	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 
+	"github.com/aws/aws-sdk-go-v2/service/ecr/types"
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/ci-runner/pubsub"
 	"github.com/devtron-labs/ci-runner/util"
@@ -48,10 +49,13 @@ const (
 	BUILDPACK_BUILD_TYPE          CiBuildType = "buildpack-build"
 )
 
+const CI_JOB string = "CI_JOB"
+
 type CiBuildConfigBean struct {
 	CiBuildType       CiBuildType        `json:"ciBuildType"`
 	DockerBuildConfig *DockerBuildConfig `json:"dockerBuildConfig,omitempty"`
 	BuildPackConfig   *BuildPackConfig   `json:"buildPackConfig"`
+	PipelineType      string             `json:"pipelineType"`
 }
 
 type DockerBuildConfig struct {
@@ -81,6 +85,89 @@ type BuildpackVersionConfig struct {
 	FileName      string `json:"fileName"`
 	FileOverride  bool   `json:"fileOverride"`
 	EntryRegex    string `json:"entryRegex"`
+}
+
+type CommonWorkflowRequest struct {
+	WorkflowNamePrefix         string                            `json:"workflowNamePrefix"`
+	PipelineName               string                            `json:"pipelineName"`
+	PipelineId                 int                               `json:"pipelineId"`
+	DockerImageTag             string                            `json:"dockerImageTag"`
+	DockerRegistryId           string                            `json:"dockerRegistryId"`
+	DockerRegistryType         string                            `json:"dockerRegistryType"`
+	DockerRegistryURL          string                            `json:"dockerRegistryURL"`
+	DockerConnection           string                            `json:"dockerConnection"`
+	DockerCert                 string                            `json:"dockerCert"`
+	DockerRepository           string                            `json:"dockerRepository"`
+	CheckoutPath               string                            `json:"checkoutPath"`
+	DockerUsername             string                            `json:"dockerUsername"`
+	DockerPassword             string                            `json:"dockerPassword"`
+	AwsRegion                  string                            `json:"awsRegion"`
+	AccessKey                  string                            `json:"accessKey"`
+	SecretKey                  string                            `json:"secretKey"`
+	CiCacheLocation            string                            `json:"ciCacheLocation"`
+	CiCacheRegion              string                            `json:"ciCacheRegion"`
+	CiCacheFileName            string                            `json:"ciCacheFileName"`
+	CiProjectDetails           []CiProjectDetails                `json:"ciProjectDetails"`
+	ActiveDeadlineSeconds      int64                             `json:"activeDeadlineSeconds"`
+	CiImage                    string                            `json:"ciImage"`
+	Namespace                  string                            `json:"namespace"`
+	WorkflowId                 int                               `json:"workflowId"`
+	TriggeredBy                int                               `json:"triggeredBy"`
+	CacheLimit                 int64                             `json:"cacheLimit"`
+	BeforeDockerBuildScripts   []*Task                           `json:"beforeDockerBuildScripts"`
+	AfterDockerBuildScripts    []*Task                           `json:"afterDockerBuildScripts"`
+	CiArtifactLocation         string                            `json:"ciArtifactLocation"`
+	CiArtifactBucket           string                            `json:"ciArtifactBucket"`
+	CiArtifactFileName         string                            `json:"ciArtifactFileName"`
+	CiArtifactRegion           string                            `json:"ciArtifactRegion"`
+	ScanEnabled                bool                              `json:"scanEnabled"`
+	CloudProvider              blob_storage.BlobStorageType      `json:"cloudProvider"`
+	BlobStorageConfigured      bool                              `json:"blobStorageConfigured"`
+	BlobStorageS3Config        *blob_storage.BlobStorageS3Config `json:"blobStorageS3Config"`
+	AzureBlobConfig            *blob_storage.AzureBlobConfig     `json:"azureBlobConfig"`
+	GcpBlobConfig              *blob_storage.GcpBlobConfig       `json:"gcpBlobConfig"`
+	BlobStorageLogsKey         string                            `json:"blobStorageLogsKey"`
+	InAppLoggingEnabled        bool                              `json:"inAppLoggingEnabled"`
+	DefaultAddressPoolBaseCidr string                            `json:"defaultAddressPoolBaseCidr"`
+	DefaultAddressPoolSize     int                               `json:"defaultAddressPoolSize"`
+	PreCiSteps                 []*StepObject                     `json:"preCiSteps"`
+	PostCiSteps                []*StepObject                     `json:"postCiSteps"`
+	RefPlugins                 []*RefPluginObject                `json:"refPlugins"`
+	AppName                    string                            `json:"appName"`
+	TriggerByAuthor            string                            `json:"triggerByAuthor"`
+	CiBuildConfig              *CiBuildConfigBean                `json:"ciBuildConfig"`
+	CiBuildDockerMtuValue      int                               `json:"ciBuildDockerMtuValue"`
+	IgnoreDockerCachePush      bool                              `json:"ignoreDockerCachePush"`
+	IgnoreDockerCachePull      bool                              `json:"ignoreDockerCachePull"`
+	CacheInvalidate            bool                              `json:"cacheInvalidate"`
+	IsPvcMounted               bool                              `json:"IsPvcMounted"`
+	ExtraEnvironmentVariables  map[string]string                 `json:"extraEnvironmentVariables"`
+	EnableBuildContext         bool                              `json:"enableBuildContext"`
+	AppId                      int                               `json:"appId"`
+	EnvironmentId              int                               `json:"environmentId"`
+	OrchestratorHost           string                            `json:"orchestratorHost"`
+	OrchestratorToken          string                            `json:"orchestratorToken"`
+	IsExtRun                   bool                              `json:"isExtRun"`
+	ImageRetryCount            int                               `json:"imageRetryCount"`
+	ImageRetryInterval         int                               `json:"imageRetryInterval"`
+	// Data from CD Workflow service
+	WorkflowRunnerId         int           `json:"workflowRunnerId"`
+	CdPipelineId             int           `json:"cdPipelineId"`
+	StageYaml                string        `json:"stageYaml"`
+	ArtifactLocation         string        `json:"artifactLocation"`
+	CiArtifactDTO            CiArtifactDTO `json:"ciArtifactDTO"`
+	CdImage                  string        `json:"cdImage"`
+	StageType                string        `json:"stageType"`
+	CdCacheLocation          string        `json:"cdCacheLocation"`
+	CdCacheRegion            string        `json:"cdCacheRegion"`
+	WorkflowPrefixForLog     string        `json:"workflowPrefixForLog"`
+	DeploymentTriggeredBy    string        `json:"deploymentTriggeredBy,omitempty"`
+	DeploymentTriggerTime    time.Time     `json:"deploymentTriggerTime,omitempty"`
+	DeploymentReleaseCounter int           `json:"deploymentReleaseCounter,omitempty"`
+	PrePostDeploySteps       []*StepObject `json:"prePostDeploySteps"`
+	TaskYaml                 *TaskYaml     `json:"-"`
+	IsDryRun                 bool          `json:"isDryRun"`
+	CiArtifactLastFetch      time.Time     `json:"ciArtifactLastFetch"`
 }
 
 type CiRequest struct {
@@ -193,9 +280,8 @@ type CdRequest struct {
 }
 
 type CiCdTriggerEvent struct {
-	Type      string     `json:"type"`
-	CiRequest *CiRequest `json:"ciRequest"`
-	CdRequest *CdRequest `json:"cdRequest"`
+	Type                  string                 `json:"type"`
+	CommonWorkflowRequest *CommonWorkflowRequest `json:"commonWorkflowRequest"`
 }
 
 type ExtEnvRequest struct {
@@ -214,20 +300,26 @@ type CiArtifactDTO struct {
 	WorkflowId   *int   `json:"workflowId"`
 }
 
+type ImageDetailsFromCR struct {
+	ImageDetails []types.ImageDetail `json:"imageDetails"`
+	Region       string              `json:"region"`
+}
+
 type CiCompleteEvent struct {
-	CiProjectDetails   []CiProjectDetails `json:"ciProjectDetails"`
-	DockerImage        string             `json:"dockerImage"`
-	Digest             string             `json:"digest"`
-	PipelineId         int                `json:"pipelineId"`
-	DataSource         string             `json:"dataSource"`
-	PipelineName       string             `json:"pipelineName"`
-	WorkflowId         int                `json:"workflowId"`
-	TriggeredBy        int                `json:"triggeredBy"`
-	MaterialType       string             `json:"materialType"`
-	Metrics            CIMetrics          `json:"metrics"`
-	AppName            string             `json:"appName"`
-	IsArtifactUploaded bool               `json:"isArtifactUploaded"`
-	FailureReason      string             `json:"failureReason"`
+	CiProjectDetails   []CiProjectDetails  `json:"ciProjectDetails"`
+	DockerImage        string              `json:"dockerImage"`
+	Digest             string              `json:"digest"`
+	PipelineId         int                 `json:"pipelineId"`
+	DataSource         string              `json:"dataSource"`
+	PipelineName       string              `json:"pipelineName"`
+	WorkflowId         int                 `json:"workflowId"`
+	TriggeredBy        int                 `json:"triggeredBy"`
+	MaterialType       string              `json:"materialType"`
+	Metrics            CIMetrics           `json:"metrics"`
+	AppName            string              `json:"appName"`
+	IsArtifactUploaded bool                `json:"isArtifactUploaded"`
+	FailureReason      string              `json:"failureReason"`
+	ImageDetailsFromCR *ImageDetailsFromCR `json:"imageDetailsFromCR"`
 }
 
 type CdStageCompleteEvent struct {
@@ -235,7 +327,7 @@ type CdStageCompleteEvent struct {
 	WorkflowId       int                `json:"workflowId"`
 	WorkflowRunnerId int                `json:"workflowRunnerId"`
 	CdPipelineId     int                `json:"cdPipelineId"`
-	TriggeredBy      int32              `json:"triggeredBy"`
+	TriggeredBy      int                `json:"triggeredBy"`
 	StageYaml        string             `json:"stageYaml"`
 	ArtifactLocation string             `json:"artifactLocation"`
 	TaskYaml         *TaskYaml          `json:"-"`
@@ -280,7 +372,7 @@ type CIMetrics struct {
 	TotalStartTime     time.Time `json:"totalStartTime"`
 }
 
-func SendCDEvent(cdRequest *CdRequest) error {
+func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
 
 	event := CdStageCompleteEvent{
 		CiProjectDetails: cdRequest.CiProjectDetails,
@@ -298,7 +390,7 @@ func SendCDEvent(cdRequest *CdRequest) error {
 	return nil
 }
 
-func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failureReason string) error {
+func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failureReason string, imageDetailsFromCR *ImageDetailsFromCR) error {
 
 	event := CiCompleteEvent{
 		CiProjectDetails:   ciRequest.CiProjectDetails,
@@ -314,6 +406,7 @@ func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMet
 		AppName:            ciRequest.AppName,
 		IsArtifactUploaded: artifactUploaded,
 		FailureReason:      failureReason,
+		ImageDetailsFromCR: imageDetailsFromCR,
 	}
 
 	err := SendCiCompleteEvent(ciRequest, event)
@@ -325,7 +418,7 @@ func SendEvents(ciRequest *CiRequest, digest string, image string, metrics CIMet
 	return nil
 }
 
-func SendCiCompleteEvent(ciRequest *CiRequest, event CiCompleteEvent) error {
+func SendCiCompleteEvent(ciRequest *CommonWorkflowRequest, event CiCompleteEvent) error {
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
@@ -341,7 +434,7 @@ func SendCiCompleteEvent(ciRequest *CiRequest, event CiCompleteEvent) error {
 	return err
 }
 
-func SendCdCompleteEvent(cdRequest *CdRequest, event CdStageCompleteEvent) error {
+func SendCdCompleteEvent(cdRequest *CommonWorkflowRequest, event CdStageCompleteEvent) error {
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)

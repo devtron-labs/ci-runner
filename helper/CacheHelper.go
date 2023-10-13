@@ -26,7 +26,7 @@ import (
 	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 )
 
-func GetCache(ciRequest *CiRequest) error {
+func GetCache(ciRequest *CommonWorkflowRequest) error {
 	if !ciRequest.BlobStorageConfigured {
 		log.Println("ignoring cache as storage module not configured ... ") //TODO not needed
 		return nil
@@ -62,7 +62,7 @@ func GetCache(ciRequest *CiRequest) error {
 	return nil
 }
 
-func SyncCache(ciRequest *CiRequest) error {
+func SyncCache(ciRequest *CommonWorkflowRequest) error {
 	if !ciRequest.BlobStorageConfigured {
 		log.Println("ignoring cache as storage module not configured... ")
 		return nil
