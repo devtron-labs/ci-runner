@@ -256,7 +256,7 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 			}
 			useBuildxK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver()
 			if useBuildxK8sDriver {
-				err = createBuildxBuilderWithK8sDriver(eligibleK8sDriverNodes)
+				err = createBuildxBuilderWithK8sDriver(eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
 				if err != nil {
 					log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 					return "", err
@@ -628,14 +628,14 @@ func createBuildxBuilderForMultiArchBuild() error {
 	return nil
 }
 
-func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string) error {
+func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
 
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
 	defaultNodeOpts := builderNodes[0]
 
-	buildxCreate := getBuildxK8sDriverCmd(defaultNodeOpts)
+	buildxCreate := getBuildxK8sDriverCmd(defaultNodeOpts, ciPipelineId, ciWorkflowId)
 	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--use")
 
 	err, errBuf := runCmd(buildxCreate)
@@ -647,7 +647,7 @@ func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string) error {
 	//appending other nodes to the builder,except default node ,since we already added it
 	for i := 1; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
-		appendNode := getBuildxK8sDriverCmd(nodeOpts)
+		appendNode := getBuildxK8sDriverCmd(nodeOpts, ciPipelineId, ciWorkflowId)
 		appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
 
 		err, errBuf = runCmd(appendNode)
@@ -706,11 +706,11 @@ func runCmd(cmd string) (error, *bytes.Buffer) {
 	return err, errBuf
 }
 
-func getBuildxK8sDriverCmd(driverOpts map[string]string) string {
+func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflowId int) string {
 	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
-		nodeName = BUILDX_NODE_NAME + util.Generate(5)
+		nodeName = BUILDX_NODE_NAME + fmt.Sprintf("%v-%v", ciPipelineId, ciWorkflowId)
 	}
 	buildxCreate = fmt.Sprintf(buildxCreate, BUILDX_K8S_DRIVER_NAME, nodeName)
 	platforms := driverOpts["platform"]
