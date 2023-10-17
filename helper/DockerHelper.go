@@ -710,7 +710,7 @@ func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflo
 	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
-		nodeName = BUILDX_NODE_NAME + fmt.Sprintf("%v-%v", ciPipelineId, ciWorkflowId)
+		nodeName = BUILDX_NODE_NAME + fmt.Sprintf("%v-%v", ciPipelineId, ciWorkflowId) + util.Generate(3)
 	}
 	buildxCreate = fmt.Sprintf(buildxCreate, BUILDX_K8S_DRIVER_NAME, nodeName)
 	platforms := driverOpts["platform"]
