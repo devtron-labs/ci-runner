@@ -42,10 +42,6 @@ func HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 
 	if artifactUploadErr != nil {
 		log.Println(util.DEVTRON, artifactUploadErr)
-		if ciCdRequest.CommonWorkflowRequest.IsExtRun {
-			log.Println(util.DEVTRON, "Ignoring artifactUploadErr")
-			return
-		}
 		*exitCode = util.DefaultErrorCode
 		return
 	}
@@ -55,10 +51,6 @@ func HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	err = helper.SyncCache(ciRequest)
 	if err != nil {
 		log.Println(err)
-		if ciCdRequest.CommonWorkflowRequest.IsExtRun {
-			log.Println(util.DEVTRON, "Ignoring cache upload")
-			return
-		}
 		*exitCode = util.DefaultErrorCode
 		return
 	}
