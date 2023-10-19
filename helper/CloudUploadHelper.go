@@ -34,6 +34,7 @@ func UploadFileToCloud(cloudHelperBaseConfig *util.CloudHelperBaseConfig, source
 				CiLogBucketVersioning:      blobStorageConfig.S3BucketVersioned,
 			}
 			cloudHelperBaseConfig.BlobStorageS3Config = blobStorageS3Config
+			log.Println(util.DEVTRON, "uploading aws s3 as blob storage for pushing in external cluster blob")
 		case util.BlobStorageGcp:
 			gcpBlobConfig := &blob_storage.GcpBlobConfig{
 				CredentialFileJsonData: blobStorageConfig.GcpBlobStorageCredentialJson,
@@ -42,6 +43,7 @@ func UploadFileToCloud(cloudHelperBaseConfig *util.CloudHelperBaseConfig, source
 				LogBucketName:          blobStorageConfig.GcpLogBucketName,
 			}
 			cloudHelperBaseConfig.GcpBlobConfig = gcpBlobConfig
+			log.Println(util.DEVTRON, "uploading gcp as blob storage for pushing in external cluster blob")
 		case util.BlobStorageAzure:
 			azureBlobConfig := &blob_storage.AzureBlobConfig{
 				Enabled:               true,
@@ -59,6 +61,7 @@ func UploadFileToCloud(cloudHelperBaseConfig *util.CloudHelperBaseConfig, source
 			//	CiLogRegion:     "",
 			//	AccessKey:       blobStorageConfig.AzureAccountName,
 			//}
+			log.Println(util.DEVTRON, "uploading aws azure as blob storage for pushing in external cluster blob")
 		default:
 			if cloudHelperBaseConfig.StorageModuleConfigured {
 				log.Println(util.DEVTRON, "blob storage not supported, blobStorage: ", blobStorageConfig.CloudProvider)
