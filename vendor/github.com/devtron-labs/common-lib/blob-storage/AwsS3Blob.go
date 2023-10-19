@@ -21,10 +21,6 @@ type AwsS3Blob struct{}
 func (impl *AwsS3Blob) UploadBlob(request *BlobStorageRequest, err error) error {
 	s3BaseConfig := request.AwsS3BaseConfig
 	var cmdArgs []string
-	var credentialsString string
-	if s3BaseConfig.AccessKey != "" && s3BaseConfig.Passkey != "" {
-		credentialsString = fmt.Sprintf("export AWS_ACCESS_KEY_ID=%s ; export AWS_SECRET_ACCESS_KEY=%s ; ", s3BaseConfig.AccessKey, s3BaseConfig.Passkey)
-	}
 	destinationFileString := fmt.Sprintf("s3://%s/%s", s3BaseConfig.BucketName, request.DestinationKey)
 	cmdArgs = append(cmdArgs, "s3", "cp", request.SourceKey, destinationFileString)
 	if s3BaseConfig.EndpointUrl != "" {
@@ -34,7 +30,13 @@ func (impl *AwsS3Blob) UploadBlob(request *BlobStorageRequest, err error) error 
 		cmdArgs = append(cmdArgs, "--region", s3BaseConfig.Region)
 	}
 
-	command := exec.Command(credentialsString+"aws", cmdArgs...)
+	command := exec.Command("aws", cmdArgs...)
+	if s3BaseConfig.AccessKey != "" && s3BaseConfig.Passkey != "" {
+		command.Env = append(os.Environ(),
+			fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", s3BaseConfig.AccessKey),
+			fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", s3BaseConfig.Passkey),
+		)
+	}
 	err = utils.RunCommand(command)
 	return err
 }
