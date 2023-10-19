@@ -10,6 +10,7 @@ import (
 // Uploads the source file to the destination key of configured blob storage /**
 func UploadFileToCloud(cloudHelperBaseConfig *util.CloudHelperBaseConfig, sourceFilePath string, destinationKey string) error {
 	if cloudHelperBaseConfig.UseExternalClusterBlob {
+		log.Println(util.DEVTRON, "uploading blob in external cluster blob")
 		blobStorageConfig, err := GetBlobStorageConfig()
 		if err != nil {
 			log.Println(util.DEVTRON, "error in getting blob storage config, err : ", err)
