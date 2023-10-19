@@ -18,7 +18,6 @@
 package helper
 
 import (
-	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 	"io"
 	"log"
 	"os"
@@ -33,9 +32,7 @@ import (
 //const BLOB_STORAGE_S3 = "S3"
 //const BLOB_STORAGE_GCP = "GCP"
 
-func UploadArtifact(storageModuleConfigured bool, artifactFiles map[string]string, blobStorageS3Config *blob_storage.BlobStorageS3Config,
-	artifactFileLocation string, cloudProvider blob_storage.BlobStorageType, azureBlobConfig *blob_storage.AzureBlobConfig,
-	gcpBlobConfig *blob_storage.GcpBlobConfig) error {
+func UploadArtifact(cloudHelperBaseConfig *util.CloudHelperBaseConfig, artifactFiles map[string]string, artifactFileLocation string) error {
 	if len(artifactFiles) == 0 {
 		log.Println(util.DEVTRON, "no artifact to upload")
 		return nil
@@ -57,14 +54,13 @@ func UploadArtifact(storageModuleConfigured bool, artifactFiles map[string]strin
 			return err
 		}
 	}
-	_, err = ZipAndUpload(storageModuleConfigured, blobStorageS3Config, artifactFileLocation, cloudProvider, azureBlobConfig, gcpBlobConfig)
+	_, err = ZipAndUpload(cloudHelperBaseConfig, artifactFileLocation)
 	return err
 }
 
-func ZipAndUpload(storageModuleConfigured bool, blobStorageS3Config *blob_storage.BlobStorageS3Config, artifactFileName string,
-	cloudProvider blob_storage.BlobStorageType, azureBlobConfig *blob_storage.AzureBlobConfig, gcpBlobConfig *blob_storage.GcpBlobConfig) (bool, error) {
+func ZipAndUpload(cloudHelperBaseConfig *util.CloudHelperBaseConfig, artifactFileName string) (bool, error) {
 	artifactUploaded := false
-	if !storageModuleConfigured {
+	if !cloudHelperBaseConfig.StorageModuleConfigured {
 		log.Println(util.DEVTRON, "not going to upload artifact as storage module not configured...")
 		return artifactUploaded, nil
 	}
@@ -84,8 +80,7 @@ func ZipAndUpload(storageModuleConfigured bool, blobStorageS3Config *blob_storag
 		return artifactUploaded, err
 	}
 	log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactFileName)
-
-	err = UploadFileToCloud(cloudProvider, zipFile, artifactFileName, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
+	err = UploadFileToCloud(cloudHelperBaseConfig, zipFile, artifactFileName)
 	if err != nil {
 		return artifactUploaded, err
 	}

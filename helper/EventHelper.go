@@ -150,6 +150,9 @@ type CommonWorkflowRequest struct {
 	IsExtRun                   bool                              `json:"isExtRun"`
 	ImageRetryCount            int                               `json:"imageRetryCount"`
 	ImageRetryInterval         int                               `json:"imageRetryInterval"`
+	ExtBlobStorageCmName       string                            `json:"extBlobStorageCmName"`
+	ExtBlobStorageSecretName   string                            `json:"extBlobStorageSecretName"`
+	UseExternalClusterBlob     bool                              `json:"useExternalClusterBlob"`
 	// Data from CD Workflow service
 	WorkflowRunnerId         int           `json:"workflowRunnerId"`
 	CdPipelineId             int           `json:"cdPipelineId"`
@@ -168,6 +171,41 @@ type CommonWorkflowRequest struct {
 	TaskYaml                 *TaskYaml     `json:"-"`
 	IsDryRun                 bool          `json:"isDryRun"`
 	CiArtifactLastFetch      time.Time     `json:"ciArtifactLastFetch"`
+}
+
+type BlobStorageConfig struct {
+	//AWS credentials
+	CloudProvider        blob_storage.BlobStorageType `env:"BLOB_STORAGE_PROVIDER"`
+	S3AccessKey          string                       `env:"BLOB_STORAGE_S3_ACCESS_KEY"`
+	S3SecretKey          string                       `env:"BLOB_STORAGE_S3_SECRET_KEY"`
+	S3Endpoint           string                       `env:"BLOB_STORAGE_S3_ENDPOINT"`
+	S3EndpointInsecure   bool                         `env:"BLOB_STORAGE_S3_ENDPOINT_INSECURE" envDefault:"false"`
+	S3BucketVersioned    bool                         `env:"BLOB_STORAGE_S3_BUCKET_VERSIONED" envDefault:"true"`
+	S3CacheBucketName    string                       `env:"BLOB_STORAGE_S3_CACHE_BUCKET_NAME"`
+	S3CacheRegion        string                       `env:"BLOB_STORAGE_S3_CACHE_REGION"`
+	S3ArtifactBucketName string                       `env:"BLOB_STORAGE_S3_ARTIFACT_BUCKET_NAME"`
+	S3ArtifactRegion     string                       `env:"BLOB_STORAGE_S3_ARTIFACT_REGION"`
+	S3LogBucketName      string                       `env:"BLOB_STORAGE_S3_LOG_BUCKET_NAME"`
+	S3LogRegion          string                       `env:"BLOB_STORAGE_S3_LOG_REGION"`
+	//GCP credentials
+	GcpBlobStorageCredentialJson string `env:"BLOB_STORAGE_GCP_CREDENTIALS_JSON"`
+	GcpCacheBucketName           string `env:"BLOB_STORAGE_GCP_CACHE_BUCKET_NAME"`
+	GcpLogBucketName             string `env:"BLOB_STORAGE_GCP_LOG_BUCKET_NAME"`
+	GcpArtifactBucketName        string `env:"BLOB_STORAGE_GCP_ARTIFACT_BUCKET_NAME"`
+	//Azure credentials
+	AzureAccountName               string `env:"AZURE_ACCOUNT_NAME"`
+	AzureGatewayUrl                string `env:"AZURE_GATEWAY_URL"`
+	AzureGatewayConnectionInsecure bool   `env:"AZURE_GATEWAY_CONNECTION_INSECURE" envDefault:"true"`
+	AzureBlobContainerCiLog        string `env:"AZURE_BLOB_CONTAINER_CI_LOG"`
+	AzureBlobContainerCiCache      string `env:"AZURE_BLOB_CONTAINER_CI_CACHE"`
+	AzureBlobContainerCiArtifact   string `env:"AZURE_BLOB_CONTAINER_CI_ARTIFACT"`
+	AzureAccountKey                string `env:"AZURE_ACCOUNT_KEY"`
+}
+
+func GetBlobStorageConfig() (*BlobStorageConfig, error) {
+	cfg := &BlobStorageConfig{}
+	err := env.Parse(cfg)
+	return cfg, err
 }
 
 type CiRequest struct {

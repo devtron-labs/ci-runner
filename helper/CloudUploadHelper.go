@@ -1,15 +1,71 @@
 package helper
 
-import "github.com/devtron-labs/common-lib/blob-storage"
+import (
+	"github.com/devtron-labs/ci-runner/util"
+	"github.com/devtron-labs/common-lib/blob-storage"
+	"log"
+)
 
 // UploadFileToCloud
 // Uploads the source file to the destination key of configured blob storage /**
-func UploadFileToCloud(cloudProvider blob_storage.BlobStorageType, sourceFilePath string, destinationKey string,
-	blobStorageS3Config *blob_storage.BlobStorageS3Config, azureBlobConfig *blob_storage.AzureBlobConfig,
-	gcpBlobConfig *blob_storage.GcpBlobConfig) error {
-
+func UploadFileToCloud(cloudHelperBaseConfig *util.CloudHelperBaseConfig, sourceFilePath string, destinationKey string) error {
+	if cloudHelperBaseConfig.UseExternalClusterBlob {
+		blobStorageConfig, err := GetBlobStorageConfig()
+		if err != nil {
+			log.Println(util.DEVTRON, "error in getting blob storage config, err : ", err)
+		}
+		switch blobStorageConfig.CloudProvider {
+		case util.BlobStorageS3:
+			//here we are only uploading logs
+			blobStorageS3Config := &blob_storage.BlobStorageS3Config{
+				AccessKey:                  blobStorageConfig.S3AccessKey,
+				Passkey:                    blobStorageConfig.S3SecretKey,
+				EndpointUrl:                blobStorageConfig.S3Endpoint,
+				IsInSecure:                 blobStorageConfig.S3EndpointInsecure,
+				CiCacheBucketName:          blobStorageConfig.S3CacheBucketName,
+				CiCacheRegion:              blobStorageConfig.S3CacheRegion,
+				CiCacheBucketVersioning:    blobStorageConfig.S3BucketVersioned,
+				CiArtifactBucketName:       blobStorageConfig.S3ArtifactBucketName,
+				CiArtifactRegion:           blobStorageConfig.S3ArtifactRegion,
+				CiArtifactBucketVersioning: blobStorageConfig.S3BucketVersioned,
+				CiLogBucketName:            blobStorageConfig.S3LogBucketName,
+				CiLogRegion:                blobStorageConfig.S3LogRegion,
+				CiLogBucketVersioning:      blobStorageConfig.S3BucketVersioned,
+			}
+			cloudHelperBaseConfig.BlobStorageS3Config = blobStorageS3Config
+		case util.BlobStorageGcp:
+			gcpBlobConfig := &blob_storage.GcpBlobConfig{
+				CredentialFileJsonData: blobStorageConfig.GcpBlobStorageCredentialJson,
+				CacheBucketName:        blobStorageConfig.GcpCacheBucketName,
+				ArtifactBucketName:     blobStorageConfig.GcpArtifactBucketName,
+				LogBucketName:          blobStorageConfig.GcpLogBucketName,
+			}
+			cloudHelperBaseConfig.GcpBlobConfig = gcpBlobConfig
+		case util.BlobStorageAzure:
+			azureBlobConfig := &blob_storage.AzureBlobConfig{
+				Enabled:               true,
+				AccountName:           blobStorageConfig.AzureAccountName,
+				BlobContainerCiCache:  blobStorageConfig.AzureBlobContainerCiCache,
+				AccountKey:            blobStorageConfig.AzureAccountKey,
+				BlobContainerCiLog:    blobStorageConfig.AzureBlobContainerCiLog,
+				BlobContainerArtifact: blobStorageConfig.AzureBlobContainerCiLog,
+			}
+			cloudHelperBaseConfig.AzureBlobConfig = azureBlobConfig
+			//blobStorageS3Config = &blob_storage.BlobStorageS3Config{
+			//	EndpointUrl:     blobStorageConfig.AzureGatewayUrl,
+			//	IsInSecure:      blobStorageConfig.AzureGatewayConnectionInsecure,
+			//	CiLogBucketName: blobStorageConfig.AzureBlobContainerCiLog,
+			//	CiLogRegion:     "",
+			//	AccessKey:       blobStorageConfig.AzureAccountName,
+			//}
+		default:
+			if cloudHelperBaseConfig.StorageModuleConfigured {
+				log.Println(util.DEVTRON, "blob storage not supported, blobStorage: ", blobStorageConfig.CloudProvider)
+			}
+		}
+	}
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
-	request := createBlobStorageRequest(cloudProvider, sourceFilePath, destinationKey, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
+	request := createBlobStorageRequest(cloudHelperBaseConfig.CloudProvider, sourceFilePath, destinationKey, cloudHelperBaseConfig.BlobStorageS3Config, cloudHelperBaseConfig.AzureBlobConfig, cloudHelperBaseConfig.GcpBlobConfig)
 
 	return blobStorageService.PutWithCommand(request)
 }

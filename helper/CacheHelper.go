@@ -18,12 +18,11 @@
 package helper
 
 import (
+	"github.com/devtron-labs/ci-runner/util"
+	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 	"log"
 	"os"
 	"os/exec"
-
-	"github.com/devtron-labs/ci-runner/util"
-	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 )
 
 func GetCache(ciRequest *CommonWorkflowRequest) error {
@@ -102,9 +101,16 @@ func SyncCache(ciRequest *CommonWorkflowRequest) error {
 	//----------upload file
 
 	log.Println(util.DEVTRON, " -----> pushing new cache")
-	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
-	request := createBlobStorageRequestForCache(ciRequest.CloudProvider, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName, ciRequest.BlobStorageS3Config, ciRequest.AzureBlobConfig, ciRequest.GcpBlobConfig)
-	err = blobStorageService.PutWithCommand(request)
+	couldHelperBaseConfig := &util.CloudHelperBaseConfig{
+		StorageModuleConfigured: ciRequest.BlobStorageConfigured,
+		BlobStorageLogKey:       ciRequest.BlobStorageLogsKey,
+		CloudProvider:           ciRequest.CloudProvider,
+		UseExternalClusterBlob:  ciRequest.UseExternalClusterBlob,
+		BlobStorageS3Config:     ciRequest.BlobStorageS3Config,
+		AzureBlobConfig:         ciRequest.AzureBlobConfig,
+		GcpBlobConfig:           ciRequest.GcpBlobConfig,
+	}
+	err = UploadFileToCloud(couldHelperBaseConfig, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName)
 	if err != nil {
 		log.Println(util.DEVTRON, " -----> push err", err)
 	}
