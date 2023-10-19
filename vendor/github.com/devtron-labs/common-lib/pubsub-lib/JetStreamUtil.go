@@ -80,6 +80,12 @@ const (
 	ARGO_PIPELINE_STATUS_UPDATE_TOPIC   string = "ARGO_PIPELINE_STATUS_UPDATE"
 	ARGO_PIPELINE_STATUS_UPDATE_GROUP   string = "ARGO_PIPELINE_STATUS_UPDATE_GROUP-1"
 	ARGO_PIPELINE_STATUS_UPDATE_DURABLE string = "ARGO_PIPELINE_STATUS_UPDATE_DURABLE-1"
+	CD_BULK_DEPLOY_TRIGGER_TOPIC        string = "CD-BULK-DEPLOY-TRIGGER"
+	CD_BULK_DEPLOY_TRIGGER_GROUP        string = "CD-BULK-DEPLOY-TRIGGER-GROUP-1"
+	CD_BULK_DEPLOY_TRIGGER_DURABLE      string = "CD-BULK-DEPLOY-TRIGGER-DURABLE-1"
+	HELM_CHART_INSTALL_STATUS_TOPIC     string = "HELM-CHART-INSTALL-STATUS-TOPIC"
+	HELM_CHART_INSTALL_STATUS_GROUP     string = "HELM-CHART-INSTALL-STATUS-GROUP"
+	HELM_CHART_INSTALL_STATUS_DURABLE   string = "HELM-CHART-INSTALL-STATUS-DURABLE"
 )
 
 type NatsTopic struct {
@@ -95,11 +101,12 @@ type ConfigJson struct {
 
 var natsTopicMapping = map[string]NatsTopic{
 
-	BULK_APPSTORE_DEPLOY_TOPIC: {topicName: BULK_APPSTORE_DEPLOY_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: BULK_APPSTORE_DEPLOY_GROUP, consumerName: BULK_APPSTORE_DEPLOY_DURABLE},
-	BULK_DEPLOY_TOPIC:          {topicName: BULK_DEPLOY_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: BULK_DEPLOY_GROUP, consumerName: BULK_DEPLOY_DURABLE},
-	BULK_HIBERNATE_TOPIC:       {topicName: BULK_HIBERNATE_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: BULK_HIBERNATE_GROUP, consumerName: BULK_HIBERNATE_DURABLE},
-	CD_SUCCESS:                 {topicName: CD_SUCCESS, streamName: ORCHESTRATOR_STREAM, queueName: CD_TRIGGER_GROUP, consumerName: CD_TRIGGER_DURABLE},
-	WEBHOOK_EVENT_TOPIC:        {topicName: WEBHOOK_EVENT_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: WEBHOOK_EVENT_GROUP, consumerName: WEBHOOK_EVENT_DURABLE},
+	BULK_APPSTORE_DEPLOY_TOPIC:   {topicName: BULK_APPSTORE_DEPLOY_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: BULK_APPSTORE_DEPLOY_GROUP, consumerName: BULK_APPSTORE_DEPLOY_DURABLE},
+	BULK_DEPLOY_TOPIC:            {topicName: BULK_DEPLOY_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: BULK_DEPLOY_GROUP, consumerName: BULK_DEPLOY_DURABLE},
+	BULK_HIBERNATE_TOPIC:         {topicName: BULK_HIBERNATE_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: BULK_HIBERNATE_GROUP, consumerName: BULK_HIBERNATE_DURABLE},
+	CD_SUCCESS:                   {topicName: CD_SUCCESS, streamName: ORCHESTRATOR_STREAM, queueName: CD_TRIGGER_GROUP, consumerName: CD_TRIGGER_DURABLE},
+	WEBHOOK_EVENT_TOPIC:          {topicName: WEBHOOK_EVENT_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: WEBHOOK_EVENT_GROUP, consumerName: WEBHOOK_EVENT_DURABLE},
+	CD_BULK_DEPLOY_TRIGGER_TOPIC: {topicName: CD_BULK_DEPLOY_TRIGGER_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: CD_BULK_DEPLOY_TRIGGER_GROUP, consumerName: CD_BULK_DEPLOY_TRIGGER_DURABLE},
 
 	CI_COMPLETE_TOPIC:       {topicName: CI_COMPLETE_TOPIC, streamName: CI_RUNNER_STREAM, queueName: CI_COMPLETE_GROUP, consumerName: CI_COMPLETE_DURABLE},
 	CD_STAGE_COMPLETE_TOPIC: {topicName: CD_STAGE_COMPLETE_TOPIC, streamName: CI_RUNNER_STREAM, queueName: CD_COMPLETE_GROUP, consumerName: CD_COMPLETE_DURABLE},
@@ -115,6 +122,7 @@ var natsTopicMapping = map[string]NatsTopic{
 	DEVTRON_TEST_TOPIC:                {topicName: DEVTRON_TEST_TOPIC, streamName: DEVTRON_TEST_STREAM, queueName: DEVTRON_TEST_QUEUE, consumerName: DEVTRON_TEST_CONSUMER},
 	TOPIC_CI_SCAN:                     {topicName: TOPIC_CI_SCAN, streamName: IMAGE_SCANNER_STREAM, queueName: TOPIC_CI_SCAN_GRP, consumerName: TOPIC_CI_SCAN_DURABLE},
 	ARGO_PIPELINE_STATUS_UPDATE_TOPIC: {topicName: ARGO_PIPELINE_STATUS_UPDATE_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: ARGO_PIPELINE_STATUS_UPDATE_GROUP, consumerName: ARGO_PIPELINE_STATUS_UPDATE_DURABLE},
+	HELM_CHART_INSTALL_STATUS_TOPIC:   {topicName: HELM_CHART_INSTALL_STATUS_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: HELM_CHART_INSTALL_STATUS_GROUP, consumerName: HELM_CHART_INSTALL_STATUS_DURABLE},
 }
 
 var NatsStreamWiseConfigMapping = map[string]NatsStreamConfig{
@@ -141,6 +149,8 @@ var NatsConsumerWiseConfigMapping = map[string]NatsConsumerConfig{
 	BULK_HIBERNATE_DURABLE:              {},
 	BULK_DEPLOY_DURABLE:                 {},
 	BULK_APPSTORE_DEPLOY_DURABLE:        {},
+	CD_BULK_DEPLOY_TRIGGER_DURABLE:      {},
+	HELM_CHART_INSTALL_STATUS_DURABLE:   {},
 }
 
 func getConsumerConfigMap(jsonString string) map[string]NatsConsumerConfig {
@@ -215,14 +225,14 @@ func ParseAndFillStreamWiseAndConsumerWiseConfigMaps() {
 	for key, _ := range NatsConsumerWiseConfigMapping {
 		defaultValue := defaultConsumerConfigVal
 
-		// Setting AckWait config. Only for BULK CD TRIGGER topic. Can be used for other topics
+		// Setting AckWait config. Only for BULK CD TRIGGER topics. Can be used for other topics
 		// if required to be made configurable
-		if key == BULK_DEPLOY_DURABLE {
+		if key == BULK_DEPLOY_DURABLE || key == CD_BULK_DEPLOY_TRIGGER_DURABLE {
 			defaultValue.AckWaitInSecs = defaultConsumerConfigForBulkCdTriggerTopic.AckWaitInSecs
 		}
 
 		// Overriding default config with explicitly provided topic-specific config
-		if _, ok := consumerConfigMap[key]; ok && (key != BULK_DEPLOY_DURABLE) {
+		if _, ok := consumerConfigMap[key]; ok && (key != BULK_DEPLOY_DURABLE && key != CD_BULK_DEPLOY_TRIGGER_DURABLE) {
 			defaultValue = consumerConfigMap[key]
 		}
 
