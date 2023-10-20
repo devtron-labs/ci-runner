@@ -123,7 +123,7 @@ type GcpBlobConfig struct {
 	ArtifactBucketName     string `json:"artifactBucketName"`
 }
 
-func (b *GcpBlobConfig) GetBlobStorageBaseS3Config(blobStorageObjectType string) *GcpBlobBaseConfig {
+func (b *GcpBlobConfig) GetBlobStorageBaseGcpConfig(blobStorageObjectType string) *GcpBlobBaseConfig {
 	switch blobStorageObjectType {
 	case BlobStorageObjectTypeCache:
 		return &GcpBlobBaseConfig{

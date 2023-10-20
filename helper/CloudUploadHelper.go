@@ -30,7 +30,7 @@ func createBlobStorageRequest(cloudHelperBaseConfig *util.CloudHelperBaseConfig,
 	}
 	var gcpBlobBaseConfig *blob_storage.GcpBlobBaseConfig
 	if cloudHelperBaseConfig.GcpBlobConfig != nil {
-		gcpBlobBaseConfig = cloudHelperBaseConfig.GcpBlobConfig.GetBlobStorageBaseS3Config(BlobStorageObjectTypeArtifact)
+		gcpBlobBaseConfig = cloudHelperBaseConfig.GcpBlobConfig.GetBlobStorageBaseGcpConfig(BlobStorageObjectTypeArtifact)
 	}
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:         cloudHelperBaseConfig.CloudProvider,
