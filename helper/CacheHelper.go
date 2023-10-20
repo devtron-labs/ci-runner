@@ -40,15 +40,7 @@ func GetCache(ciRequest *CommonWorkflowRequest) error {
 
 	//----------download file
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
-	cloudHelperBaseConfig := &util.CloudHelperBaseConfig{
-		StorageModuleConfigured: ciRequest.BlobStorageConfigured,
-		BlobStorageLogKey:       ciRequest.BlobStorageLogsKey,
-		CloudProvider:           ciRequest.CloudProvider,
-		UseExternalClusterBlob:  ciRequest.UseExternalClusterBlob,
-		BlobStorageS3Config:     ciRequest.BlobStorageS3Config,
-		AzureBlobConfig:         ciRequest.AzureBlobConfig,
-		GcpBlobConfig:           ciRequest.GcpBlobConfig,
-	}
+	cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig()
 	request := createBlobStorageRequestForCache(cloudHelperBaseConfig, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName)
 	downloadSuccess, bytesSize, err := blobStorageService.Get(request)
 	if bytesSize >= ciRequest.CacheLimit {
@@ -110,15 +102,7 @@ func SyncCache(ciRequest *CommonWorkflowRequest) error {
 	//----------upload file
 
 	log.Println(util.DEVTRON, " -----> pushing new cache")
-	cloudHelperBaseConfig := &util.CloudHelperBaseConfig{
-		StorageModuleConfigured: ciRequest.BlobStorageConfigured,
-		BlobStorageLogKey:       ciRequest.BlobStorageLogsKey,
-		CloudProvider:           ciRequest.CloudProvider,
-		UseExternalClusterBlob:  ciRequest.UseExternalClusterBlob,
-		BlobStorageS3Config:     ciRequest.BlobStorageS3Config,
-		AzureBlobConfig:         ciRequest.AzureBlobConfig,
-		GcpBlobConfig:           ciRequest.GcpBlobConfig,
-	}
+	cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig()
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
 	request := createBlobStorageRequestForCache(cloudHelperBaseConfig, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName)
 	err = blobStorageService.PutWithCommand(request)
@@ -129,7 +113,9 @@ func SyncCache(ciRequest *CommonWorkflowRequest) error {
 }
 
 func createBlobStorageRequestForCache(cloudHelperBaseConfig *util.CloudHelperBaseConfig, sourceKey string, destinationKey string) *blob_storage.BlobStorageRequest {
-	CheckForExtClusterBlobAndUpdateCloudHelperBaseConfig(cloudHelperBaseConfig)
+	if cloudHelperBaseConfig.UseExternalClusterBlob {
+		UpdateCloudHelperBaseConfigForExtCluster(cloudHelperBaseConfig)
+	}
 	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
 	if cloudHelperBaseConfig.BlobStorageS3Config != nil {
 		awsS3BaseConfig = &blob_storage.AwsS3BaseConfig{

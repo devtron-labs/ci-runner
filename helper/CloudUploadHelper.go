@@ -17,8 +17,9 @@ func UploadFileToCloud(cloudHelperBaseConfig *util.CloudHelperBaseConfig, source
 }
 
 func createBlobStorageRequest(cloudHelperBaseConfig *util.CloudHelperBaseConfig, sourceKey string, destinationKey string) *blob_storage.BlobStorageRequest {
-
-	CheckForExtClusterBlobAndUpdateCloudHelperBaseConfig(cloudHelperBaseConfig)
+	if cloudHelperBaseConfig.UseExternalClusterBlob {
+		UpdateCloudHelperBaseConfigForExtCluster(cloudHelperBaseConfig)
+	}
 	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
 	if cloudHelperBaseConfig.BlobStorageS3Config != nil {
 		awsS3BaseConfig = &blob_storage.AwsS3BaseConfig{
@@ -58,39 +59,37 @@ func createBlobStorageRequest(cloudHelperBaseConfig *util.CloudHelperBaseConfig,
 	return request
 }
 
-func CheckForExtClusterBlobAndUpdateCloudHelperBaseConfig(cloudHelperBaseConfig *util.CloudHelperBaseConfig) {
-	if cloudHelperBaseConfig.UseExternalClusterBlob {
-		log.Println(util.DEVTRON, "using external cluster blob")
-		blobStorageConfig, err := GetBlobStorageConfig()
-		if err != nil {
-			log.Println(util.DEVTRON, "error in getting blob storage config, err : ", err)
+func UpdateCloudHelperBaseConfigForExtCluster(cloudHelperBaseConfig *util.CloudHelperBaseConfig) {
+	log.Println(util.DEVTRON, "using external cluster blob")
+	blobStorageConfig, err := GetBlobStorageConfig()
+	if err != nil {
+		log.Println(util.DEVTRON, "error in getting blob storage config, err : ", err)
+	}
+	switch blobStorageConfig.CloudProvider {
+	case util.BlobStorageS3:
+		//here we are only uploading logs
+		blobStorageS3Config := &blob_storage.BlobStorageS3Config{
+			AccessKey:   blobStorageConfig.S3AccessKey,
+			Passkey:     blobStorageConfig.S3SecretKey,
+			EndpointUrl: blobStorageConfig.S3Endpoint,
+			IsInSecure:  blobStorageConfig.S3EndpointInsecure,
 		}
-		switch blobStorageConfig.CloudProvider {
-		case util.BlobStorageS3:
-			//here we are only uploading logs
-			blobStorageS3Config := &blob_storage.BlobStorageS3Config{
-				AccessKey:   blobStorageConfig.S3AccessKey,
-				Passkey:     blobStorageConfig.S3SecretKey,
-				EndpointUrl: blobStorageConfig.S3Endpoint,
-				IsInSecure:  blobStorageConfig.S3EndpointInsecure,
-			}
-			cloudHelperBaseConfig.BlobStorageS3Config = blobStorageS3Config
-		case util.BlobStorageGcp:
-			gcpBlobConfig := &blob_storage.GcpBlobConfig{
-				CredentialFileJsonData: blobStorageConfig.GcpBlobStorageCredentialJson,
-			}
-			cloudHelperBaseConfig.GcpBlobConfig = gcpBlobConfig
-		case util.BlobStorageAzure:
-			azureBlobConfig := &blob_storage.AzureBlobConfig{
-				Enabled:     blobStorageConfig.CloudProvider == blob_storage.BLOB_STORAGE_AZURE,
-				AccountName: blobStorageConfig.AzureAccountName,
-				AccountKey:  blobStorageConfig.AzureAccountKey,
-			}
-			cloudHelperBaseConfig.AzureBlobConfig = azureBlobConfig
-		default:
-			if cloudHelperBaseConfig.StorageModuleConfigured {
-				log.Println(util.DEVTRON, "blob storage not supported, blobStorage: ", blobStorageConfig.CloudProvider)
-			}
+		cloudHelperBaseConfig.BlobStorageS3Config = blobStorageS3Config
+	case util.BlobStorageGcp:
+		gcpBlobConfig := &blob_storage.GcpBlobConfig{
+			CredentialFileJsonData: blobStorageConfig.GcpBlobStorageCredentialJson,
+		}
+		cloudHelperBaseConfig.GcpBlobConfig = gcpBlobConfig
+	case util.BlobStorageAzure:
+		azureBlobConfig := &blob_storage.AzureBlobConfig{
+			Enabled:     blobStorageConfig.CloudProvider == blob_storage.BLOB_STORAGE_AZURE,
+			AccountName: blobStorageConfig.AzureAccountName,
+			AccountKey:  blobStorageConfig.AzureAccountKey,
+		}
+		cloudHelperBaseConfig.AzureBlobConfig = azureBlobConfig
+	default:
+		if cloudHelperBaseConfig.StorageModuleConfigured {
+			log.Println(util.DEVTRON, "blob storage not supported, blobStorage: ", blobStorageConfig.CloudProvider)
 		}
 	}
 }

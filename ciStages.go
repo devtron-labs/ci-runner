@@ -18,14 +18,7 @@ func HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	log.Println(util.DEVTRON, artifactUploaded, err)
 	var artifactUploadErr error
 	if !artifactUploaded {
-		cloudHelperBaseConfig := &util.CloudHelperBaseConfig{
-			StorageModuleConfigured: ciRequest.BlobStorageConfigured,
-			CloudProvider:           ciRequest.CloudProvider,
-			UseExternalClusterBlob:  ciRequest.UseExternalClusterBlob,
-			BlobStorageS3Config:     ciRequest.BlobStorageS3Config,
-			AzureBlobConfig:         ciRequest.AzureBlobConfig,
-			GcpBlobConfig:           ciRequest.GcpBlobConfig,
-		}
+		cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig()
 		artifactUploaded, artifactUploadErr = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
 	}
 
@@ -42,6 +35,10 @@ func HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 
 	if artifactUploadErr != nil {
 		log.Println(util.DEVTRON, artifactUploadErr)
+		if ciCdRequest.CommonWorkflowRequest.IsExtRun {
+			log.Println(util.DEVTRON, "Ignoring artifactUploadErr")
+			return
+		}
 		*exitCode = util.DefaultErrorCode
 		return
 	}
@@ -51,6 +48,10 @@ func HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	err = helper.SyncCache(ciRequest)
 	if err != nil {
 		log.Println(err)
+		if ciCdRequest.CommonWorkflowRequest.IsExtRun {
+			log.Println(util.DEVTRON, "Ignoring cache upload")
+			return
+		}
 		*exitCode = util.DefaultErrorCode
 		return
 	}
@@ -237,14 +238,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	log.Println(util.DEVTRON, " /docker-push")
 
 	log.Println(util.DEVTRON, " artifact-upload")
-	cloudHelperBaseConfig := &util.CloudHelperBaseConfig{
-		StorageModuleConfigured: ciCdRequest.CommonWorkflowRequest.BlobStorageConfigured,
-		CloudProvider:           ciCdRequest.CommonWorkflowRequest.CloudProvider,
-		UseExternalClusterBlob:  ciCdRequest.CommonWorkflowRequest.UseExternalClusterBlob,
-		BlobStorageS3Config:     ciCdRequest.CommonWorkflowRequest.BlobStorageS3Config,
-		AzureBlobConfig:         ciCdRequest.CommonWorkflowRequest.AzureBlobConfig,
-		GcpBlobConfig:           ciCdRequest.CommonWorkflowRequest.GcpBlobConfig,
-	}
+	cloudHelperBaseConfig := ciCdRequest.CommonWorkflowRequest.GetCloudHelperBaseConfig()
 	artifactUploaded, err = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
 
 	if err != nil {

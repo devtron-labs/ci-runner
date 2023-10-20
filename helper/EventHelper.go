@@ -173,6 +173,18 @@ type CommonWorkflowRequest struct {
 	CiArtifactLastFetch      time.Time     `json:"ciArtifactLastFetch"`
 }
 
+func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig() *util.CloudHelperBaseConfig {
+	return &util.CloudHelperBaseConfig{
+		StorageModuleConfigured: c.BlobStorageConfigured,
+		BlobStorageLogKey:       c.BlobStorageLogsKey,
+		CloudProvider:           c.CloudProvider,
+		UseExternalClusterBlob:  c.UseExternalClusterBlob,
+		BlobStorageS3Config:     c.BlobStorageS3Config,
+		AzureBlobConfig:         c.AzureBlobConfig,
+		GcpBlobConfig:           c.GcpBlobConfig,
+	}
+}
+
 type BlobStorageConfig struct {
 	//AWS credentials
 	CloudProvider      blob_storage.BlobStorageType `env:"BLOB_STORAGE_PROVIDER"`
