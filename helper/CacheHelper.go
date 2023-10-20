@@ -118,33 +118,17 @@ func createBlobStorageRequestForCache(cloudHelperBaseConfig *util.CloudHelperBas
 	}
 	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
 	if cloudHelperBaseConfig.BlobStorageS3Config != nil {
-		awsS3BaseConfig = &blob_storage.AwsS3BaseConfig{
-			AccessKey:         cloudHelperBaseConfig.BlobStorageS3Config.AccessKey,
-			Passkey:           cloudHelperBaseConfig.BlobStorageS3Config.Passkey,
-			EndpointUrl:       cloudHelperBaseConfig.BlobStorageS3Config.EndpointUrl,
-			IsInSecure:        cloudHelperBaseConfig.BlobStorageS3Config.IsInSecure,
-			BucketName:        cloudHelperBaseConfig.BlobStorageS3Config.CiCacheBucketName,
-			Region:            cloudHelperBaseConfig.BlobStorageS3Config.CiCacheRegion,
-			VersioningEnabled: cloudHelperBaseConfig.BlobStorageS3Config.CiCacheBucketVersioning,
-		}
+		awsS3BaseConfig = cloudHelperBaseConfig.BlobStorageS3Config.GetBlobStorageBaseS3Config(BlobStorageObjectTypeCache)
 	}
 
 	var azureBlobBaseConfig *blob_storage.AzureBlobBaseConfig
 	if cloudHelperBaseConfig.AzureBlobConfig != nil {
-		azureBlobBaseConfig = &blob_storage.AzureBlobBaseConfig{
-			AccountKey:        cloudHelperBaseConfig.AzureBlobConfig.AccountKey,
-			AccountName:       cloudHelperBaseConfig.AzureBlobConfig.AccountName,
-			Enabled:           cloudHelperBaseConfig.AzureBlobConfig.Enabled,
-			BlobContainerName: cloudHelperBaseConfig.AzureBlobConfig.BlobContainerCiCache,
-		}
+		azureBlobBaseConfig = cloudHelperBaseConfig.AzureBlobConfig.GetBlobStorageBaseAzureConfig(BlobStorageObjectTypeCache)
 	}
 
 	var gcpBlobBaseConfig *blob_storage.GcpBlobBaseConfig
 	if cloudHelperBaseConfig.GcpBlobConfig != nil {
-		gcpBlobBaseConfig = &blob_storage.GcpBlobBaseConfig{
-			CredentialFileJsonData: cloudHelperBaseConfig.GcpBlobConfig.CredentialFileJsonData,
-			BucketName:             cloudHelperBaseConfig.GcpBlobConfig.CacheBucketName,
-		}
+		gcpBlobBaseConfig = cloudHelperBaseConfig.GcpBlobConfig.GetBlobStorageBaseS3Config(BlobStorageObjectTypeCache)
 	}
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:         cloudHelperBaseConfig.CloudProvider,

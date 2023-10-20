@@ -47,6 +47,9 @@ const (
 	MANAGED_DOCKERFILE_BUILD_TYPE CiBuildType = "managed-dockerfile-build"
 	BUILD_SKIP_BUILD_TYPE         CiBuildType = "skip-build"
 	BUILDPACK_BUILD_TYPE          CiBuildType = "buildpack-build"
+	BlobStorageObjectTypeCache                = "cache"
+	BlobStorageObjectTypeArtifact             = "artifact"
+	BlobStorageObjectTypeLog                  = "log"
 )
 
 const CI_JOB string = "CI_JOB"
