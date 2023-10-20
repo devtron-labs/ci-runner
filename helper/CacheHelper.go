@@ -40,7 +40,16 @@ func GetCache(ciRequest *CommonWorkflowRequest) error {
 
 	//----------download file
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
-	request := createBlobStorageRequestForCache(ciRequest.CloudProvider, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName, ciRequest.BlobStorageS3Config, ciRequest.AzureBlobConfig, ciRequest.GcpBlobConfig)
+	cloudHelperBaseConfig := &util.CloudHelperBaseConfig{
+		StorageModuleConfigured: ciRequest.BlobStorageConfigured,
+		BlobStorageLogKey:       ciRequest.BlobStorageLogsKey,
+		CloudProvider:           ciRequest.CloudProvider,
+		UseExternalClusterBlob:  ciRequest.UseExternalClusterBlob,
+		BlobStorageS3Config:     ciRequest.BlobStorageS3Config,
+		AzureBlobConfig:         ciRequest.AzureBlobConfig,
+		GcpBlobConfig:           ciRequest.GcpBlobConfig,
+	}
+	request := createBlobStorageRequestForCache(cloudHelperBaseConfig, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName)
 	downloadSuccess, bytesSize, err := blobStorageService.Get(request)
 	if bytesSize >= ciRequest.CacheLimit {
 		log.Println(util.DEVTRON, " cache upper limit exceeded, ignoring old cache")
@@ -101,7 +110,7 @@ func SyncCache(ciRequest *CommonWorkflowRequest) error {
 	//----------upload file
 
 	log.Println(util.DEVTRON, " -----> pushing new cache")
-	couldHelperBaseConfig := &util.CloudHelperBaseConfig{
+	cloudHelperBaseConfig := &util.CloudHelperBaseConfig{
 		StorageModuleConfigured: ciRequest.BlobStorageConfigured,
 		BlobStorageLogKey:       ciRequest.BlobStorageLogsKey,
 		CloudProvider:           ciRequest.CloudProvider,
@@ -110,46 +119,49 @@ func SyncCache(ciRequest *CommonWorkflowRequest) error {
 		AzureBlobConfig:         ciRequest.AzureBlobConfig,
 		GcpBlobConfig:           ciRequest.GcpBlobConfig,
 	}
-	err = UploadFileToCloud(couldHelperBaseConfig, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName)
+	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
+	request := createBlobStorageRequestForCache(cloudHelperBaseConfig, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName)
+	err = blobStorageService.PutWithCommand(request)
 	if err != nil {
 		log.Println(util.DEVTRON, " -----> push err", err)
 	}
 	return err
 }
 
-func createBlobStorageRequestForCache(cloudProvider blob_storage.BlobStorageType, sourceKey string, destinationKey string, blobStorageS3Config *blob_storage.BlobStorageS3Config, azureBlobConfig *blob_storage.AzureBlobConfig, gcpBlobConfig *blob_storage.GcpBlobConfig) *blob_storage.BlobStorageRequest {
+func createBlobStorageRequestForCache(cloudHelperBaseConfig *util.CloudHelperBaseConfig, sourceKey string, destinationKey string) *blob_storage.BlobStorageRequest {
+	CheckForExtClusterBlobAndUpdateCloudHelperBaseConfig(cloudHelperBaseConfig)
 	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
-	if blobStorageS3Config != nil {
+	if cloudHelperBaseConfig.BlobStorageS3Config != nil {
 		awsS3BaseConfig = &blob_storage.AwsS3BaseConfig{
-			AccessKey:         blobStorageS3Config.AccessKey,
-			Passkey:           blobStorageS3Config.Passkey,
-			EndpointUrl:       blobStorageS3Config.EndpointUrl,
-			IsInSecure:        blobStorageS3Config.IsInSecure,
-			BucketName:        blobStorageS3Config.CiCacheBucketName,
-			Region:            blobStorageS3Config.CiCacheRegion,
-			VersioningEnabled: blobStorageS3Config.CiCacheBucketVersioning,
+			AccessKey:         cloudHelperBaseConfig.BlobStorageS3Config.AccessKey,
+			Passkey:           cloudHelperBaseConfig.BlobStorageS3Config.Passkey,
+			EndpointUrl:       cloudHelperBaseConfig.BlobStorageS3Config.EndpointUrl,
+			IsInSecure:        cloudHelperBaseConfig.BlobStorageS3Config.IsInSecure,
+			BucketName:        cloudHelperBaseConfig.BlobStorageS3Config.CiCacheBucketName,
+			Region:            cloudHelperBaseConfig.BlobStorageS3Config.CiCacheRegion,
+			VersioningEnabled: cloudHelperBaseConfig.BlobStorageS3Config.CiCacheBucketVersioning,
 		}
 	}
 
 	var azureBlobBaseConfig *blob_storage.AzureBlobBaseConfig
-	if azureBlobConfig != nil {
+	if cloudHelperBaseConfig.AzureBlobConfig != nil {
 		azureBlobBaseConfig = &blob_storage.AzureBlobBaseConfig{
-			AccountKey:        azureBlobConfig.AccountKey,
-			AccountName:       azureBlobConfig.AccountName,
-			Enabled:           azureBlobConfig.Enabled,
-			BlobContainerName: azureBlobConfig.BlobContainerCiCache,
+			AccountKey:        cloudHelperBaseConfig.AzureBlobConfig.AccountKey,
+			AccountName:       cloudHelperBaseConfig.AzureBlobConfig.AccountName,
+			Enabled:           cloudHelperBaseConfig.AzureBlobConfig.Enabled,
+			BlobContainerName: cloudHelperBaseConfig.AzureBlobConfig.BlobContainerCiCache,
 		}
 	}
 
 	var gcpBlobBaseConfig *blob_storage.GcpBlobBaseConfig
-	if gcpBlobConfig != nil {
+	if cloudHelperBaseConfig.GcpBlobConfig != nil {
 		gcpBlobBaseConfig = &blob_storage.GcpBlobBaseConfig{
-			CredentialFileJsonData: gcpBlobConfig.CredentialFileJsonData,
-			BucketName:             gcpBlobConfig.CacheBucketName,
+			CredentialFileJsonData: cloudHelperBaseConfig.GcpBlobConfig.CredentialFileJsonData,
+			BucketName:             cloudHelperBaseConfig.GcpBlobConfig.CacheBucketName,
 		}
 	}
 	request := &blob_storage.BlobStorageRequest{
-		StorageType:         cloudProvider,
+		StorageType:         cloudHelperBaseConfig.CloudProvider,
 		SourceKey:           sourceKey,
 		DestinationKey:      destinationKey,
 		AzureBlobBaseConfig: azureBlobBaseConfig,
