@@ -17,7 +17,7 @@ func HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 }
 
 func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) error {
-	cloudHelperBaseConfig := cdRequest.GetCloudHelperBaseConfig()
+	cloudHelperBaseConfig := cdRequest.GetCloudHelperBaseConfig(helper.BlobStorageObjectTypeArtifact)
 	if cdRequest.PrePostDeploySteps != nil && len(cdRequest.PrePostDeploySteps) > 0 {
 		_, err := helper.ZipAndUpload(cloudHelperBaseConfig, cdRequest.CiArtifactFileName)
 		return err

@@ -20,18 +20,17 @@ func createBlobStorageRequest(cloudHelperBaseConfig *util.CloudHelperBaseConfig,
 	if cloudHelperBaseConfig.UseExternalClusterBlob {
 		UpdateCloudHelperBaseConfigForExtCluster(cloudHelperBaseConfig)
 	}
-	log.Println(util.DEVTRON, "cloudHelperBaseConfig: ", cloudHelperBaseConfig)
 	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
 	if cloudHelperBaseConfig.BlobStorageS3Config != nil {
-		awsS3BaseConfig = cloudHelperBaseConfig.BlobStorageS3Config.GetBlobStorageBaseS3Config(BlobStorageObjectTypeArtifact)
+		awsS3BaseConfig = cloudHelperBaseConfig.BlobStorageS3Config.GetBlobStorageBaseS3Config(cloudHelperBaseConfig.BlobStorageObjectType)
 	}
 	var azureBlobBaseConfig *blob_storage.AzureBlobBaseConfig
 	if cloudHelperBaseConfig.AzureBlobConfig != nil {
-		azureBlobBaseConfig = cloudHelperBaseConfig.AzureBlobConfig.GetBlobStorageBaseAzureConfig(BlobStorageObjectTypeArtifact)
+		azureBlobBaseConfig = cloudHelperBaseConfig.AzureBlobConfig.GetBlobStorageBaseAzureConfig(cloudHelperBaseConfig.BlobStorageObjectType)
 	}
 	var gcpBlobBaseConfig *blob_storage.GcpBlobBaseConfig
 	if cloudHelperBaseConfig.GcpBlobConfig != nil {
-		gcpBlobBaseConfig = cloudHelperBaseConfig.GcpBlobConfig.GetBlobStorageBaseGcpConfig(BlobStorageObjectTypeArtifact)
+		gcpBlobBaseConfig = cloudHelperBaseConfig.GcpBlobConfig.GetBlobStorageBaseGcpConfig(cloudHelperBaseConfig.BlobStorageObjectType)
 	}
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:         cloudHelperBaseConfig.CloudProvider,
@@ -53,21 +52,40 @@ func UpdateCloudHelperBaseConfigForExtCluster(cloudHelperBaseConfig *util.CloudH
 	log.Println(util.DEVTRON, "blob storage config: ", blobStorageConfig)
 	log.Println(util.DEVTRON, "cloudHelperBaseConfig: ", cloudHelperBaseConfig)
 	if blobStorageConfig != nil {
+		cloudHelperBaseConfig.CloudProvider = blobStorageConfig.CloudProvider
 		switch blobStorageConfig.CloudProvider {
 		case util.BlobStorageS3:
-			//here we are only uploading logs
-			cloudHelperBaseConfig.BlobStorageS3Config.AccessKey = blobStorageConfig.S3AccessKey
-			cloudHelperBaseConfig.BlobStorageS3Config.Passkey = blobStorageConfig.S3SecretKey
-			cloudHelperBaseConfig.BlobStorageS3Config.EndpointUrl = blobStorageConfig.S3Endpoint
-			cloudHelperBaseConfig.BlobStorageS3Config.IsInSecure = blobStorageConfig.S3EndpointInsecure
-
+			cloudHelperBaseConfig.BlobStorageS3Config = &blob_storage.BlobStorageS3Config{
+				AccessKey:                  blobStorageConfig.S3AccessKey,
+				Passkey:                    blobStorageConfig.S3SecretKey,
+				EndpointUrl:                blobStorageConfig.S3Endpoint,
+				IsInSecure:                 blobStorageConfig.S3EndpointInsecure,
+				CiLogBucketName:            blobStorageConfig.CdDefaultBuildLogsBucket,
+				CiLogRegion:                blobStorageConfig.CdDefaultCdLogsBucketRegion,
+				CiLogBucketVersioning:      blobStorageConfig.S3BucketVersioned,
+				CiCacheBucketName:          blobStorageConfig.DefaultCacheBucket,
+				CiCacheRegion:              blobStorageConfig.DefaultCacheBucketRegion,
+				CiCacheBucketVersioning:    blobStorageConfig.S3BucketVersioned,
+				CiArtifactBucketName:       blobStorageConfig.CdDefaultBuildLogsBucket,
+				CiArtifactRegion:           blobStorageConfig.CdDefaultCdLogsBucketRegion,
+				CiArtifactBucketVersioning: blobStorageConfig.S3BucketVersioned,
+			}
 		case util.BlobStorageGcp:
-			cloudHelperBaseConfig.GcpBlobConfig.CredentialFileJsonData = blobStorageConfig.GcpBlobStorageCredentialJson
-
+			cloudHelperBaseConfig.GcpBlobConfig = &blob_storage.GcpBlobConfig{
+				CredentialFileJsonData: blobStorageConfig.GcpBlobStorageCredentialJson,
+				CacheBucketName:        blobStorageConfig.DefaultCacheBucket,
+				LogBucketName:          blobStorageConfig.CdDefaultBuildLogsBucket,
+				ArtifactBucketName:     blobStorageConfig.CdDefaultBuildLogsBucket,
+			}
 		case util.BlobStorageAzure:
-			cloudHelperBaseConfig.AzureBlobConfig.Enabled = blobStorageConfig.CloudProvider == blob_storage.BLOB_STORAGE_AZURE
-			cloudHelperBaseConfig.AzureBlobConfig.AccountName = blobStorageConfig.AzureAccountName
-			cloudHelperBaseConfig.AzureBlobConfig.AccountKey = blobStorageConfig.AzureAccountKey
+			cloudHelperBaseConfig.AzureBlobConfig = &blob_storage.AzureBlobConfig{
+				Enabled:               blobStorageConfig.CloudProvider == blob_storage.BLOB_STORAGE_AZURE,
+				AccountName:           blobStorageConfig.AzureAccountName,
+				BlobContainerCiLog:    blobStorageConfig.AzureBlobContainerCiLog,
+				BlobContainerCiCache:  blobStorageConfig.AzureBlobContainerCiCache,
+				BlobContainerArtifact: blobStorageConfig.AzureBlobContainerCiLog,
+				AccountKey:            blobStorageConfig.AzureAccountKey,
+			}
 		default:
 			if cloudHelperBaseConfig.StorageModuleConfigured {
 				log.Println(util.DEVTRON, "blob storage not supported, blobStorage: ", blobStorageConfig.CloudProvider)

@@ -16,4 +16,5 @@ type CloudHelperBaseConfig struct {
 	BlobStorageS3Config     *blob_storage.BlobStorageS3Config
 	AzureBlobConfig         *blob_storage.AzureBlobConfig
 	GcpBlobConfig           *blob_storage.GcpBlobConfig
+	BlobStorageObjectType   string
 }

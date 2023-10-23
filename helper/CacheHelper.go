@@ -40,7 +40,7 @@ func GetCache(ciRequest *CommonWorkflowRequest) error {
 
 	//----------download file
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
-	cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig()
+	cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig(BlobStorageObjectTypeCache)
 	request := createBlobStorageRequestForCache(cloudHelperBaseConfig, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName)
 	downloadSuccess, bytesSize, err := blobStorageService.Get(request)
 	if bytesSize >= ciRequest.CacheLimit {
@@ -102,7 +102,7 @@ func SyncCache(ciRequest *CommonWorkflowRequest) error {
 	//----------upload file
 
 	log.Println(util.DEVTRON, " -----> pushing new cache")
-	cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig()
+	cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig(BlobStorageObjectTypeCache)
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
 	request := createBlobStorageRequestForCache(cloudHelperBaseConfig, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName)
 	err = blobStorageService.PutWithCommand(request)
@@ -116,20 +116,19 @@ func createBlobStorageRequestForCache(cloudHelperBaseConfig *util.CloudHelperBas
 	if cloudHelperBaseConfig.UseExternalClusterBlob {
 		UpdateCloudHelperBaseConfigForExtCluster(cloudHelperBaseConfig)
 	}
-	log.Println(util.DEVTRON, "cloudHelperBaseConfig: ", cloudHelperBaseConfig)
 	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
 	if cloudHelperBaseConfig.BlobStorageS3Config != nil {
-		awsS3BaseConfig = cloudHelperBaseConfig.BlobStorageS3Config.GetBlobStorageBaseS3Config(BlobStorageObjectTypeCache)
+		awsS3BaseConfig = cloudHelperBaseConfig.BlobStorageS3Config.GetBlobStorageBaseS3Config(cloudHelperBaseConfig.BlobStorageObjectType)
 	}
 
 	var azureBlobBaseConfig *blob_storage.AzureBlobBaseConfig
 	if cloudHelperBaseConfig.AzureBlobConfig != nil {
-		azureBlobBaseConfig = cloudHelperBaseConfig.AzureBlobConfig.GetBlobStorageBaseAzureConfig(BlobStorageObjectTypeCache)
+		azureBlobBaseConfig = cloudHelperBaseConfig.AzureBlobConfig.GetBlobStorageBaseAzureConfig(cloudHelperBaseConfig.BlobStorageObjectType)
 	}
 
 	var gcpBlobBaseConfig *blob_storage.GcpBlobBaseConfig
 	if cloudHelperBaseConfig.GcpBlobConfig != nil {
-		gcpBlobBaseConfig = cloudHelperBaseConfig.GcpBlobConfig.GetBlobStorageBaseGcpConfig(BlobStorageObjectTypeCache)
+		gcpBlobBaseConfig = cloudHelperBaseConfig.GcpBlobConfig.GetBlobStorageBaseGcpConfig(cloudHelperBaseConfig.BlobStorageObjectType)
 	}
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:         cloudHelperBaseConfig.CloudProvider,

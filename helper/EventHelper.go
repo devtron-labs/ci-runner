@@ -176,7 +176,7 @@ type CommonWorkflowRequest struct {
 	CiArtifactLastFetch      time.Time     `json:"ciArtifactLastFetch"`
 }
 
-func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig() *util.CloudHelperBaseConfig {
+func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {
 	return &util.CloudHelperBaseConfig{
 		StorageModuleConfigured: c.BlobStorageConfigured,
 		BlobStorageLogKey:       c.BlobStorageLogsKey,
@@ -185,6 +185,7 @@ func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig() *util.CloudHelperBase
 		BlobStorageS3Config:     c.BlobStorageS3Config,
 		AzureBlobConfig:         c.AzureBlobConfig,
 		GcpBlobConfig:           c.GcpBlobConfig,
+		BlobStorageObjectType:   blobStorageObjectType,
 	}
 }
 
@@ -196,13 +197,29 @@ type BlobStorageConfig struct {
 	S3Endpoint         string                       `env:"BLOB_STORAGE_S3_ENDPOINT"`
 	S3EndpointInsecure bool                         `env:"BLOB_STORAGE_S3_ENDPOINT_INSECURE" envDefault:"false"`
 	S3BucketVersioned  bool                         `env:"BLOB_STORAGE_S3_BUCKET_VERSIONED" envDefault:"true"`
+	//artifact and logs bucket name in s3 will get their values from DEFAULT_BUILD_LOGS_BUCKET
+	CdDefaultBuildLogsBucket string `env:"DEFAULT_BUILD_LOGS_BUCKET" `
+	//logs and artifact region in s3 will get their values from DEFAULT_CD_LOGS_BUCKET_REGION
+	CdDefaultCdLogsBucketRegion string `env:"DEFAULT_CD_LOGS_BUCKET_REGION" `
+	//cache bucket name in s3 will get its value from DEFAULT_CACHE_BUCKET
+	DefaultCacheBucket string `env:"DEFAULT_CACHE_BUCKET"`
+	//cache region in s3 will get its value from DEFAULT_CACHE_BUCKET_REGION
+	DefaultCacheBucketRegion string `env:"DEFAULT_CACHE_BUCKET_REGION"`
+
 	//GCP credentials
 	GcpBlobStorageCredentialJson string `env:"BLOB_STORAGE_GCP_CREDENTIALS_JSON"`
+	//ArtifactBucketName and LogBucketName for gcp will get their values from DEFAULT_BUILD_LOGS_BUCKET
+	//CacheBucketName for gcp will get its value from DEFAULT_CACHE_BUCKET
+
 	//Azure credentials
 	AzureAccountName               string `env:"AZURE_ACCOUNT_NAME"`
 	AzureGatewayUrl                string `env:"AZURE_GATEWAY_URL"`
 	AzureGatewayConnectionInsecure bool   `env:"AZURE_GATEWAY_CONNECTION_INSECURE" envDefault:"true"`
 	AzureAccountKey                string `env:"AZURE_ACCOUNT_KEY"`
+	//log and artifact container name in azure will get their values from AZURE_BLOB_CONTAINER_CI_LOG
+	AzureBlobContainerCiLog string `env:"AZURE_BLOB_CONTAINER_CI_LOG"`
+	//cache container name in azure will get their values from AZURE_BLOB_CONTAINER_CI_CACHE
+	AzureBlobContainerCiCache string `env:"AZURE_BLOB_CONTAINER_CI_CACHE"`
 }
 
 func GetBlobStorageConfig() (*BlobStorageConfig, error) {
