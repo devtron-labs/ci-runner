@@ -116,6 +116,7 @@ func createBlobStorageRequestForCache(cloudHelperBaseConfig *util.CloudHelperBas
 	if cloudHelperBaseConfig.UseExternalClusterBlob {
 		UpdateCloudHelperBaseConfigForExtCluster(cloudHelperBaseConfig)
 	}
+	log.Println(util.DEVTRON, "cloudHelperBaseConfig: ", cloudHelperBaseConfig)
 	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
 	if cloudHelperBaseConfig.BlobStorageS3Config != nil {
 		awsS3BaseConfig = cloudHelperBaseConfig.BlobStorageS3Config.GetBlobStorageBaseS3Config(BlobStorageObjectTypeCache)
