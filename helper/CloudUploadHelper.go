@@ -50,24 +50,27 @@ func UpdateCloudHelperBaseConfigForExtCluster(cloudHelperBaseConfig *util.CloudH
 		log.Println(util.DEVTRON, "error in getting blob storage config, err : ", err)
 	}
 	log.Println(util.DEVTRON, "blob storage config: ", blobStorageConfig)
-	switch blobStorageConfig.CloudProvider {
-	case util.BlobStorageS3:
-		//here we are only uploading logs
-		cloudHelperBaseConfig.BlobStorageS3Config.AccessKey = blobStorageConfig.S3AccessKey
-		cloudHelperBaseConfig.BlobStorageS3Config.Passkey = blobStorageConfig.S3SecretKey
-		cloudHelperBaseConfig.BlobStorageS3Config.EndpointUrl = blobStorageConfig.S3Endpoint
-		cloudHelperBaseConfig.BlobStorageS3Config.IsInSecure = blobStorageConfig.S3EndpointInsecure
+	if blobStorageConfig != nil {
+		switch blobStorageConfig.CloudProvider {
+		case util.BlobStorageS3:
+			//here we are only uploading logs
+			cloudHelperBaseConfig.BlobStorageS3Config.AccessKey = blobStorageConfig.S3AccessKey
+			cloudHelperBaseConfig.BlobStorageS3Config.Passkey = blobStorageConfig.S3SecretKey
+			cloudHelperBaseConfig.BlobStorageS3Config.EndpointUrl = blobStorageConfig.S3Endpoint
+			cloudHelperBaseConfig.BlobStorageS3Config.IsInSecure = blobStorageConfig.S3EndpointInsecure
 
-	case util.BlobStorageGcp:
-		cloudHelperBaseConfig.GcpBlobConfig.CredentialFileJsonData = blobStorageConfig.GcpBlobStorageCredentialJson
+		case util.BlobStorageGcp:
+			cloudHelperBaseConfig.GcpBlobConfig.CredentialFileJsonData = blobStorageConfig.GcpBlobStorageCredentialJson
 
-	case util.BlobStorageAzure:
-		cloudHelperBaseConfig.AzureBlobConfig.Enabled = blobStorageConfig.CloudProvider == blob_storage.BLOB_STORAGE_AZURE
-		cloudHelperBaseConfig.AzureBlobConfig.AccountName = blobStorageConfig.AzureAccountName
-		cloudHelperBaseConfig.AzureBlobConfig.AccountKey = blobStorageConfig.AzureAccountKey
-	default:
-		if cloudHelperBaseConfig.StorageModuleConfigured {
-			log.Println(util.DEVTRON, "blob storage not supported, blobStorage: ", blobStorageConfig.CloudProvider)
+		case util.BlobStorageAzure:
+			cloudHelperBaseConfig.AzureBlobConfig.Enabled = blobStorageConfig.CloudProvider == blob_storage.BLOB_STORAGE_AZURE
+			cloudHelperBaseConfig.AzureBlobConfig.AccountName = blobStorageConfig.AzureAccountName
+			cloudHelperBaseConfig.AzureBlobConfig.AccountKey = blobStorageConfig.AzureAccountKey
+		default:
+			if cloudHelperBaseConfig.StorageModuleConfigured {
+				log.Println(util.DEVTRON, "blob storage not supported, blobStorage: ", blobStorageConfig.CloudProvider)
+			}
 		}
+
 	}
 }
