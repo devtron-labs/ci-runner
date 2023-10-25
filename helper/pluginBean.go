@@ -208,7 +208,7 @@ type ConditionType int
 const (
 	TRIGGER = iota
 	SKIP
-	SUCCESS
+	PASS
 	FAIL
 )
 
@@ -217,15 +217,15 @@ func (d ConditionType) ValueOf(conditionType string) (ConditionType, error) {
 		return TRIGGER, nil
 	} else if conditionType == "SKIP" {
 		return SKIP, nil
-	} else if conditionType == "SUCCESS" {
-		return SUCCESS, nil
+	} else if conditionType == "PASS" {
+		return PASS, nil
 	} else if conditionType == "FAIL" {
 		return FAIL, nil
 	}
-	return SUCCESS, fmt.Errorf("invalid conditionType: %s", conditionType)
+	return PASS, fmt.Errorf("invalid conditionType: %s", conditionType)
 }
 func (d ConditionType) String() string {
-	return [...]string{"TRIGGER", "SKIP", "SUCCESS", "FAIL"}[d]
+	return [...]string{"TRIGGER", "SKIP", "PASS", "FAIL"}[d]
 }
 
 func (t ConditionType) MarshalJSON() ([]byte, error) {
