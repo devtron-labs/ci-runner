@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
+	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 	"log"
 	"os"
 )
@@ -17,7 +18,7 @@ func HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 }
 
 func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) error {
-	cloudHelperBaseConfig := cdRequest.GetCloudHelperBaseConfig(helper.BlobStorageObjectTypeArtifact)
+	cloudHelperBaseConfig := cdRequest.GetCloudHelperBaseConfig(blob_storage.BlobStorageObjectTypeArtifact)
 	if cdRequest.PrePostDeploySteps != nil && len(cdRequest.PrePostDeploySteps) > 0 {
 		_, err := helper.ZipAndUpload(cloudHelperBaseConfig, cdRequest.CiArtifactFileName)
 		return err

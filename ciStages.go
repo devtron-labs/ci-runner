@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
+	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
 	"io/ioutil"
 	"log"
 	"os"
@@ -18,7 +19,7 @@ func HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	log.Println(util.DEVTRON, artifactUploaded, err)
 	var artifactUploadErr error
 	if !artifactUploaded {
-		cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig(helper.BlobStorageObjectTypeArtifact)
+		cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig(blob_storage.BlobStorageObjectTypeArtifact)
 		artifactUploaded, artifactUploadErr = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
 	}
 
@@ -238,7 +239,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	log.Println(util.DEVTRON, " /docker-push")
 
 	log.Println(util.DEVTRON, " artifact-upload")
-	cloudHelperBaseConfig := ciCdRequest.CommonWorkflowRequest.GetCloudHelperBaseConfig(helper.BlobStorageObjectTypeArtifact)
+	cloudHelperBaseConfig := ciCdRequest.CommonWorkflowRequest.GetCloudHelperBaseConfig(blob_storage.BlobStorageObjectTypeArtifact)
 	artifactUploaded, err = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
 
 	if err != nil {

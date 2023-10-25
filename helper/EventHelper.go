@@ -47,9 +47,6 @@ const (
 	MANAGED_DOCKERFILE_BUILD_TYPE CiBuildType = "managed-dockerfile-build"
 	BUILD_SKIP_BUILD_TYPE         CiBuildType = "skip-build"
 	BUILDPACK_BUILD_TYPE          CiBuildType = "buildpack-build"
-	BlobStorageObjectTypeCache                = "cache"
-	BlobStorageObjectTypeArtifact             = "artifact"
-	BlobStorageObjectTypeLog                  = "log"
 )
 
 const CI_JOB string = "CI_JOB"
@@ -189,6 +186,8 @@ func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType s
 	}
 }
 
+// BlobStorageConfig is the blob storage config for external cluster added via cm/secret code
+// will be expecting these env variables acc to cloud provider if UseExternalClusterBlob is true.
 type BlobStorageConfig struct {
 	//AWS credentials
 	CloudProvider      blob_storage.BlobStorageType `env:"BLOB_STORAGE_PROVIDER"`

@@ -49,8 +49,7 @@ func UpdateCloudHelperBaseConfigForExtCluster(cloudHelperBaseConfig *util.CloudH
 	if err != nil {
 		log.Println(util.DEVTRON, "error in getting blob storage config, err : ", err)
 	}
-	log.Println(util.DEVTRON, "blob storage config: ", blobStorageConfig)
-	log.Println(util.DEVTRON, "cloudHelperBaseConfig: ", cloudHelperBaseConfig)
+	log.Println(util.DEVTRON, "external cluster cloud provider: ", blobStorageConfig.CloudProvider)
 	if blobStorageConfig != nil {
 		cloudHelperBaseConfig.CloudProvider = blobStorageConfig.CloudProvider
 		switch blobStorageConfig.CloudProvider {
