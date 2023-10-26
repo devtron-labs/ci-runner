@@ -31,12 +31,7 @@ func (impl *AwsS3Blob) UploadBlob(request *BlobStorageRequest, err error) error 
 	}
 
 	command := exec.Command("aws", cmdArgs...)
-	if s3BaseConfig.AccessKey != "" && s3BaseConfig.Passkey != "" {
-		command.Env = append(os.Environ(),
-			fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", s3BaseConfig.AccessKey),
-			fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", s3BaseConfig.Passkey),
-		)
-	}
+	setAWSEnvironmentVariables(s3BaseConfig, command)
 	err = utils.RunCommand(command)
 	return err
 }

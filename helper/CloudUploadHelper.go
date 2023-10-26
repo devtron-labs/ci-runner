@@ -22,15 +22,15 @@ func createBlobStorageRequest(cloudHelperBaseConfig *util.CloudHelperBaseConfig,
 	}
 	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
 	if cloudHelperBaseConfig.BlobStorageS3Config != nil {
-		awsS3BaseConfig = cloudHelperBaseConfig.BlobStorageS3Config.GetBlobStorageBaseS3Config(cloudHelperBaseConfig.BlobStorageObjectType)
+		awsS3BaseConfig = util.GetBlobStorageBaseS3Config(cloudHelperBaseConfig.BlobStorageS3Config, cloudHelperBaseConfig.BlobStorageObjectType)
 	}
 	var azureBlobBaseConfig *blob_storage.AzureBlobBaseConfig
 	if cloudHelperBaseConfig.AzureBlobConfig != nil {
-		azureBlobBaseConfig = cloudHelperBaseConfig.AzureBlobConfig.GetBlobStorageBaseAzureConfig(cloudHelperBaseConfig.BlobStorageObjectType)
+		azureBlobBaseConfig = util.GetBlobStorageBaseAzureConfig(cloudHelperBaseConfig.AzureBlobConfig, cloudHelperBaseConfig.BlobStorageObjectType)
 	}
 	var gcpBlobBaseConfig *blob_storage.GcpBlobBaseConfig
 	if cloudHelperBaseConfig.GcpBlobConfig != nil {
-		gcpBlobBaseConfig = cloudHelperBaseConfig.GcpBlobConfig.GetBlobStorageBaseGcpConfig(cloudHelperBaseConfig.BlobStorageObjectType)
+		gcpBlobBaseConfig = util.GetBlobStorageBaseGcpConfig(cloudHelperBaseConfig.GcpBlobConfig, cloudHelperBaseConfig.BlobStorageObjectType)
 	}
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:         cloudHelperBaseConfig.CloudProvider,
