@@ -40,7 +40,7 @@ func GetCache(ciRequest *CommonWorkflowRequest) error {
 
 	//----------download file
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
-	cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig(blob_storage.BlobStorageObjectTypeCache)
+	cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeCache)
 	request := createBlobStorageRequestForCache(cloudHelperBaseConfig, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName)
 	downloadSuccess, bytesSize, err := blobStorageService.Get(request)
 	if bytesSize >= ciRequest.CacheLimit {
@@ -102,7 +102,7 @@ func SyncCache(ciRequest *CommonWorkflowRequest) error {
 	//----------upload file
 
 	log.Println(util.DEVTRON, " -----> pushing new cache")
-	cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig(blob_storage.BlobStorageObjectTypeCache)
+	cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeCache)
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
 	request := createBlobStorageRequestForCache(cloudHelperBaseConfig, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName)
 	err = blobStorageService.PutWithCommand(request)
@@ -114,7 +114,7 @@ func SyncCache(ciRequest *CommonWorkflowRequest) error {
 
 func createBlobStorageRequestForCache(cloudHelperBaseConfig *util.CloudHelperBaseConfig, sourceKey string, destinationKey string) *blob_storage.BlobStorageRequest {
 	if cloudHelperBaseConfig.UseExternalClusterBlob {
-		UpdateCloudHelperBaseConfigForExtCluster(cloudHelperBaseConfig)
+		UpdateCloudHelperBaseConfigFromEnv(cloudHelperBaseConfig)
 	}
 	var awsS3BaseConfig *blob_storage.AwsS3BaseConfig
 	if cloudHelperBaseConfig.BlobStorageS3Config != nil {

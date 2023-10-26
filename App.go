@@ -150,7 +150,7 @@ func uploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
 		BlobStorageS3Config:     blobStorageS3Config,
 		AzureBlobConfig:         azureBlobConfig,
 		GcpBlobConfig:           gcpBlobConfig,
-		BlobStorageObjectType:   blob_storage.BlobStorageObjectTypeLog,
+		BlobStorageObjectType:   util.BlobStorageObjectTypeLog,
 	}
 	if r := recover(); r != nil {
 		fmt.Println(r, string(debug.Stack()))

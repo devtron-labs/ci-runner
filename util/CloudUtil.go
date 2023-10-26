@@ -1,11 +1,11 @@
 package util
 
-import blob_storage "github.com/devtron-labs/common-lib/blob-storage"
+import (
+	"github.com/devtron-labs/ci-runner/helper"
+	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
+)
 
 const (
-	BlobStorageAzure              = "AZURE"
-	BlobStorageS3                 = "S3"
-	BlobStorageGcp                = "GCP"
 	BlobStorageObjectTypeCache    = "cache"
 	BlobStorageObjectTypeArtifact = "artifact"
 	BlobStorageObjectTypeLog      = "log"
@@ -20,6 +20,44 @@ type CloudHelperBaseConfig struct {
 	AzureBlobConfig         *blob_storage.AzureBlobConfig
 	GcpBlobConfig           *blob_storage.GcpBlobConfig
 	BlobStorageObjectType   string
+}
+
+func (c *CloudHelperBaseConfig) SetAwsBlobStorageS3Config(blobStorageConfig *helper.BlobStorageConfig) {
+	c.BlobStorageS3Config = &blob_storage.BlobStorageS3Config{
+		AccessKey:                  blobStorageConfig.S3AccessKey,
+		Passkey:                    blobStorageConfig.S3SecretKey,
+		EndpointUrl:                blobStorageConfig.S3Endpoint,
+		IsInSecure:                 blobStorageConfig.S3EndpointInsecure,
+		CiLogBucketName:            blobStorageConfig.CdDefaultBuildLogsBucket,
+		CiLogRegion:                blobStorageConfig.CdDefaultCdLogsBucketRegion,
+		CiLogBucketVersioning:      blobStorageConfig.S3BucketVersioned,
+		CiCacheBucketName:          blobStorageConfig.DefaultCacheBucket,
+		CiCacheRegion:              blobStorageConfig.DefaultCacheBucketRegion,
+		CiCacheBucketVersioning:    blobStorageConfig.S3BucketVersioned,
+		CiArtifactBucketName:       blobStorageConfig.CdDefaultBuildLogsBucket,
+		CiArtifactRegion:           blobStorageConfig.CdDefaultCdLogsBucketRegion,
+		CiArtifactBucketVersioning: blobStorageConfig.S3BucketVersioned,
+	}
+}
+
+func (c *CloudHelperBaseConfig) SetAzureBlobStorageConfig(blobStorageConfig *helper.BlobStorageConfig) {
+	c.AzureBlobConfig = &blob_storage.AzureBlobConfig{
+		Enabled:               blobStorageConfig.CloudProvider == blob_storage.BLOB_STORAGE_AZURE,
+		AccountName:           blobStorageConfig.AzureAccountName,
+		BlobContainerCiLog:    blobStorageConfig.AzureBlobContainerCiLog,
+		BlobContainerCiCache:  blobStorageConfig.AzureBlobContainerCiCache,
+		BlobContainerArtifact: blobStorageConfig.AzureBlobContainerCiLog,
+		AccountKey:            blobStorageConfig.AzureAccountKey,
+	}
+}
+
+func (c *CloudHelperBaseConfig) SetGcpBlobStorageConfig(blobStorageConfig *helper.BlobStorageConfig) {
+	c.GcpBlobConfig = &blob_storage.GcpBlobConfig{
+		CredentialFileJsonData: blobStorageConfig.GcpBlobStorageCredentialJson,
+		CacheBucketName:        blobStorageConfig.DefaultCacheBucket,
+		LogBucketName:          blobStorageConfig.CdDefaultBuildLogsBucket,
+		ArtifactBucketName:     blobStorageConfig.CdDefaultBuildLogsBucket,
+	}
 }
 
 func GetBlobStorageBaseS3Config(b *blob_storage.BlobStorageS3Config, blobStorageObjectType string) *blob_storage.AwsS3BaseConfig {
