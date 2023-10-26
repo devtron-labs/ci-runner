@@ -88,16 +88,12 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	scriptEnvs, err := getGlobalEnvVariables(cicdRequest)
 
 	if len(cicdRequest.CommonWorkflowRequest.PrePostDeploySteps) > 0 {
-		digest, err := helper.ExtractDigestUsingPull(cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image)
-		if err != nil {
-			return err
-		}
 		refStageMap := make(map[int][]*helper.StepObject)
 		for _, ref := range cicdRequest.CommonWorkflowRequest.RefPlugins {
 			refStageMap[ref.Id] = ref.Steps
 		}
 		scriptEnvs["DEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
-		scriptEnvs["DIGEST"] = digest
+		scriptEnvs["DIGEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
 		var stage = StepType(cicdRequest.CommonWorkflowRequest.StageType)
 		_, _, err = RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {
