@@ -76,7 +76,7 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["DEVTRON_CD_TRIGGER_TIME"] = cicdRequest.CommonWorkflowRequest.DeploymentTriggerTime.String()
 
 		//adding some envs for Image scanning plugin
-		envs["TRIGGERED_BY"] = cicdRequest.CommonWorkflowRequest.DeploymentTriggeredBy
+		envs["TRIGGERED_BY"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.TriggeredBy)
 		envs["DOCKER_REGISTRY_ID"] = cicdRequest.CommonWorkflowRequest.DockerRegistryId
 		envs["IMAGE_SCANNER_ENDPOINT"] = cfg.ImageScannerEndpoint
 
