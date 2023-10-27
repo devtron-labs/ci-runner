@@ -45,7 +45,7 @@ func createBlobStorageRequest(cloudHelperBaseConfig *util.CloudHelperBaseConfig,
 
 func UpdateCloudHelperBaseConfigFromEnv(cloudHelperBaseConfig *util.CloudHelperBaseConfig) {
 	log.Println(util.DEVTRON, "using external cluster blob")
-	blobStorageConfig, err := GetBlobStorageConfig()
+	blobStorageConfig, err := util.GetBlobStorageConfig()
 	if err != nil {
 		log.Println(util.DEVTRON, "error in getting blob storage config, err : ", err)
 	}
@@ -56,7 +56,7 @@ func UpdateCloudHelperBaseConfigFromEnv(cloudHelperBaseConfig *util.CloudHelperB
 	setConfigForBlobType(cloudHelperBaseConfig, blobStorageConfig)
 }
 
-func setConfigForBlobType(cloudHelperBaseConfig *util.CloudHelperBaseConfig, blobStorageConfig *BlobStorageConfig) {
+func setConfigForBlobType(cloudHelperBaseConfig *util.CloudHelperBaseConfig, blobStorageConfig *util.BlobStorageConfig) {
 	cloudHelperBaseConfig.CloudProvider = blobStorageConfig.CloudProvider
 	switch blobStorageConfig.CloudProvider {
 	case blob_storage.BLOB_STORAGE_S3:
