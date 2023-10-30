@@ -342,7 +342,7 @@ type CiProjectDetails struct {
 	CheckoutPath    string      `json:"checkoutPath"`
 	CommitHash      string      `json:"commitHash"`
 	GitTag          string      `json:"gitTag"`
-	CommitTime      time.Time   `json:"commitTime"`
+	CommitTime      time.Time   `json:"commitTime,omitempty"`
 	SourceType      SourceType  `json:"sourceType"`
 	SourceValue     string      `json:"sourceValue"`
 	Type            string      `json:"type"`
