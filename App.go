@@ -72,7 +72,6 @@ func processEvent(args string) {
 	ciCdRequest := &helper.CiCdTriggerEvent{}
 	err := json.Unmarshal([]byte(args), ciCdRequest)
 	if err != nil {
-		log.Println("error in unmarshalling", "err", err, "ciCdRequest", ciCdRequest)
 		log.Println(err)
 		exitCode = util.DefaultErrorCode
 		return

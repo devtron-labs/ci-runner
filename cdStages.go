@@ -61,10 +61,7 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	}
 	// git handling
 	log.Println(util.DEVTRON, " git")
-	skipCheckout := true
-	if !skipCheckout {
-		err = helper.CloneAndCheckout(cicdRequest.CommonWorkflowRequest.CiProjectDetails)
-	}
+	err = helper.CloneAndCheckout(cicdRequest.CommonWorkflowRequest.CiProjectDetails)
 
 	if err != nil {
 		log.Println(util.DEVTRON, "clone err: ", err)
