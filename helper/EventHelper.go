@@ -171,6 +171,7 @@ type CommonWorkflowRequest struct {
 	TaskYaml                 *TaskYaml     `json:"-"`
 	IsDryRun                 bool          `json:"isDryRun"`
 	CiArtifactLastFetch      time.Time     `json:"ciArtifactLastFetch"`
+	CiPipelineType           string        `json:"CiPipelineType"`
 }
 
 func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {
