@@ -142,6 +142,16 @@ func uploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
 		inAppLoggingEnabled = event.CommonWorkflowRequest.InAppLoggingEnabled
 	}
 
+	cloudHelperConfig := &util.CloudHelperBaseConfig{
+		StorageModuleConfigured: storageModuleConfigured,
+		BlobStorageLogKey:       blobStorageLogKey,
+		CloudProvider:           cloudProvider,
+		UseExternalClusterBlob:  event.CommonWorkflowRequest.UseExternalClusterBlob,
+		BlobStorageS3Config:     blobStorageS3Config,
+		AzureBlobConfig:         azureBlobConfig,
+		GcpBlobConfig:           gcpBlobConfig,
+		BlobStorageObjectType:   util.BlobStorageObjectTypeLog,
+	}
 	if r := recover(); r != nil {
 		fmt.Println(r, string(debug.Stack()))
 		*exitCode = 1
@@ -149,7 +159,7 @@ func uploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
 	log.Println(util.DEVTRON, " blob storage configured ", storageModuleConfigured)
 	log.Println(util.DEVTRON, " in app logging enabled ", inAppLoggingEnabled)
 	if inAppLoggingEnabled {
-		helper.UploadLogs(storageModuleConfigured, blobStorageLogKey, cloudProvider, blobStorageS3Config, azureBlobConfig, gcpBlobConfig)
+		helper.UploadLogs(cloudHelperConfig)
 	} else {
 		log.Println(util.DEVTRON, "not uploading logs from app")
 	}
