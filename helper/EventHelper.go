@@ -308,35 +308,35 @@ type ImageDetailsFromCR struct {
 }
 
 type CiCompleteEvent struct {
-	CiProjectDetails           []CiProjectDetails  `json:"ciProjectDetails"`
-	DockerImage                string              `json:"dockerImage"`
-	Digest                     string              `json:"digest"`
-	PipelineId                 int                 `json:"pipelineId"`
-	DataSource                 string              `json:"dataSource"`
-	PipelineName               string              `json:"pipelineName"`
-	WorkflowId                 int                 `json:"workflowId"`
-	TriggeredBy                int                 `json:"triggeredBy"`
-	MaterialType               string              `json:"materialType"`
-	Metrics                    CIMetrics           `json:"metrics"`
-	AppName                    string              `json:"appName"`
-	IsArtifactUploaded         bool                `json:"isArtifactUploaded"`
-	FailureReason              string              `json:"failureReason"`
-	ImageDetailsFromCR         *ImageDetailsFromCR `json:"imageDetailsFromCR"`
-	PluginRegistryImageDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
+	CiProjectDetails              []CiProjectDetails  `json:"ciProjectDetails"`
+	DockerImage                   string              `json:"dockerImage"`
+	Digest                        string              `json:"digest"`
+	PipelineId                    int                 `json:"pipelineId"`
+	DataSource                    string              `json:"dataSource"`
+	PipelineName                  string              `json:"pipelineName"`
+	WorkflowId                    int                 `json:"workflowId"`
+	TriggeredBy                   int                 `json:"triggeredBy"`
+	MaterialType                  string              `json:"materialType"`
+	Metrics                       CIMetrics           `json:"metrics"`
+	AppName                       string              `json:"appName"`
+	IsArtifactUploaded            bool                `json:"isArtifactUploaded"`
+	FailureReason                 string              `json:"failureReason"`
+	ImageDetailsFromCR            *ImageDetailsFromCR `json:"imageDetailsFromCR"`
+	PluginRegistryArtifactDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
 }
 
 type CdStageCompleteEvent struct {
-	CiProjectDetails           []CiProjectDetails  `json:"ciProjectDetails"`
-	WorkflowId                 int                 `json:"workflowId"`
-	WorkflowRunnerId           int                 `json:"workflowRunnerId"`
-	CdPipelineId               int                 `json:"cdPipelineId"`
-	TriggeredBy                int                 `json:"triggeredBy"`
-	StageYaml                  string              `json:"stageYaml"`
-	ArtifactLocation           string              `json:"artifactLocation"`
-	TaskYaml                   *TaskYaml           `json:"-"`
-	PipelineName               string              `json:"pipelineName"`
-	CiArtifactDTO              CiArtifactDTO       `json:"ciArtifactDTO"`
-	PluginRegistryImageDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
+	CiProjectDetails              []CiProjectDetails  `json:"ciProjectDetails"`
+	WorkflowId                    int                 `json:"workflowId"`
+	WorkflowRunnerId              int                 `json:"workflowRunnerId"`
+	CdPipelineId                  int                 `json:"cdPipelineId"`
+	TriggeredBy                   int                 `json:"triggeredBy"`
+	StageYaml                     string              `json:"stageYaml"`
+	ArtifactLocation              string              `json:"artifactLocation"`
+	TaskYaml                      *TaskYaml           `json:"-"`
+	PipelineName                  string              `json:"pipelineName"`
+	CiArtifactDTO                 CiArtifactDTO       `json:"ciArtifactDTO"`
+	PluginRegistryArtifactDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
 }
 
 type CiProjectDetails struct {
@@ -388,13 +388,13 @@ type CIMetrics struct {
 
 func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
 	event := CdStageCompleteEvent{
-		CiProjectDetails:           cdRequest.CiProjectDetails,
-		CdPipelineId:               cdRequest.CdPipelineId,
-		WorkflowId:                 cdRequest.WorkflowId,
-		WorkflowRunnerId:           cdRequest.WorkflowRunnerId,
-		CiArtifactDTO:              cdRequest.CiArtifactDTO,
-		TriggeredBy:                cdRequest.TriggeredBy,
-		PluginRegistryImageDetails: cdRequest.RegistryDestinationImageMap,
+		CiProjectDetails:              cdRequest.CiProjectDetails,
+		CdPipelineId:                  cdRequest.CdPipelineId,
+		WorkflowId:                    cdRequest.WorkflowId,
+		WorkflowRunnerId:              cdRequest.WorkflowRunnerId,
+		CiArtifactDTO:                 cdRequest.CiArtifactDTO,
+		TriggeredBy:                   cdRequest.TriggeredBy,
+		PluginRegistryArtifactDetails: cdRequest.RegistryDestinationImageMap,
 	}
 	err := SendCdCompleteEvent(cdRequest, event)
 	if err != nil {
@@ -407,21 +407,21 @@ func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
 func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failureReason string, imageDetailsFromCR *ImageDetailsFromCR) error {
 
 	event := CiCompleteEvent{
-		CiProjectDetails:           ciRequest.CiProjectDetails,
-		DockerImage:                image,
-		Digest:                     digest,
-		PipelineId:                 ciRequest.PipelineId,
-		PipelineName:               ciRequest.PipelineName,
-		DataSource:                 "CI-RUNNER",
-		WorkflowId:                 ciRequest.WorkflowId,
-		TriggeredBy:                ciRequest.TriggeredBy,
-		MaterialType:               "git",
-		Metrics:                    metrics,
-		AppName:                    ciRequest.AppName,
-		IsArtifactUploaded:         artifactUploaded,
-		FailureReason:              failureReason,
-		ImageDetailsFromCR:         imageDetailsFromCR,
-		PluginRegistryImageDetails: ciRequest.RegistryDestinationImageMap,
+		CiProjectDetails:              ciRequest.CiProjectDetails,
+		DockerImage:                   image,
+		Digest:                        digest,
+		PipelineId:                    ciRequest.PipelineId,
+		PipelineName:                  ciRequest.PipelineName,
+		DataSource:                    "CI-RUNNER",
+		WorkflowId:                    ciRequest.WorkflowId,
+		TriggeredBy:                   ciRequest.TriggeredBy,
+		MaterialType:                  "git",
+		Metrics:                       metrics,
+		AppName:                       ciRequest.AppName,
+		IsArtifactUploaded:            artifactUploaded,
+		FailureReason:                 failureReason,
+		ImageDetailsFromCR:            imageDetailsFromCR,
+		PluginRegistryArtifactDetails: ciRequest.RegistryDestinationImageMap,
 	}
 
 	err := SendCiCompleteEvent(ciRequest, event)
