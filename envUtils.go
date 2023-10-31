@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
@@ -50,6 +51,11 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		for k, v := range cicdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables {
 			envs[k] = v
 		}
+		// for skopeo plugin, list of destination images againt registry name eg: <registry_name>: [<i1>,<i2>]
+		RegistryDestinationImage, _ := json.Marshal(cicdRequest.CommonWorkflowRequest.RegistryDestinationImageMap)
+		RegistryCredentials, _ := json.Marshal(cicdRequest.CommonWorkflowRequest.RegistryCredentialMap)
+		envs["REGISTRY_DESTINATION_IMAGE_MAP"] = string(RegistryDestinationImage)
+		envs["REGISTRY_CREDENTIALS"] = string(RegistryCredentials)
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
 		envs["DEPLOYMENT_RELEASE_ID"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.DeploymentReleaseCounter)
@@ -64,6 +70,11 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		for k, v := range cicdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables {
 			envs[k] = v
 		}
+		// for skopeo plugin, list of destination images againt registry name eg: <registry_name>: [<i1>,<i2>]
+		RegistryDestinationImage, _ := json.Marshal(cicdRequest.CommonWorkflowRequest.RegistryDestinationImageMap)
+		RegistryCredentials, _ := json.Marshal(cicdRequest.CommonWorkflowRequest.RegistryCredentialMap)
+		envs["REGISTRY_DESTINATION_IMAGE_MAP"] = string(RegistryDestinationImage)
+		envs["REGISTRY_CREDENTIALS"] = string(RegistryCredentials)
 	}
 	return envs, nil
 }

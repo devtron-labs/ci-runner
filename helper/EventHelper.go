@@ -151,23 +151,25 @@ type CommonWorkflowRequest struct {
 	ImageRetryCount            int                               `json:"imageRetryCount"`
 	ImageRetryInterval         int                               `json:"imageRetryInterval"`
 	// Data from CD Workflow service
-	WorkflowRunnerId         int           `json:"workflowRunnerId"`
-	CdPipelineId             int           `json:"cdPipelineId"`
-	StageYaml                string        `json:"stageYaml"`
-	ArtifactLocation         string        `json:"artifactLocation"`
-	CiArtifactDTO            CiArtifactDTO `json:"ciArtifactDTO"`
-	CdImage                  string        `json:"cdImage"`
-	StageType                string        `json:"stageType"`
-	CdCacheLocation          string        `json:"cdCacheLocation"`
-	CdCacheRegion            string        `json:"cdCacheRegion"`
-	WorkflowPrefixForLog     string        `json:"workflowPrefixForLog"`
-	DeploymentTriggeredBy    string        `json:"deploymentTriggeredBy,omitempty"`
-	DeploymentTriggerTime    time.Time     `json:"deploymentTriggerTime,omitempty"`
-	DeploymentReleaseCounter int           `json:"deploymentReleaseCounter,omitempty"`
-	PrePostDeploySteps       []*StepObject `json:"prePostDeploySteps"`
-	TaskYaml                 *TaskYaml     `json:"-"`
-	IsDryRun                 bool          `json:"isDryRun"`
-	CiArtifactLastFetch      time.Time     `json:"ciArtifactLastFetch"`
+	WorkflowRunnerId            int                            `json:"workflowRunnerId"`
+	CdPipelineId                int                            `json:"cdPipelineId"`
+	StageYaml                   string                         `json:"stageYaml"`
+	ArtifactLocation            string                         `json:"artifactLocation"`
+	CiArtifactDTO               CiArtifactDTO                  `json:"ciArtifactDTO"`
+	CdImage                     string                         `json:"cdImage"`
+	StageType                   string                         `json:"stageType"`
+	CdCacheLocation             string                         `json:"cdCacheLocation"`
+	CdCacheRegion               string                         `json:"cdCacheRegion"`
+	WorkflowPrefixForLog        string                         `json:"workflowPrefixForLog"`
+	DeploymentTriggeredBy       string                         `json:"deploymentTriggeredBy,omitempty"`
+	DeploymentTriggerTime       time.Time                      `json:"deploymentTriggerTime,omitempty"`
+	DeploymentReleaseCounter    int                            `json:"deploymentReleaseCounter,omitempty"`
+	PrePostDeploySteps          []*StepObject                  `json:"prePostDeploySteps"`
+	TaskYaml                    *TaskYaml                      `json:"-"`
+	IsDryRun                    bool                           `json:"isDryRun"`
+	CiArtifactLastFetch         time.Time                      `json:"ciArtifactLastFetch"`
+	RegistryDestinationImageMap map[string][]string            `json:"registryDestinationImageMap"`
+	RegistryCredentialMap       map[string]RegistryCredentials `json:"registryCredentialMap"`
 }
 
 type CiRequest struct {
@@ -306,33 +308,35 @@ type ImageDetailsFromCR struct {
 }
 
 type CiCompleteEvent struct {
-	CiProjectDetails   []CiProjectDetails  `json:"ciProjectDetails"`
-	DockerImage        string              `json:"dockerImage"`
-	Digest             string              `json:"digest"`
-	PipelineId         int                 `json:"pipelineId"`
-	DataSource         string              `json:"dataSource"`
-	PipelineName       string              `json:"pipelineName"`
-	WorkflowId         int                 `json:"workflowId"`
-	TriggeredBy        int                 `json:"triggeredBy"`
-	MaterialType       string              `json:"materialType"`
-	Metrics            CIMetrics           `json:"metrics"`
-	AppName            string              `json:"appName"`
-	IsArtifactUploaded bool                `json:"isArtifactUploaded"`
-	FailureReason      string              `json:"failureReason"`
-	ImageDetailsFromCR *ImageDetailsFromCR `json:"imageDetailsFromCR"`
+	CiProjectDetails           []CiProjectDetails  `json:"ciProjectDetails"`
+	DockerImage                string              `json:"dockerImage"`
+	Digest                     string              `json:"digest"`
+	PipelineId                 int                 `json:"pipelineId"`
+	DataSource                 string              `json:"dataSource"`
+	PipelineName               string              `json:"pipelineName"`
+	WorkflowId                 int                 `json:"workflowId"`
+	TriggeredBy                int                 `json:"triggeredBy"`
+	MaterialType               string              `json:"materialType"`
+	Metrics                    CIMetrics           `json:"metrics"`
+	AppName                    string              `json:"appName"`
+	IsArtifactUploaded         bool                `json:"isArtifactUploaded"`
+	FailureReason              string              `json:"failureReason"`
+	ImageDetailsFromCR         *ImageDetailsFromCR `json:"imageDetailsFromCR"`
+	PluginRegistryImageDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
 }
 
 type CdStageCompleteEvent struct {
-	CiProjectDetails []CiProjectDetails `json:"ciProjectDetails"`
-	WorkflowId       int                `json:"workflowId"`
-	WorkflowRunnerId int                `json:"workflowRunnerId"`
-	CdPipelineId     int                `json:"cdPipelineId"`
-	TriggeredBy      int                `json:"triggeredBy"`
-	StageYaml        string             `json:"stageYaml"`
-	ArtifactLocation string             `json:"artifactLocation"`
-	TaskYaml         *TaskYaml          `json:"-"`
-	PipelineName     string             `json:"pipelineName"`
-	CiArtifactDTO    CiArtifactDTO      `json:"ciArtifactDTO"`
+	CiProjectDetails           []CiProjectDetails  `json:"ciProjectDetails"`
+	WorkflowId                 int                 `json:"workflowId"`
+	WorkflowRunnerId           int                 `json:"workflowRunnerId"`
+	CdPipelineId               int                 `json:"cdPipelineId"`
+	TriggeredBy                int                 `json:"triggeredBy"`
+	StageYaml                  string              `json:"stageYaml"`
+	ArtifactLocation           string              `json:"artifactLocation"`
+	TaskYaml                   *TaskYaml           `json:"-"`
+	PipelineName               string              `json:"pipelineName"`
+	CiArtifactDTO              CiArtifactDTO       `json:"ciArtifactDTO"`
+	PluginRegistryImageDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
 }
 
 type CiProjectDetails struct {
@@ -350,6 +354,16 @@ type CiProjectDetails struct {
 	Author          string      `json:"author"`
 	GitOptions      GitOptions  `json:"gitOptions"`
 	WebhookData     WebhookData `json:"webhookData"`
+}
+
+type RegistryCredentials struct {
+	RegistryType       string `json:"registryType"`
+	RegistryURL        string `json:"registryURL"`
+	Username           string `json:"username"`
+	Password           string `json:"password"`
+	AWSAccessKeyId     string `json:"awsAccessKeyId,omitempty"`
+	AWSSecretAccessKey string `json:"awsSecretAccessKey,omitempty"`
+	AWSRegion          string `json:"awsRegion,omitempty"`
 }
 
 type PublishRequest struct {
@@ -373,14 +387,14 @@ type CIMetrics struct {
 }
 
 func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
-
 	event := CdStageCompleteEvent{
-		CiProjectDetails: cdRequest.CiProjectDetails,
-		CdPipelineId:     cdRequest.CdPipelineId,
-		WorkflowId:       cdRequest.WorkflowId,
-		WorkflowRunnerId: cdRequest.WorkflowRunnerId,
-		CiArtifactDTO:    cdRequest.CiArtifactDTO,
-		TriggeredBy:      cdRequest.TriggeredBy,
+		CiProjectDetails:           cdRequest.CiProjectDetails,
+		CdPipelineId:               cdRequest.CdPipelineId,
+		WorkflowId:                 cdRequest.WorkflowId,
+		WorkflowRunnerId:           cdRequest.WorkflowRunnerId,
+		CiArtifactDTO:              cdRequest.CiArtifactDTO,
+		TriggeredBy:                cdRequest.TriggeredBy,
+		PluginRegistryImageDetails: cdRequest.RegistryDestinationImageMap,
 	}
 	err := SendCdCompleteEvent(cdRequest, event)
 	if err != nil {
@@ -393,20 +407,21 @@ func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
 func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failureReason string, imageDetailsFromCR *ImageDetailsFromCR) error {
 
 	event := CiCompleteEvent{
-		CiProjectDetails:   ciRequest.CiProjectDetails,
-		DockerImage:        image,
-		Digest:             digest,
-		PipelineId:         ciRequest.PipelineId,
-		PipelineName:       ciRequest.PipelineName,
-		DataSource:         "CI-RUNNER",
-		WorkflowId:         ciRequest.WorkflowId,
-		TriggeredBy:        ciRequest.TriggeredBy,
-		MaterialType:       "git",
-		Metrics:            metrics,
-		AppName:            ciRequest.AppName,
-		IsArtifactUploaded: artifactUploaded,
-		FailureReason:      failureReason,
-		ImageDetailsFromCR: imageDetailsFromCR,
+		CiProjectDetails:           ciRequest.CiProjectDetails,
+		DockerImage:                image,
+		Digest:                     digest,
+		PipelineId:                 ciRequest.PipelineId,
+		PipelineName:               ciRequest.PipelineName,
+		DataSource:                 "CI-RUNNER",
+		WorkflowId:                 ciRequest.WorkflowId,
+		TriggeredBy:                ciRequest.TriggeredBy,
+		MaterialType:               "git",
+		Metrics:                    metrics,
+		AppName:                    ciRequest.AppName,
+		IsArtifactUploaded:         artifactUploaded,
+		FailureReason:              failureReason,
+		ImageDetailsFromCR:         imageDetailsFromCR,
+		PluginRegistryImageDetails: ciRequest.RegistryDestinationImageMap,
 	}
 
 	err := SendCiCompleteEvent(ciRequest, event)
