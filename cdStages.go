@@ -60,11 +60,15 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		return err
 	}
 	// git handling
-	log.Println(util.DEVTRON, " git")
-	err = helper.CloneAndCheckout(cicdRequest.CommonWorkflowRequest.CiProjectDetails)
-	if err != nil {
-		log.Println(util.DEVTRON, "clone err: ", err)
-		return err
+	// we are skipping clone and checkout in case of ci job type poll cr images plugin does not require it.(ci-job)
+	skipCheckout := cicdRequest.CommonWorkflowRequest.CiPipelineType == helper.CI_JOB
+	if !skipCheckout {
+		log.Println(util.DEVTRON, " git")
+		err = helper.CloneAndCheckout(cicdRequest.CommonWorkflowRequest.CiProjectDetails)
+		if err != nil {
+			log.Println(util.DEVTRON, "clone err: ", err)
+			return err
+		}
 	}
 	log.Println(util.DEVTRON, " /git")
 
