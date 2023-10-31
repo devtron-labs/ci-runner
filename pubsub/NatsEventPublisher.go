@@ -43,7 +43,7 @@ func PublishEventsOnNats(jsonBody []byte, topic string) error {
 	if err != nil {
 		log.Print(util.DEVTRON, "error in publishing event to pubsub client", "topic", topic, "body", string(jsonBody))
 	} else {
-		log.Print(util.DEVTRON, "ci complete event notification done")
+		log.Print(util.DEVTRON, "ci complete event notification done", "eventBody", string(jsonBody))
 	}
 
 	log.Print(util.DEVTRON, " housekeeping done. exiting now")
