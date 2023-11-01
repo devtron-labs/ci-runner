@@ -170,6 +170,7 @@ type CommonWorkflowRequest struct {
 	CiArtifactLastFetch         time.Time                      `json:"ciArtifactLastFetch"`
 	RegistryDestinationImageMap map[string][]string            `json:"registryDestinationImageMap"`
 	RegistryCredentialMap       map[string]RegistryCredentials `json:"registryCredentialMap"`
+	PluginArtifactStage         string                         `json:"pluginArtifactStage"`
 }
 
 type CiRequest struct {
@@ -323,6 +324,7 @@ type CiCompleteEvent struct {
 	FailureReason                 string              `json:"failureReason"`
 	ImageDetailsFromCR            *ImageDetailsFromCR `json:"imageDetailsFromCR"`
 	PluginRegistryArtifactDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
+	PluginArtifactStage           string              `json:"pluginArtifactStage"`
 }
 
 type CdStageCompleteEvent struct {
@@ -337,6 +339,7 @@ type CdStageCompleteEvent struct {
 	PipelineName                  string              `json:"pipelineName"`
 	CiArtifactDTO                 CiArtifactDTO       `json:"ciArtifactDTO"`
 	PluginRegistryArtifactDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
+	PluginArtifactStage           string              `json:"pluginArtifactStage"`
 }
 
 type CiProjectDetails struct {
@@ -395,6 +398,7 @@ func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
 		CiArtifactDTO:                 cdRequest.CiArtifactDTO,
 		TriggeredBy:                   cdRequest.TriggeredBy,
 		PluginRegistryArtifactDetails: cdRequest.RegistryDestinationImageMap,
+		PluginArtifactStage:           cdRequest.PluginArtifactStage,
 	}
 	err := SendCdCompleteEvent(cdRequest, event)
 	if err != nil {
@@ -422,6 +426,7 @@ func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, m
 		FailureReason:                 failureReason,
 		ImageDetailsFromCR:            imageDetailsFromCR,
 		PluginRegistryArtifactDetails: ciRequest.RegistryDestinationImageMap,
+		PluginArtifactStage:           ciRequest.PluginArtifactStage,
 	}
 
 	err := SendCiCompleteEvent(ciRequest, event)
