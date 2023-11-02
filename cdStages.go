@@ -17,9 +17,9 @@ func HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 }
 
 func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) error {
-
+	cloudHelperBaseConfig := cdRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
 	if cdRequest.PrePostDeploySteps != nil && len(cdRequest.PrePostDeploySteps) > 0 {
-		_, err := helper.ZipAndUpload(cdRequest.BlobStorageConfigured, cdRequest.BlobStorageS3Config, cdRequest.CiArtifactFileName, cdRequest.CloudProvider, cdRequest.AzureBlobConfig, cdRequest.GcpBlobConfig)
+		_, err := helper.ZipAndUpload(cloudHelperBaseConfig, cdRequest.CiArtifactFileName)
 		return err
 	}
 
@@ -43,7 +43,7 @@ func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) error 
 		}
 	}
 	log.Println(util.DEVTRON, " artifacts", artifactFiles)
-	return helper.UploadArtifact(cdRequest.BlobStorageConfigured, artifactFiles, cdRequest.BlobStorageS3Config, cdRequest.CiArtifactFileName, cdRequest.CloudProvider, cdRequest.AzureBlobConfig, cdRequest.GcpBlobConfig)
+	return helper.UploadArtifact(cloudHelperBaseConfig, artifactFiles, cdRequest.CiArtifactFileName)
 }
 
 func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {

@@ -150,6 +150,9 @@ type CommonWorkflowRequest struct {
 	IsExtRun                   bool                              `json:"isExtRun"`
 	ImageRetryCount            int                               `json:"imageRetryCount"`
 	ImageRetryInterval         int                               `json:"imageRetryInterval"`
+	ExtBlobStorageCmName       string                            `json:"extBlobStorageCmName"`
+	ExtBlobStorageSecretName   string                            `json:"extBlobStorageSecretName"`
+	UseExternalClusterBlob     bool                              `json:"useExternalClusterBlob"`
 	// Data from CD Workflow service
 	WorkflowRunnerId         int           `json:"workflowRunnerId"`
 	CdPipelineId             int           `json:"cdPipelineId"`
@@ -169,6 +172,19 @@ type CommonWorkflowRequest struct {
 	IsDryRun                 bool          `json:"isDryRun"`
 	CiArtifactLastFetch      time.Time     `json:"ciArtifactLastFetch"`
 	CiPipelineType           string        `json:"CiPipelineType"`
+}
+
+func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {
+	return &util.CloudHelperBaseConfig{
+		StorageModuleConfigured: c.BlobStorageConfigured,
+		BlobStorageLogKey:       c.BlobStorageLogsKey,
+		CloudProvider:           c.CloudProvider,
+		UseExternalClusterBlob:  c.UseExternalClusterBlob,
+		BlobStorageS3Config:     c.BlobStorageS3Config,
+		AzureBlobConfig:         c.AzureBlobConfig,
+		GcpBlobConfig:           c.GcpBlobConfig,
+		BlobStorageObjectType:   blobStorageObjectType,
+	}
 }
 
 type CiRequest struct {
