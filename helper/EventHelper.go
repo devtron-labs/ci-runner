@@ -150,27 +150,32 @@ type CommonWorkflowRequest struct {
 	IsExtRun                   bool                              `json:"isExtRun"`
 	ImageRetryCount            int                               `json:"imageRetryCount"`
 	ImageRetryInterval         int                               `json:"imageRetryInterval"`
+	ExtBlobStorageCmName       string                            `json:"extBlobStorageCmName"`
+	ExtBlobStorageSecretName   string                            `json:"extBlobStorageSecretName"`
+	UseExternalClusterBlob     bool                              `json:"useExternalClusterBlob"`
 	// Data from CD Workflow service
-	WorkflowRunnerId            int                            `json:"workflowRunnerId"`
-	CdPipelineId                int                            `json:"cdPipelineId"`
-	StageYaml                   string                         `json:"stageYaml"`
-	ArtifactLocation            string                         `json:"artifactLocation"`
-	CiArtifactDTO               CiArtifactDTO                  `json:"ciArtifactDTO"`
-	CdImage                     string                         `json:"cdImage"`
-	StageType                   string                         `json:"stageType"`
-	CdCacheLocation             string                         `json:"cdCacheLocation"`
-	CdCacheRegion               string                         `json:"cdCacheRegion"`
-	WorkflowPrefixForLog        string                         `json:"workflowPrefixForLog"`
-	DeploymentTriggeredBy       string                         `json:"deploymentTriggeredBy,omitempty"`
-	DeploymentTriggerTime       time.Time                      `json:"deploymentTriggerTime,omitempty"`
-	DeploymentReleaseCounter    int                            `json:"deploymentReleaseCounter,omitempty"`
-	PrePostDeploySteps          []*StepObject                  `json:"prePostDeploySteps"`
-	TaskYaml                    *TaskYaml                      `json:"-"`
-	IsDryRun                    bool                           `json:"isDryRun"`
-	CiArtifactLastFetch         time.Time                      `json:"ciArtifactLastFetch"`
+	WorkflowRunnerId         int           `json:"workflowRunnerId"`
+	CdPipelineId             int           `json:"cdPipelineId"`
+	StageYaml                string        `json:"stageYaml"`
+	ArtifactLocation         string        `json:"artifactLocation"`
+	CiArtifactDTO            CiArtifactDTO `json:"ciArtifactDTO"`
+	CdImage                  string        `json:"cdImage"`
+	StageType                string        `json:"stageType"`
+	CdCacheLocation          string        `json:"cdCacheLocation"`
+	CdCacheRegion            string        `json:"cdCacheRegion"`
+	WorkflowPrefixForLog     string        `json:"workflowPrefixForLog"`
+	DeploymentTriggeredBy    string        `json:"deploymentTriggeredBy,omitempty"`
+	DeploymentTriggerTime    time.Time     `json:"deploymentTriggerTime,omitempty"`
+	DeploymentReleaseCounter int           `json:"deploymentReleaseCounter,omitempty"`
+	PrePostDeploySteps       []*StepObject `json:"prePostDeploySteps"`
+	TaskYaml                 *TaskYaml     `json:"-"`
+	IsDryRun                 bool          `json:"isDryRun"`
+	CiArtifactLastFetch      time.Time     `json:"ciArtifactLastFetch"`
+	CiPipelineType           string        `json:"CiPipelineType"`
 	RegistryDestinationImageMap map[string][]string            `json:"registryDestinationImageMap"`
 	RegistryCredentialMap       map[string]RegistryCredentials `json:"registryCredentialMap"`
 	PluginArtifactStage         string                         `json:"pluginArtifactStage"`
+
 }
 
 type CiRequest struct {
