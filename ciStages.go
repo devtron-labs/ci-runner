@@ -70,7 +70,7 @@ const (
 
 func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
 
-	var metrics *helper.CIMetrics
+	metrics := &helper.CIMetrics{}
 	start := time.Now()
 	metrics.TotalStartTime = start
 	artifactUploaded = false
