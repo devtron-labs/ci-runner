@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/caarlos0/env"
 	"github.com/devtron-labs/ci-runner/helper"
+	"github.com/devtron-labs/ci-runner/pubsub"
 	"github.com/devtron-labs/ci-runner/util"
 	"os"
 	"strconv"
@@ -13,11 +15,17 @@ import (
 func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]string, error) {
 	envs := make(map[string]string)
 	envs["WORKING_DIRECTORY"] = util.WORKINGDIR
+	cfg := &pubsub.PubSubConfig{}
+	err := env.Parse(cfg)
+	if err != nil {
+		return nil, err
+	}
 	if cicdRequest.Type == util.CIEVENT {
 		image, err := helper.BuildDockerImagePath(cicdRequest.CommonWorkflowRequest)
 		if err != nil {
 			return nil, err
 		}
+
 		envs["DOCKER_IMAGE_TAG"] = cicdRequest.CommonWorkflowRequest.DockerImageTag
 		envs["DOCKER_REPOSITORY"] = cicdRequest.CommonWorkflowRequest.DockerRepository
 		envs["DOCKER_REGISTRY_URL"] = cicdRequest.CommonWorkflowRequest.DockerRegistryURL
@@ -47,6 +55,12 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["AWS_REGION"] = cicdRequest.CommonWorkflowRequest.AwsRegion
 		envs["LAST_FETCHED_TIME"] = cicdRequest.CommonWorkflowRequest.CiArtifactLastFetch.String()
 
+		//adding some envs for Image scanning plugin
+		envs["PIPELINE_ID"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.PipelineId)
+		envs["TRIGGERED_BY"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.TriggeredBy)
+		envs["DOCKER_REGISTRY_ID"] = cicdRequest.CommonWorkflowRequest.DockerRegistryId
+		envs["IMAGE_SCANNER_ENDPOINT"] = cfg.ImageScannerEndpoint
+
 		// setting extraEnvironmentVariables
 		for k, v := range cicdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables {
 			envs[k] = v
@@ -66,6 +80,11 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		// to support legacy yaml based script trigger
 		envs["DEVTRON_CD_TRIGGERED_BY"] = cicdRequest.CommonWorkflowRequest.DeploymentTriggeredBy
 		envs["DEVTRON_CD_TRIGGER_TIME"] = cicdRequest.CommonWorkflowRequest.DeploymentTriggerTime.String()
+
+		//adding some envs for Image scanning plugin
+		envs["TRIGGERED_BY"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.TriggeredBy)
+		envs["DOCKER_REGISTRY_ID"] = cicdRequest.CommonWorkflowRequest.DockerRegistryId
+		envs["IMAGE_SCANNER_ENDPOINT"] = cfg.ImageScannerEndpoint
 
 		for k, v := range cicdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables {
 			envs[k] = v
