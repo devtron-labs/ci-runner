@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func RunScriptsV1(outputPath string, bashScript string, script string, envVars map[string]string) error {
@@ -95,7 +96,8 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 	for k, v := range envInputVars {
 		inputEnvironmentVariable = append(inputEnvironmentVariable, fmt.Sprintf("%s=%s", k, v))
 	}
-
+	log.Println("---------hibernating-------")
+	time.Sleep(time.Minute * 15)
 	runScriptCMD := exec.Command("/bin/sh", scriptPath)
 	runScriptCMD.Env = inputEnvironmentVariable
 	err = util.RunCommand(runScriptCMD)
