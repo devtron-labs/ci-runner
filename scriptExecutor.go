@@ -95,7 +95,6 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 	for k, v := range envInputVars {
 		inputEnvironmentVariable = append(inputEnvironmentVariable, fmt.Sprintf("%s=%s", k, v))
 	}
-
 	runScriptCMD := exec.Command("/bin/sh", scriptPath)
 	runScriptCMD.Env = inputEnvironmentVariable
 	err = util.RunCommand(runScriptCMD)
