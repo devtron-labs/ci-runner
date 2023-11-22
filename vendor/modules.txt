@@ -125,7 +125,7 @@ github.com/caarlos0/env
 # github.com/cespare/xxhash/v2 v2.2.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/devtron-labs/common-lib v0.0.8-0.20231122054436-a0d885287f77
+# github.com/devtron-labs/common-lib v0.0.8-0.20231122064714-2465dd0c9480
 ## explicit; go 1.20
 github.com/devtron-labs/common-lib/blob-storage
 github.com/devtron-labs/common-lib/natsMetrics
