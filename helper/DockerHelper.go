@@ -160,14 +160,15 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 		pwd = credsSlice[1]
 
 	}
-	dockerLogin := "docker login -u " + username + " -p " + pwd + " " + dockerCredentials.DockerRegistryURL
-	fmt.Println("Docker login successful with username ", username, " on docker registry URL ", dockerCredentials.DockerRegistryURL)
+	dockerLogin := fmt.Sprintf("docker login -u %s -p %s %s ", username, pwd, dockerCredentials.DockerRegistryURL)
+	//dockerLogin = "docker login -u " + username + " -p " + pwd + " " + dockerCredentials.DockerRegistryURL
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
+	fmt.Println("Docker login successful with username ", username, " on docker registry URL ", dockerCredentials.DockerRegistryURL)
 	return nil
 }
 func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
