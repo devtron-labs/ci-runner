@@ -434,7 +434,7 @@ func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, m
 		Digest:                        digest,
 		PipelineId:                    ciRequest.PipelineId,
 		PipelineName:                  ciRequest.PipelineName,
-		DataSource:                    "CI-RUNNER",
+		DataSource:                    "ci",
 		WorkflowId:                    ciRequest.WorkflowId,
 		TriggeredBy:                   ciRequest.TriggeredBy,
 		MaterialType:                  "git",
