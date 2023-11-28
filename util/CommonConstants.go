@@ -26,7 +26,7 @@ const (
 	SECUREWITHCERT              = "secure-with-cert"
 	RETRYCOUNT                  = 10
 	HOMEDIR                     = "/"
-	WORKINGDIR                  = "/Users/ayushmaheshwari/devtroncd"
+	WORKINGDIR                  = "/devtroncd"
 	LOCAL_BUILDX_LOCATION       = "/var/lib/devtron/buildx"
 	LOCAL_BUILDX_CACHE_LOCATION = LOCAL_BUILDX_LOCATION + "/cache"
 	CIEVENT                     = "CI"
