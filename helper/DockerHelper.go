@@ -164,7 +164,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 
 	} else if (dockerCredentials.DockerRegistryType == REGISTRY_TYPE_GCR || dockerCredentials.DockerRegistryType == REGISTRY_TYPE_ARTIFACT_REGISTRY) && username == JSON_KEY_USERNAME {
 		// for gcr and artifact registry password is already saved as string in DB
-		if strings.HasPrefix(pwd, git "'") {
+		if strings.HasPrefix(pwd, "'") {
 			pwd = pwd[1:]
 		}
 		if strings.HasSuffix(pwd, "'") {
