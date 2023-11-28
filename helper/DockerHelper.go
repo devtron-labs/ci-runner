@@ -168,7 +168,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 		log.Println(err)
 		return err
 	}
-	fmt.Println("Docker login successful with username ", username, " on docker registry URL ", dockerCredentials.DockerRegistryURL)
+	log.Println("Docker login successful with username ", username, " on docker registry URL ", dockerCredentials.DockerRegistryURL)
 	return nil
 }
 func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
