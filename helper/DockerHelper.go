@@ -102,6 +102,9 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 const DOCKER_REGISTRY_TYPE_ECR = "ecr"
 const DOCKER_REGISTRY_TYPE_DOCKERHUB = "docker-hub"
 const DOCKER_REGISTRY_TYPE_OTHER = "other"
+const REGISTRY_TYPE_ARTIFACT_REGISTRY = "artifact-registry"
+const REGISTRY_TYPE_GCR = "gcr"
+const JSON_KEY_USERNAME = "_json_key"
 
 type DockerCredentials struct {
 	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType string
@@ -159,8 +162,15 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 		username = credsSlice[0]
 		pwd = credsSlice[1]
 
+	} else if (dockerCredentials.DockerRegistryType == REGISTRY_TYPE_GCR || dockerCredentials.DockerRegistryType == REGISTRY_TYPE_ARTIFACT_REGISTRY) && username == JSON_KEY_USERNAME {
+		if strings.HasPrefix(pwd, "'") {
+			pwd = pwd[1:]
+		}
+		if strings.HasSuffix(pwd, "'") {
+			pwd = pwd[:len(pwd)-1]
+		}
 	}
-	dockerLogin := "docker login -u " + fmt.Sprintf(`'%s'`, username) + " -p " + fmt.Sprintf(`'%s'`, pwd) + " " + fmt.Sprintf(`'%s'`, dockerCredentials.DockerRegistryURL)
+	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, dockerCredentials.DockerRegistryURL)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
