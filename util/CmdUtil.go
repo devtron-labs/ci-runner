@@ -19,6 +19,7 @@ package util
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -42,4 +43,9 @@ func RunCommand(cmd *exec.Cmd) error {
 	}
 	//log.Println(stdBuffer.String())
 	return nil
+}
+
+// SanitizeCliParam is used where we are directly injecting the user defined params to any CLI commands. This prevents any script injection to the running env
+func SanitizeCliParam(param string) string {
+	return fmt.Sprintf("%q", param)
 }

@@ -171,7 +171,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 			pwd = pwd[:len(pwd)-1]
 		}
 	}
-	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, dockerCredentials.DockerRegistryURL)
+	dockerLogin := fmt.Sprintf("docker login -u '%q' -p '%q' '%q' ", username, pwd, dockerCredentials.DockerRegistryURL)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
@@ -295,7 +295,7 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 
 			dockerBuild = getBuildxBuildCommand(cacheEnabled, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig)
 		} else {
-			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerBuildConfig.DockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
+			dockerBuild = fmt.Sprintf("%s -f %q --network host -t %q %s", dockerBuild, dockerBuildConfig.DockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
 		if envVars.ShowDockerBuildCmdInLogs {
 			log.Println("Starting docker build : ", dockerBuild)
@@ -355,7 +355,7 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 }
 
 func getBuildxBuildCommand(cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig) string {
-	dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
+	dockerBuild = fmt.Sprintf("%s -f %q -t %q --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
 	if cacheEnabled {
 		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s", dockerBuild, localCachePath, oldCacheBuildxPath)
 	}
@@ -455,7 +455,7 @@ func executeCmd(dockerBuild string) error {
 }
 
 func tagDockerBuild(dockerRepository string, dest string) error {
-	dockerTag := "docker tag " + dockerRepository + ":latest" + " " + dest
+	dockerTag := fmt.Sprintf("docker tag %q:latest %q", dockerRepository, dest)
 	log.Println(" -----> " + dockerTag)
 	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
 	err := util.RunCommand(dockerTagCMD)
@@ -547,7 +547,7 @@ func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
 
 func PushArtifact(dest string) error {
 	//awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
-	dockerPush := "docker push " + dest
+	dockerPush := fmt.Sprintf("docker push %q", dest)
 	log.Println("-----> " + dockerPush)
 	dockerPushCMD := exec.Command("/bin/sh", "-c", dockerPush)
 	err := util.RunCommand(dockerPushCMD)
@@ -581,7 +581,7 @@ func ExtractDigestForBuildx(dest string) (string, error) {
 }
 
 func ExtractDigestUsingPull(dest string) (string, error) {
-	dockerPull := "docker pull " + dest
+	dockerPull := fmt.Sprintf("docker pull %q", dest)
 	dockerPullCmd := exec.Command("/bin/sh", "-c", dockerPull)
 	digest, err := runGetDockerImageDigest(dockerPullCmd)
 	if err != nil {
