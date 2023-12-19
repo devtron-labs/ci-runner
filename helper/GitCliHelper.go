@@ -22,7 +22,7 @@ const GIT_AKS_PASS = "/git-ask-pass.sh"
 
 func (impl *GitUtil) Fetch(gitContext GitContext, rootDir string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git fetch ", "location", rootDir)
-	cmd := exec.Command("git", "-C", util.SanitizeCliParam(rootDir), "fetch", "origin", "--tags", "--force")
+	cmd := exec.Command("git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
 	output, errMsg, err := impl.runCommandWithCred(cmd, gitContext.auth.Username, gitContext.auth.Password)
 	log.Println(util.DEVTRON, "fetch output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, "", nil
@@ -30,7 +30,7 @@ func (impl *GitUtil) Fetch(gitContext GitContext, rootDir string) (response, err
 
 func (impl *GitUtil) Checkout(rootDir string, checkout string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git checkout ", "location", rootDir)
-	cmd := exec.Command("git", "-C", util.SanitizeCliParam(rootDir), "checkout", util.SanitizeCliParam(checkout), "--force")
+	cmd := exec.Command("git", "-C", rootDir, "checkout", checkout, "--force")
 	output, errMsg, err := impl.runCommand(cmd)
 	log.Println(util.DEVTRON, "checkout output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, "", nil
@@ -111,7 +111,7 @@ func (impl *GitUtil) Merge(rootDir string, commit string) (response, errMsg stri
 
 func (impl *GitUtil) RecursiveFetchSubmodules(rootDir string) (response, errMsg string, error error) {
 	log.Println(util.DEVTRON, "git recursive fetch submodules ", "location", rootDir)
-	cmd := exec.Command("git", "-C", util.SanitizeCliParam(rootDir), "submodule", "update", "--init", "--recursive")
+	cmd := exec.Command("git", "-C", rootDir, "submodule", "update", "--init", "--recursive")
 	output, eMsg, err := impl.runCommandForSuppliedNullifiedEnv(cmd, false)
 	log.Println(util.DEVTRON, "recursive fetch submodules output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, eMsg, err
@@ -119,7 +119,7 @@ func (impl *GitUtil) RecursiveFetchSubmodules(rootDir string) (response, errMsg 
 
 func (impl *GitUtil) UpdateCredentialHelper(rootDir string) (response, errMsg string, error error) {
 	log.Println(util.DEVTRON, "git credential helper store ", "location", rootDir)
-	cmd := exec.Command("git", "-C", util.SanitizeCliParam(rootDir), "config", "--global", "credential.helper", "store")
+	cmd := exec.Command("git", "-C", rootDir, "config", "--global", "credential.helper", "store")
 	output, eMsg, err := impl.runCommandForSuppliedNullifiedEnv(cmd, false)
 	log.Println(util.DEVTRON, "git credential helper store output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, eMsg, err
@@ -127,7 +127,7 @@ func (impl *GitUtil) UpdateCredentialHelper(rootDir string) (response, errMsg st
 
 func (impl *GitUtil) UnsetCredentialHelper(rootDir string) (response, errMsg string, error error) {
 	log.Println(util.DEVTRON, "git credential helper unset ", "location", rootDir)
-	cmd := exec.Command("git", "-C", util.SanitizeCliParam(rootDir), "config", "--global", "--unset", "credential.helper")
+	cmd := exec.Command("git", "-C", rootDir, "config", "--global", "--unset", "credential.helper")
 	output, eMsg, err := impl.runCommandForSuppliedNullifiedEnv(cmd, false)
 	log.Println(util.DEVTRON, "git credential helper unset output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, eMsg, err
