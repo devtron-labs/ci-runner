@@ -228,28 +228,28 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 				dockerBuild = dockerBuildxBuild + " "
 			}
 			if isTargetPlatformSet {
-				dockerBuild += "--platform " + dockerBuildConfig.TargetPlatform + " "
+				dockerBuild += fmt.Sprintf("--platform %q ", dockerBuildConfig.TargetPlatform)
 			}
 		}
 		dockerBuildFlags := make(map[string]string)
 		dockerBuildArgsMap := dockerBuildConfig.Args
 		for k, v := range dockerBuildArgsMap {
-			flagKey := fmt.Sprintf("%s %s", BUILD_ARG_FLAG, k)
+			flagKey := fmt.Sprintf("%s %q", BUILD_ARG_FLAG, strings.TrimSpace(k))
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=\"%s\"", valueFromEnv)
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=\"%s\"", strings.TrimSpace(valueFromEnv))
 			} else {
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", v)
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", strings.TrimSpace(v))
 			}
 		}
 		dockerBuildOptionsMap := dockerBuildConfig.DockerBuildOptions
 		for k, v := range dockerBuildOptionsMap {
-			flagKey := "--" + k
+			flagKey := "--" + strings.TrimSpace(k)
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", valueFromEnv)
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", strings.TrimSpace(valueFromEnv))
 			} else {
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", v)
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", strings.TrimSpace(v))
 			}
 		}
 		for key, value := range dockerBuildFlags {
@@ -355,9 +355,9 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 }
 
 func getBuildxBuildCommand(cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig) string {
-	dockerBuild = fmt.Sprintf("%s -f %q -t %q --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
+	dockerBuild = fmt.Sprintf("%s -f %q -t %q --push %q --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
 	if cacheEnabled {
-		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s", dockerBuild, localCachePath, oldCacheBuildxPath)
+		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%q,mode=max --cache-from=type=local,src=%s", dockerBuild, localCachePath, oldCacheBuildxPath)
 	}
 
 	provenanceFlag := dockerBuildConfig.GetProvenanceFlag()
