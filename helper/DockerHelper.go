@@ -171,7 +171,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 			pwd = pwd[:len(pwd)-1]
 		}
 	}
-	dockerLogin := fmt.Sprintf("docker login -u '%q' -p '%q' '%q' ", username, pwd, dockerCredentials.DockerRegistryURL)
+	dockerLogin := fmt.Sprintf("docker login -u %q -p %q %q", username, pwd, dockerCredentials.DockerRegistryURL)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
