@@ -94,6 +94,8 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 		}
 		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 	}
+	// TODO: refactor dockerBuild string to []string for removing script injection
+	// Until then use fmt.Sprintf("%q", userInput) to sanitize the input
 	out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
 	log.Println(string(out))
 	waitForDockerDaemon(util.RETRYCOUNT)
@@ -171,8 +173,7 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 			pwd = pwd[:len(pwd)-1]
 		}
 	}
-	dockerLogin := fmt.Sprintf("docker login -u %q -p %q %q", username, pwd, dockerCredentials.DockerRegistryURL)
-	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
+	awsLoginCmd := exec.Command("/bin/sh", "-c", "docker", "login", "-u", username, "-p", pwd, dockerCredentials.DockerRegistryURL)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
 		log.Println(err)
@@ -212,6 +213,8 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 		return "", err
 	}
 	if ciBuildConfig.CiBuildType == SELF_DOCKERFILE_BUILD_TYPE || ciBuildConfig.CiBuildType == MANAGED_DOCKERFILE_BUILD_TYPE {
+		// TODO: refactor dockerBuild string to []string for removing script injection
+		// Until then use fmt.Sprintf("%q", userInput) to sanitize the input
 		dockerBuild := "docker build "
 		if ciRequest.CacheInvalidate && ciRequest.IsPvcMounted {
 			dockerBuild = dockerBuild + "--no-cache "
@@ -327,15 +330,17 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 			projectPath = "./" + projectPath
 		}
 		handleLanguageVersion(projectPath, buildPackParams)
-		buildPackCmd := fmt.Sprintf("pack build %s --path %s --builder %s", dest, projectPath, buildPackParams.BuilderId)
+		// TODO: refactor buildPackCmd: string to []string for removing script injection
+		// Until then use fmt.Sprintf("%q", userInput) to sanitize the input
+		buildPackCmd := fmt.Sprintf("pack build %q --path %q --builder %q", dest, projectPath, buildPackParams.BuilderId)
 		BuildPackArgsMap := buildPackParams.Args
 		for k, v := range BuildPackArgsMap {
-			buildPackCmd = buildPackCmd + " --env " + k + "=" + v
+			buildPackCmd = buildPackCmd + " --env " + strings.TrimSpace(k) + "=" + strings.TrimSpace(v)
 		}
 
 		if len(buildPackParams.BuildPacks) > 0 {
 			for _, buildPack := range buildPackParams.BuildPacks {
-				buildPackCmd = buildPackCmd + " --buildpack " + buildPack
+				buildPackCmd = buildPackCmd + " --buildpack " + strings.TrimSpace(buildPack)
 			}
 		}
 		log.Println(" -----> " + buildPackCmd)
@@ -343,8 +348,7 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		builderRmCmdString := "docker image rm " + buildPackParams.BuilderId
-		builderRmCmd := exec.Command("/bin/sh", "-c", builderRmCmdString)
+		builderRmCmd := exec.Command("/bin/sh", "-c", "docker", "image", "rm", buildPackParams.BuilderId)
 		err := builderRmCmd.Run()
 		if err != nil {
 			return "", err
@@ -357,7 +361,7 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 func getBuildxBuildCommand(cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig) string {
 	dockerBuild = fmt.Sprintf("%s -f %q -t %q --push %q --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
 	if cacheEnabled {
-		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%q,mode=max --cache-from=type=local,src=%s", dockerBuild, localCachePath, oldCacheBuildxPath)
+		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%q,mode=max --cache-from=type=local,src=%q", dockerBuild, localCachePath, oldCacheBuildxPath)
 	}
 
 	provenanceFlag := dockerBuildConfig.GetProvenanceFlag()
@@ -423,6 +427,8 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 					return
 				}
 				if strings.TrimSpace(string(outputBytes)) == "null" {
+					// TODO: refactor versionUpdateCmd string to []string for removing script injection
+					// Until then use fmt.Sprintf("%q", userInput) to sanitize the input
 					tmpJsonFile := "./tmp.json"
 					versionUpdateCmd := fmt.Sprintf("jq '.engines.node = \"%s\"' %s >%s", languageVersion, finalPath, tmpJsonFile)
 					err := executeCmd(versionUpdateCmd)
@@ -430,6 +436,8 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 						log.Println("error occurred while inserting node version", "err", err)
 						return
 					}
+					// TODO: refactor fileReplaceCmd string to []string for removing script injection
+					// Until then use fmt.Sprintf("%q", userInput) to sanitize the input
 					fileReplaceCmd := fmt.Sprintf("mv %s %s", tmpJsonFile, finalPath)
 					err = executeCmd(fileReplaceCmd)
 					if err != nil {
@@ -445,7 +453,15 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 
 }
 
+// executeCmd uses CLI to run git command and it is prone to script injection |
+// Don'ts:
+// 1- Never concatenate the whole cmd args into a single string and pass it as exec.Command(name, fmt.Sprintf("--flag1 %s --flag2 %s  --flag3 %s", value1, value2, value3)) |
+// DOs:
+// 1- Break the command to name and []args as exec.Command(name, []arg...)
+// 2- Use strings.TrimSpace() to build an user defined flags; e.g: fmt.Sprintf("--%s", strings.TrimSpace(userDefinedFlag))
+// 3- In case a single arg contains multiple user defined inputs, then use fmt.Sprintf() with %q to sanitize user defined inputs; exec.Command(name, "--flag=", fmt.Sprintf("key1=%q,key2=%q,key3=%q", userDefinedArg-1, userDefinedArg-2, userDefinedArg-2))
 func executeCmd(dockerBuild string) error {
+	// TODO: dockerBuild should be []string{arg...}
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {

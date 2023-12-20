@@ -20,6 +20,13 @@ func NewGitUtil() *GitUtil {
 
 const GIT_AKS_PASS = "/git-ask-pass.sh"
 
+// Fetch uses CLI to run git command and it is prone to script injection |
+// Don'ts:
+// 1- Never concatenate the whole cmd args into a single string and pass it as exec.Command(name, fmt.Sprintf("--flag1 %s --flag2 %s  --flag3 %s", value1, value2, value3)) |
+// DOs:
+// 1- Break the command to name and []args as exec.Command(name, []arg...)
+// 2- Use strings.TrimSpace() to build an user defined flags; e.g: fmt.Sprintf("--%s", strings.TrimSpace(userDefinedFlag))
+// 3- In case a single arg contains multiple user defined inputs, then use fmt.Sprintf() with %q to sanitize user defined inputs; exec.Command(name, "--flag=", fmt.Sprintf("key1=%q,key2=%q,key3=%q", userDefinedArg-1, userDefinedArg-2, userDefinedArg-2))
 func (impl *GitUtil) Fetch(gitContext GitContext, rootDir string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git fetch ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
@@ -28,6 +35,13 @@ func (impl *GitUtil) Fetch(gitContext GitContext, rootDir string) (response, err
 	return output, "", nil
 }
 
+// Checkout uses CLI to run git command and it is prone to script injection |
+// Don'ts:
+// 1- Never concatenate the whole cmd args into a single string and pass it as exec.Command(name, fmt.Sprintf("--flag1 %s --flag2 %s  --flag3 %s", value1, value2, value3)) |
+// DOs:
+// 1- Break the command to name and []args as exec.Command(name, []arg...)
+// 2- Use strings.TrimSpace() to build an user defined flags; e.g: fmt.Sprintf("--%s", strings.TrimSpace(userDefinedFlag))
+// 3- In case a single arg contains multiple user defined inputs, then use fmt.Sprintf() with %q to sanitize user defined inputs; exec.Command(name, "--flag=", fmt.Sprintf("key1=%q,key2=%q,key3=%q", userDefinedArg-1, userDefinedArg-2, userDefinedArg-2))
 func (impl *GitUtil) Checkout(rootDir string, checkout string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git checkout ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "checkout", checkout, "--force")
@@ -36,6 +50,13 @@ func (impl *GitUtil) Checkout(rootDir string, checkout string) (response, errMsg
 	return output, "", nil
 }
 
+// runCommandWithCred uses CLI to run git command and it is prone to script injection |
+// Don'ts:
+// 1- Never concatenate the whole cmd args into a single string and pass it as exec.Command(name, fmt.Sprintf("--flag1 %s --flag2 %s  --flag3 %s", value1, value2, value3))  |
+// DOs:
+// 1- Break the command to name and []args as exec.Command(name, []arg...)
+// 2- Use strings.TrimSpace() to build an user defined flags; e.g: fmt.Sprintf("--%s", strings.TrimSpace(userDefinedFlag))
+// 3- In case a single arg contains multiple user defined inputs, then use fmt.Sprintf() with %q to sanitize user defined inputs; exec.Command(name, "--flag=", fmt.Sprintf("key1=%q,key2=%q,key3=%q", userDefinedArg-1, userDefinedArg-2, userDefinedArg-2))
 func (impl *GitUtil) runCommandWithCred(cmd *exec.Cmd, userName, password string) (response, errMsg string, err error) {
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("GIT_ASKPASS=%s", GIT_AKS_PASS),
@@ -99,7 +120,14 @@ func (impl *GitUtil) Clone(gitContext GitContext, rootDir string, remoteUrl stri
 	return response, errMsg, err
 }
 
-// setting user.name and user.email as for non-fast-forward merge, git ask for user.name and email
+// Merge sets user.name and user.email as for non-fast-forward merge, git ask for user.name and email |
+// Merge uses CLI to run git command and it is prone to script injection |
+// Don'ts:
+// 1- Never concatenate the whole cmd args into a single string and pass it as exec.Command(name, fmt.Sprintf("--flag1 %s --flag2 %s  --flag3 %s", value1, value2, value3)) |
+// DOs:
+// 1- Break the command to name and []args as exec.Command(name, []arg...)
+// 2- Use strings.TrimSpace() to build an user defined flags; e.g: fmt.Sprintf("--%s", strings.TrimSpace(userDefinedFlag))
+// 3- In case a single arg contains multiple user defined inputs, then use fmt.Sprintf() with %q to sanitize user defined inputs; exec.Command(name, "--flag=", fmt.Sprintf("key1=%q,key2=%q,key3=%q", userDefinedArg-1, userDefinedArg-2, userDefinedArg-2))
 func (impl *GitUtil) Merge(rootDir string, commit string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git merge ", "location", rootDir)
 	command := fmt.Sprintf("cd %q && git config user.email git@devtron.com && git config user.name Devtron && git merge %q --no-commit", rootDir, commit)
@@ -109,6 +137,13 @@ func (impl *GitUtil) Merge(rootDir string, commit string) (response, errMsg stri
 	return output, errMsg, err
 }
 
+// RecursiveFetchSubmodules uses CLI to run git command and it is prone to script injection |
+// Don'ts:
+// 1- Never concatenate the whole cmd args into a single string and pass it as exec.Command(name, fmt.Sprintf("--flag1 %s --flag2 %s  --flag3 %s", value1, value2, value3)) |
+// DOs:
+// 1- Break the command to name and []args as exec.Command(name, []arg...)
+// 2- Use strings.TrimSpace() to build an user defined flags; e.g: fmt.Sprintf("--%s", strings.TrimSpace(userDefinedFlag))
+// 3- In case a single arg contains multiple user defined inputs, then use fmt.Sprintf() with %q to sanitize user defined inputs; exec.Command(name, "--flag=", fmt.Sprintf("key1=%q,key2=%q,key3=%q", userDefinedArg-1, userDefinedArg-2, userDefinedArg-2))
 func (impl *GitUtil) RecursiveFetchSubmodules(rootDir string) (response, errMsg string, error error) {
 	log.Println(util.DEVTRON, "git recursive fetch submodules ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "submodule", "update", "--init", "--recursive")
@@ -117,6 +152,13 @@ func (impl *GitUtil) RecursiveFetchSubmodules(rootDir string) (response, errMsg 
 	return output, eMsg, err
 }
 
+// UpdateCredentialHelper uses CLI to run git command and it is prone to script injection |
+// Don'ts:
+// 1- Never concatenate the whole cmd args into a single string and pass it as exec.Command(name, fmt.Sprintf("--flag1 %s --flag2 %s  --flag3 %s", value1, value2, value3)) |
+// DOs:
+// 1- Break the command to name and []args as exec.Command(name, []arg...)
+// 2- Use strings.TrimSpace() to build an user defined flags; e.g: fmt.Sprintf("--%s", strings.TrimSpace(userDefinedFlag))
+// 3- In case a single arg contains multiple user defined inputs, then use fmt.Sprintf() with %q to sanitize user defined inputs; exec.Command(name, "--flag=", fmt.Sprintf("key1=%q,key2=%q,key3=%q", userDefinedArg-1, userDefinedArg-2, userDefinedArg-2))
 func (impl *GitUtil) UpdateCredentialHelper(rootDir string) (response, errMsg string, error error) {
 	log.Println(util.DEVTRON, "git credential helper store ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "config", "--global", "credential.helper", "store")
@@ -125,6 +167,13 @@ func (impl *GitUtil) UpdateCredentialHelper(rootDir string) (response, errMsg st
 	return output, eMsg, err
 }
 
+// UnsetCredentialHelper uses CLI to run git command and it is prone to script injection |
+// Don'ts:
+// 1- Never concatenate the whole cmd args into a single string and pass it as exec.Command(name, fmt.Sprintf("--flag1 %s --flag2 %s  --flag3 %s", value1, value2, value3)) |
+// DOs:
+// 1- Break the command to name and []args as exec.Command(name, []arg...)
+// 2- Use strings.TrimSpace() to build an user defined flags; e.g: fmt.Sprintf("--%s", strings.TrimSpace(userDefinedFlag))
+// 3- In case a single arg contains multiple user defined inputs, then use fmt.Sprintf() with %q to sanitize user defined inputs; exec.Command(name, "--flag=", fmt.Sprintf("key1=%q,key2=%q,key3=%q", userDefinedArg-1, userDefinedArg-2, userDefinedArg-2))
 func (impl *GitUtil) UnsetCredentialHelper(rootDir string) (response, errMsg string, error error) {
 	log.Println(util.DEVTRON, "git credential helper unset ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "config", "--global", "--unset", "credential.helper")
