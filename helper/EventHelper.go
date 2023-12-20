@@ -176,6 +176,7 @@ type CommonWorkflowRequest struct {
 	RegistryCredentialMap       map[string]RegistryCredentials `json:"registryCredentialMap"`
 	PluginArtifactStage         string                         `json:"pluginArtifactStage"`
 	PushImageBeforePostCI       bool                           `json:"pushImageBeforePostCI"`
+	PullImageUsingDigest        bool                           `json:"pullImageUsingDigest"`
 }
 
 func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {

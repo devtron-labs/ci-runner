@@ -96,8 +96,11 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		for _, ref := range cicdRequest.CommonWorkflowRequest.RefPlugins {
 			refStageMap[ref.Id] = ref.Steps
 		}
-		scriptEnvs["DEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
-		scriptEnvs["DIGEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
+		scriptEnvs[DEST] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
+		scriptEnvs[DIGEST] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
+		if cicdRequest.CommonWorkflowRequest.PullImageUsingDigest {
+			scriptEnvs[DOCKER_IMAGE] = helper.ReplaceImageTagWithDigest(cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image, cicdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest)
+		}
 		var stage = StepType(cicdRequest.CommonWorkflowRequest.StageType)
 		_, _, err = RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {

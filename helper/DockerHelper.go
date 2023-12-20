@@ -545,6 +545,12 @@ func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
 	return dest, nil
 }
 
+func ReplaceImageTagWithDigest(image, digest string) string {
+	imageWithoutTag := strings.Split(image, ":")[0]
+	imageWithDigest := fmt.Sprintf("%s@%s", imageWithoutTag, digest)
+	return imageWithDigest
+}
+
 func PushArtifact(dest string) error {
 	//awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
 	dockerPush := "docker push " + dest

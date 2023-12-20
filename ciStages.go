@@ -159,8 +159,19 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	var dest string
 	var digest string
 	if !buildSkipEnabled {
-		dest, digest, err = getImageDestAndDigest(ciCdRequest, metrics, scriptEnvs, refStageMap, preCiStageOutVariable, artifactUploaded)
+		dest, digest, err = buildImageAndGetDestAndDigest(ciCdRequest, metrics, scriptEnvs, refStageMap, preCiStageOutVariable, artifactUploaded)
 		if err != nil {
+			// code-block starts : run post-ci which are enabled to run on ci fail
+			postCiStepsToTriggerOnCiFail := getPostCiStepToRunOnCiFail(ciCdRequest.CommonWorkflowRequest.PostCiSteps)
+			if len(postCiStepsToTriggerOnCiFail) > 0 {
+				util.LogStage("Running POST-CI steps which are enabled to RUN even on CI FAIL")
+				// build success will always be false
+				scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
+				// run post artifact processing
+				RunCiCdSteps(STEP_TYPE_POST, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preCiStageOutVariable)
+			}
+			// code-block ends
+			err = sendFailureNotification(string(Build), ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
 			return artifactUploaded, err
 		}
 	}
@@ -253,17 +264,7 @@ func runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMe
 	metrics.BuildDuration = time.Since(start).Seconds()
 	if err != nil {
 		log.Println("Error in building artifact", "err", err)
-		// code-block starts : run post-ci which are enabled to run on ci fail
-		postCiStepsToTriggerOnCiFail := getPostCiStepToRunOnCiFail(ciCdRequest.CommonWorkflowRequest.PostCiSteps)
-		if len(postCiStepsToTriggerOnCiFail) > 0 {
-			util.LogStage("Running POST-CI steps which are enabled to RUN even on CI FAIL")
-			// build success will always be false
-			scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
-			// run post artifact processing
-			RunCiCdSteps(STEP_TYPE_POST, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preCiStageOutVariable)
-		}
-		// code-block ends
-		err = sendFailureNotification(string(Build), ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
+		return dest, err
 	}
 	log.Println(util.DEVTRON, " Build artifact completed", "dest", dest, "err", err)
 	return dest, err
@@ -289,9 +290,12 @@ func extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest string, metrics *h
 func runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, metrics *helper.CIMetrics, artifactUploaded bool, dest string, digest string) error {
 	util.LogStage("running POST-CI steps")
 	// sending build success as true always as post-ci triggers only if ci gets success
+	if ciCdRequest.CommonWorkflowRequest.PullImageUsingDigest {
+		scriptEnvs[DOCKER_IMAGE] = helper.ReplaceImageTagWithDigest(dest, digest)
+	}
 	scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "true"
-	scriptEnvs["DEST"] = dest
-	scriptEnvs["DIGEST"] = digest
+	scriptEnvs[DEST] = dest
+	scriptEnvs[DIGEST] = digest
 	// run post artifact processing
 	_, step, err := RunCiCdSteps(STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest.PostCiSteps, refStageMap, scriptEnvs, preCiStageOutVariable)
 	if err != nil {
@@ -316,7 +320,7 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 	return nil
 }
 
-func getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, artifactUploaded bool) (string, string, error) {
+func buildImageAndGetDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, artifactUploaded bool) (string, string, error) {
 	dest, err := runBuildArtifact(ciCdRequest, metrics, refStageMap, scriptEnvs, artifactUploaded, preCiStageOutVariable)
 	if err != nil {
 		return "", "", err
