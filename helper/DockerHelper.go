@@ -734,7 +734,7 @@ func runCmd(cmd string) (error, *bytes.Buffer) {
 }
 
 func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflowId int) string {
-	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
+	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%q --bootstrap "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
 		nodeName = BUILDX_NODE_NAME + fmt.Sprintf("%v-%v", ciPipelineId, ciWorkflowId) + util.Generate(3) //need this to generate unique name for builder node in same builder.
@@ -742,7 +742,7 @@ func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflo
 	buildxCreate = fmt.Sprintf(buildxCreate, BUILDX_K8S_DRIVER_NAME, nodeName)
 	platforms := driverOpts["platform"]
 	if platforms != "" {
-		buildxCreate += " --platform=%s "
+		buildxCreate += " --platform=%q "
 		buildxCreate = fmt.Sprintf(buildxCreate, platforms)
 	}
 	if len(driverOpts["driverOptions"]) > 0 {
