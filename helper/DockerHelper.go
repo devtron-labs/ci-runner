@@ -242,7 +242,7 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
 				dockerBuildFlags[flagKey] = fmt.Sprintf("=\"%s\"", strings.TrimSpace(valueFromEnv))
 			} else {
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", strings.TrimSpace(v))
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%q", strings.TrimSpace(v))
 			}
 		}
 		dockerBuildOptionsMap := dockerBuildConfig.DockerBuildOptions
@@ -250,9 +250,9 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 			flagKey := "--" + strings.TrimSpace(k)
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", strings.TrimSpace(valueFromEnv))
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%q", strings.TrimSpace(valueFromEnv))
 			} else {
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", strings.TrimSpace(v))
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=%q", strings.TrimSpace(v))
 			}
 		}
 		for key, value := range dockerBuildFlags {
