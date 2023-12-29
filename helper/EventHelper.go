@@ -526,6 +526,7 @@ func PublishEventsOnRest(jsonBody []byte, topic string, cdRequest *ExtEnvRequest
 func SendEventToClairUtility(event *ScanEvent) error {
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
+		util.LogStage(err.Error())
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
@@ -544,6 +545,7 @@ func SendEventToClairUtility(event *ScanEvent) error {
 		SetBody(jsonBody).
 		Post(fmt.Sprintf("%s/%s", cfg.ImageScannerEndpoint, "scanner/image"))
 	if err != nil {
+		util.LogStage(err.Error())
 		log.Println(util.DEVTRON, "err in image scanner app over rest", err)
 		return err
 	}
