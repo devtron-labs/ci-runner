@@ -303,15 +303,17 @@ func runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, scriptEnvs map[string]
 
 func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, artifactUploaded bool) error {
 	util.LogStage("IMAGE SCAN")
-	util.LogStage(" Image Scanning Started for digest")
+	log.Println(util.DEVTRON, " Image Scanning Started for digest", digest)
 	scanEvent := &helper.ScanEvent{Image: dest, ImageDigest: digest, PipelineId: ciCdRequest.CommonWorkflowRequest.PipelineId, UserId: ciCdRequest.CommonWorkflowRequest.TriggeredBy}
 	scanEvent.DockerRegistryId = ciCdRequest.CommonWorkflowRequest.DockerRegistryId
 	err := helper.SendEventToClairUtility(scanEvent)
 	if err != nil {
+		util.LogStage("error in running image scan")
 		log.Println("error in running Image Scan", "err", err)
 		err = sendFailureNotification(string(Scan), ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, err)
 		return err
 	}
+	util.LogStage("IMAGE SCAN completed with scanEvent")
 	log.Println(util.DEVTRON, "Image scanning completed with scanEvent", scanEvent)
 	return nil
 }
