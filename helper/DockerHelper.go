@@ -776,7 +776,13 @@ func waitForDockerDaemon(retryCount int) {
 		}
 		time.Sleep(1 * time.Second)
 		err = DockerdUpCheck()
+		if err != nil {
+			log.Println("login error", err.Error())
+		}
 		retry++
+	}
+	if err != nil {
+		log.Println("docker login not success")
 	}
 }
 
