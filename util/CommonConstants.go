@@ -23,7 +23,7 @@ const DEVTRON = "DEVTRON"
 
 const INSECURE = "insecure"
 const SECUREWITHCERT = "secure-with-cert"
-const RETRYCOUNT = 100
+const RETRYCOUNT = 1000
 const WORKINGDIR = "/devtroncd"
 const LOCAL_BUILDX_LOCATION = "/var/lib/devtron/buildx"
 const LOCAL_BUILDX_CACHE_LOCATION = LOCAL_BUILDX_LOCATION + "/cache"
