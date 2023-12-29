@@ -74,6 +74,7 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 	if connection == util.INSECURE {
 		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, u.Host, dockerMtuValueFlag)
 		util.LogStage("Insecure Registry")
+		log.Println("dockerdstart command: ", dockerdstart)
 	} else {
 		if connection == util.SECUREWITHCERT {
 			os.MkdirAll(fmt.Sprintf("/etc/docker/certs.d/%s", u.Host), os.ModePerm)
