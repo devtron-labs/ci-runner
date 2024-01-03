@@ -545,6 +545,9 @@ func SendEventToClairUtility(event *ScanEvent) error {
 		Post(fmt.Sprintf("%s/%s", cfg.ImageScannerEndpoint, "scanner/image"))
 	log.Println(string(resp.Body()))
 	log.Println(err)
+	log.Println(resp.Result())
+	log.Println(resp.Error())
+	log.Println(resp.IsError())
 	if err != nil || resp.StatusCode() != 200 {
 		log.Println("err in image scanner app over rest", err)
 		return err
