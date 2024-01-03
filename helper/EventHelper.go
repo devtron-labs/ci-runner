@@ -525,6 +525,7 @@ func PublishEventsOnRest(jsonBody []byte, topic string, cdRequest *ExtEnvRequest
 }
 
 func SendEventToClairUtility(event *ScanEvent) error {
+	log.Println("event", event)
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
