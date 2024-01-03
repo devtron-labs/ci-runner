@@ -308,12 +308,10 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 	scanEvent.DockerRegistryId = ciCdRequest.CommonWorkflowRequest.DockerRegistryId
 	err := helper.SendEventToClairUtility(scanEvent)
 	if err != nil {
-		util.LogStage("error in running image scan")
 		log.Println("error in running Image Scan", "err", err)
 		err = sendFailureNotification(string(Scan), ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, err)
 		return err
 	}
-	util.LogStage("IMAGE SCAN completed with scanEvent")
 	log.Println(util.DEVTRON, "Image scanning completed with scanEvent", scanEvent)
 	return nil
 }
