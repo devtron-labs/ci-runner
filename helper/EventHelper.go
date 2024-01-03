@@ -550,7 +550,11 @@ func SendEventToClairUtility(event *ScanEvent) error {
 			log.Println("err in image scanner app over rest", err)
 			return err
 		}
-		return fmt.Errorf("%s", respBodyMap["errors"])
+		errorMap := respBodyMap["errors"]
+		if in, ok := errorMap.(map[string]interface{}); ok {
+			return fmt.Errorf("%s", in["userMessage"])
+		}
+		return fmt.Errorf("some error occurred while scanning image")
 	}
 	//log.Println(err)
 	//log.Println(resp.Result())
