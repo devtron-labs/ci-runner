@@ -547,16 +547,22 @@ func SendEventToClairUtility(event *ScanEvent) error {
 		respBodyMap := make(map[string]interface{})
 		err := json.Unmarshal(resp.Body(), &respBodyMap)
 		if err != nil {
-			log.Println("err in image scanner app over rest", err)
+			log.Println("err while unmarshalling", err)
 			return err
 		}
-		log.Println(util.DEVTRON, "respBodyMap", respBodyMap)
 		errorMap := respBodyMap["errors"]
-		log.Println(util.DEVTRON, "errorMap", errorMap)
-		if in, ok := errorMap.(map[string]interface{}); ok {
-			return fmt.Errorf("%s", in["userMessage"])
+		errorMapJson, err := json.Marshal(errorMap)
+		if err != nil {
+			log.Println("err while marshaling", err)
+			return err
 		}
-		return fmt.Errorf("some error occurred while scanning image")
+		specificErrorMap := make(map[string]interface{})
+		err = json.Unmarshal(errorMapJson, &specificErrorMap)
+		if err != nil {
+			log.Println("err while unmarshalling", err)
+			return err
+		}
+		return fmt.Errorf("%s", specificErrorMap["internalMessage"])
 	}
 	//log.Println(err)
 	//log.Println(resp.Result())
