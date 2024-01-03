@@ -543,12 +543,20 @@ func SendEventToClairUtility(event *ScanEvent) error {
 		SetHeader("Content-Type", "application/json").
 		SetBody(jsonBody).
 		Post(fmt.Sprintf("%s/%s", cfg.ImageScannerEndpoint, "scanner/image"))
-	log.Println(string(resp.Body()))
-	log.Println(err)
-	log.Println(resp.Result())
-	log.Println(resp.Error())
-	log.Println(resp.IsError())
-	if err != nil || resp.StatusCode() != 200 {
+	if resp.StatusCode() != 200 {
+		respBodyMap := make(map[string]interface{})
+		err := json.Unmarshal(resp.Body(), &respBodyMap)
+		if err != nil {
+			log.Println("err in image scanner app over rest", err)
+			return err
+		}
+		return fmt.Errorf("%s", respBodyMap["errors"])
+	}
+	//log.Println(err)
+	//log.Println(resp.Result())
+	//log.Println(resp.Error())
+	//log.Println(resp.IsError())
+	if err != nil {
 		log.Println("err in image scanner app over rest", err)
 		return err
 	}
