@@ -524,7 +524,6 @@ func PublishEventsOnRest(jsonBody []byte, topic string, cdRequest *ExtEnvRequest
 }
 
 func SendEventToClairUtility(event *ScanEvent) error {
-	log.Println("event", event)
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
@@ -545,20 +544,21 @@ func SendEventToClairUtility(event *ScanEvent) error {
 		SetBody(jsonBody).
 		Post(fmt.Sprintf("%s/%s", cfg.ImageScannerEndpoint, "scanner/image"))
 	if resp.StatusCode() != 200 {
-		respBodyMap := make(map[string]interface{})
-		err := json.Unmarshal(resp.Body(), &respBodyMap)
-		if err != nil {
-			log.Println("err while unmarshalling", err)
-			return err
-		}
-		errorMap := respBodyMap["errors"]
-		if errorList, ok := errorMap.([]interface{}); ok {
-			errorMap = errorList[0]
-		}
-		if internalMessage, ok := errorMap.(map[string]interface{}); ok {
-			return fmt.Errorf("%s", internalMessage["internalMessage"])
-		}
-		return fmt.Errorf("some error occurred while image scanning")
+		return fmt.Errorf("%s", string(resp.Body()))
+		//respBodyMap := make(map[string]interface{})
+		//err := json.Unmarshal(resp.Body(), &respBodyMap)
+		//if err != nil {
+		//	log.Println("err while unmarshalling", err)
+		//	return err
+		//}
+		//errorMap := respBodyMap["errors"]
+		//if errorList, ok := errorMap.([]interface{}); ok {
+		//	errorMap = errorList[0]
+		//}
+		//if internalMessage, ok := errorMap.(map[string]interface{}); ok {
+		//	return fmt.Errorf("%s", internalMessage["internalMessage"])
+		//}
+		//return fmt.Errorf("some error occurred while image scanning")
 	}
 	if err != nil {
 		log.Println("err in image scanner app over rest", err)
