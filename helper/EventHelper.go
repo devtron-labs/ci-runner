@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"reflect"
 	"strings"
 	"time"
 
@@ -551,6 +552,7 @@ func SendEventToClairUtility(event *ScanEvent) error {
 			return err
 		}
 		errorMap := respBodyMap["errors"]
+		log.Println("errorMap", reflect.TypeOf(errorMap))
 		errorMapJson, err := json.Marshal(errorMap)
 		if err != nil {
 			log.Println("err while marshaling", err)
