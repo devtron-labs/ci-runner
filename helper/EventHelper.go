@@ -540,10 +540,9 @@ func SendEventToClairUtility(event *ScanEvent) error {
 	client := resty.New()
 	client.
 		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}).
-		SetRetryCount(3).
+		SetRetryCount(3).SetRetryMaxWaitTime(5).
 		AddRetryCondition(
 			func(r *resty.Response, err error) bool {
-
 				return err != nil || r.StatusCode() != http.StatusOK
 			},
 		).AddRetryHook(
