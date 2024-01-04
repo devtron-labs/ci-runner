@@ -543,10 +543,13 @@ func SendEventToClairUtility(event *ScanEvent) error {
 		SetRetryCount(3).
 		AddRetryCondition(
 			func(r *resty.Response, err error) bool {
-				println("RETRYING...")
+
 				return err != nil || r.StatusCode() != http.StatusOK
 			},
-		).AddRetryAfterErrorCondition()
+		).AddRetryHook(
+		func(r *resty.Response, err error) {
+			println(fmt.Sprintf("IMAGE SCAN failed with status code = %v. RETRYING...", r.StatusCode()))
+		})
 
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
