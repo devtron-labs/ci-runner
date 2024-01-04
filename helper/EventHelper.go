@@ -542,6 +542,7 @@ func SendEventToClairUtility(event *ScanEvent) error {
 		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}).
 		AddRetryCondition(
 			func(r *resty.Response, err error) bool {
+				println(r.StatusCode())
 				return r.StatusCode() != http.StatusOK
 			},
 		).SetRetryCount(3)
