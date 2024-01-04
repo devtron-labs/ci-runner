@@ -548,6 +548,7 @@ func SendEventToClairUtility(event *ScanEvent) error {
 		return err
 	}
 	if resp.StatusCode() != 200 {
+		log.Println(fmt.Sprintf("======== Vulnerability Scanning request failed with HTTP status code %v ========", resp.StatusCode()))
 		return fmt.Errorf("%s", string(resp.Body()))
 	}
 
