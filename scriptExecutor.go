@@ -98,10 +98,12 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 	runScriptCMD := exec.Command("/bin/sh", scriptPath)
 	runScriptCMD.Env = inputEnvironmentVariable
 	err = util.RunCommand(runScriptCMD)
+	log.Println("cmd script === ", runScriptCMD)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
+	log.Println("===== script end ==== ")
 	envMap, err := godotenv.Read(envOutFileName)
 	if err != nil {
 		log.Println(err)
