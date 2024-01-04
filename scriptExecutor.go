@@ -69,6 +69,7 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
+	log.Println("finalScript", finalScript)
 	//--------------
 	scriptPath := filepath.Join(workDirectory, scriptFileName)
 	file, err := os.Create(scriptPath)
