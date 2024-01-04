@@ -540,12 +540,12 @@ func SendEventToClairUtility(event *ScanEvent) error {
 	client := resty.New()
 	client.
 		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}).
+		SetRetryCount(3).
 		AddRetryCondition(
 			func(r *resty.Response, err error) bool {
-				println(r.StatusCode())
-				return r.StatusCode() != http.StatusOK
+				return err != nil || r.StatusCode() != http.StatusOK
 			},
-		).SetRetryCount(3)
+		)
 
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
