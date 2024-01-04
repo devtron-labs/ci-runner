@@ -546,7 +546,7 @@ func SendEventToClairUtility(event *ScanEvent) error {
 				println("RETRYING...")
 				return err != nil || r.StatusCode() != http.StatusOK
 			},
-		)
+		).AddRetryAfterErrorCondition()
 
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
