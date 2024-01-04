@@ -103,6 +103,7 @@ func RunCiCdSteps(stepType StepType, steps []*helper.StepObject, refStageMap map
 		if step.StepType == helper.STEP_TYPE_INLINE {
 			if step.ExecutorType == helper.SHELL {
 				stageOutputVars, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", i), step.Script, scriptEnvs, outVars)
+				log.Println("stageOutputVars", stageOutputVars, "err", err)
 				if err != nil {
 					return nil, step, err
 				}
