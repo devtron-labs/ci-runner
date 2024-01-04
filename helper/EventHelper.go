@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 
@@ -537,7 +538,13 @@ func SendEventToClairUtility(event *ScanEvent) error {
 	}
 
 	client := resty.New()
-	client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+	client.
+		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}).
+		AddRetryCondition(
+			func(r *resty.Response, err error) bool {
+				return r.StatusCode() != http.StatusOK
+			},
+		).SetRetryCount(3)
 
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
