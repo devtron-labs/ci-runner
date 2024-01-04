@@ -543,6 +543,7 @@ func SendEventToClairUtility(event *ScanEvent) error {
 		SetRetryCount(3).
 		AddRetryCondition(
 			func(r *resty.Response, err error) bool {
+				println("RETRYING...")
 				return err != nil || r.StatusCode() != http.StatusOK
 			},
 		)
