@@ -583,6 +583,8 @@ type ScanEvent struct {
 	Token            string `json:"token"`
 	AwsRegion        string `json:"awsRegion"`
 	DockerRegistryId string `json:"dockerRegistryId"`
+	MaxRetries       int    `json:"maxRetries,omitempty"`
+	RetryDelay       int    `json:"retryDelay,omitempty"`
 }
 
 func (dockerBuildConfig *DockerBuildConfig) GetProvenanceFlag() string {
