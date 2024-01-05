@@ -154,6 +154,8 @@ type CommonWorkflowRequest struct {
 	ExtBlobStorageCmName       string                            `json:"extBlobStorageCmName"`
 	ExtBlobStorageSecretName   string                            `json:"extBlobStorageSecretName"`
 	UseExternalClusterBlob     bool                              `json:"useExternalClusterBlob"`
+	MaxRetries                 int                               `json:"maxRetries,omitempty"`
+	RetryDelay                 int                               `json:"retryDelay,omitempty"`
 	// Data from CD Workflow service
 	WorkflowRunnerId            int                            `json:"workflowRunnerId"`
 	CdPipelineId                int                            `json:"cdPipelineId"`
