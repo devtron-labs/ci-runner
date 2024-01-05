@@ -306,6 +306,8 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 	log.Println(util.DEVTRON, " Image Scanning Started for digest", digest)
 	scanEvent := &helper.ScanEvent{Image: dest, ImageDigest: digest, PipelineId: ciCdRequest.CommonWorkflowRequest.PipelineId, UserId: ciCdRequest.CommonWorkflowRequest.TriggeredBy}
 	scanEvent.DockerRegistryId = ciCdRequest.CommonWorkflowRequest.DockerRegistryId
+	scanEvent.MaxRetries = ciCdRequest.CommonWorkflowRequest.MaxRetries
+	scanEvent.RetryDelay = ciCdRequest.CommonWorkflowRequest.RetryDelay
 	err := helper.SendEventToClairUtility(scanEvent)
 	if err != nil {
 		log.Println("error in running Image Scan", "err", err)

@@ -32,8 +32,6 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["APP_NAME"] = cicdRequest.CommonWorkflowRequest.AppName
 		envs["TRIGGER_BY_AUTHOR"] = cicdRequest.CommonWorkflowRequest.TriggerByAuthor
 		envs["DOCKER_IMAGE"] = image
-		envs["MAX_RETRIES"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.MaxRetries)
-		envs["RETRY_DELAY"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.RetryDelay)
 
 		//adding GIT_MATERIAL_REQUEST in env for semgrep plugin
 		CiMaterialRequestArr := ""
@@ -62,6 +60,8 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["TRIGGERED_BY"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.TriggeredBy)
 		envs["DOCKER_REGISTRY_ID"] = cicdRequest.CommonWorkflowRequest.DockerRegistryId
 		envs["IMAGE_SCANNER_ENDPOINT"] = cfg.ImageScannerEndpoint
+		envs["MAX_RETRIES"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.MaxRetries)
+		envs["RETRY_DELAY"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.RetryDelay)
 
 		// setting extraEnvironmentVariables
 		for k, v := range cicdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables {
@@ -87,6 +87,8 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["TRIGGERED_BY"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.TriggeredBy)
 		envs["DOCKER_REGISTRY_ID"] = cicdRequest.CommonWorkflowRequest.DockerRegistryId
 		envs["IMAGE_SCANNER_ENDPOINT"] = cfg.ImageScannerEndpoint
+		envs["MAX_RETRIES"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.MaxRetries)
+		envs["RETRY_DELAY"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.RetryDelay)
 
 		for k, v := range cicdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables {
 			envs[k] = v
