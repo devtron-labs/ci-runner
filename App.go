@@ -70,7 +70,6 @@ func processEvent(args string) {
 
 	exitCode := 0
 	ciCdRequest := &helper.CiCdTriggerEvent{}
-	log.Println("args === ", args)
 	err := json.Unmarshal([]byte(args), ciCdRequest)
 	if err != nil {
 		log.Println(err)
