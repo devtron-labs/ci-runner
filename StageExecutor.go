@@ -40,6 +40,9 @@ func RunCiCdSteps(stepType StepType, steps []*helper.StepObject, refStageMap map
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
+	log.Println("steps = ", steps)
+	log.Println("globalEnvironmentVariables = ", globalEnvironmentVariables)
+	log.Println("preeCiStageVariable = ", preeCiStageVariable)
 	stageVariable := make(map[int]map[string]*helper.VariableObject)
 	for i, step := range steps {
 		var vars []*helper.VariableObject
