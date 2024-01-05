@@ -259,6 +259,7 @@ func populateOutVars(outData map[string]string, desired []*helper.VariableObject
 func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject, postCiStageVariables map[int]map[string]*helper.VariableObject, refPluginStageVariables map[int]map[string]*helper.VariableObject) ([]*helper.VariableObject, error) {
 	var inputVars []*helper.VariableObject
 	for _, desired := range desiredVars {
+		log.Println("desired = ", desired)
 		switch desired.VariableType {
 		case helper.VALUE:
 			inputVars = append(inputVars, desired)
