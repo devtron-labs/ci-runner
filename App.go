@@ -63,6 +63,7 @@ func main() {
 	}
 
 	args := os.Getenv(util.CiCdEventEnvKey)
+	log.Println("args = ", args)
 	processEvent(args)
 }
 
