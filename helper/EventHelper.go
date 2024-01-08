@@ -154,8 +154,8 @@ type CommonWorkflowRequest struct {
 	ExtBlobStorageCmName       string                            `json:"extBlobStorageCmName"`
 	ExtBlobStorageSecretName   string                            `json:"extBlobStorageSecretName"`
 	UseExternalClusterBlob     bool                              `json:"useExternalClusterBlob"`
-	MaxRetries                 int                               `json:"maxRetries,omitempty"`
-	RetryDelay                 int                               `json:"retryDelay,omitempty"`
+	ImageScanMaxRetries        int                               `json:"imageScanMaxRetries,omitempty"`
+	ImageScanRetryDelay        int                               `json:"imageScanRetryDelay,omitempty"`
 	// Data from CD Workflow service
 	WorkflowRunnerId            int                            `json:"workflowRunnerId"`
 	CdPipelineId                int                            `json:"cdPipelineId"`
@@ -542,7 +542,7 @@ func SendEventToClairUtility(event *ScanEvent) error {
 	client := resty.New()
 	client.
 		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}).
-		SetRetryCount(event.MaxRetries).SetRetryMaxWaitTime(time.Duration(event.RetryDelay)).
+		SetRetryCount(event.ImageScanMaxRetries).SetRetryMaxWaitTime(time.Duration(event.ImageScanRetryDelay)).
 		AddRetryCondition(
 			func(r *resty.Response, err error) bool {
 				return err != nil || r.StatusCode() != http.StatusOK
@@ -571,20 +571,20 @@ func SendEventToClairUtility(event *ScanEvent) error {
 }
 
 type ScanEvent struct {
-	Image            string `json:"image"`
-	ImageDigest      string `json:"imageDigest"`
-	AppId            int    `json:"appId"`
-	EnvId            int    `json:"envId"`
-	PipelineId       int    `json:"pipelineId"`
-	CiArtifactId     int    `json:"ciArtifactId"`
-	UserId           int    `json:"userId"`
-	AccessKey        string `json:"accessKey"`
-	SecretKey        string `json:"secretKey"`
-	Token            string `json:"token"`
-	AwsRegion        string `json:"awsRegion"`
-	DockerRegistryId string `json:"dockerRegistryId"`
-	MaxRetries       int    `json:"maxRetries,omitempty"`
-	RetryDelay       int    `json:"retryDelay,omitempty"`
+	Image               string `json:"image"`
+	ImageDigest         string `json:"imageDigest"`
+	AppId               int    `json:"appId"`
+	EnvId               int    `json:"envId"`
+	PipelineId          int    `json:"pipelineId"`
+	CiArtifactId        int    `json:"ciArtifactId"`
+	UserId              int    `json:"userId"`
+	AccessKey           string `json:"accessKey"`
+	SecretKey           string `json:"secretKey"`
+	Token               string `json:"token"`
+	AwsRegion           string `json:"awsRegion"`
+	DockerRegistryId    string `json:"dockerRegistryId"`
+	ImageScanMaxRetries int    `json:"imageScanMaxRetries,omitempty"`
+	ImageScanRetryDelay int    `json:"imageScanRetryDelay,omitempty"`
 }
 
 func (dockerBuildConfig *DockerBuildConfig) GetProvenanceFlag() string {
