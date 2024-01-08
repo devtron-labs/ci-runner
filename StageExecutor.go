@@ -40,13 +40,8 @@ func RunCiCdSteps(stepType StepType, steps []*helper.StepObject, refStageMap map
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
-	log.Println("steps = ", steps)
-	log.Println("stepType = ", stepType)
-	log.Println("globalEnvironmentVariables = ", globalEnvironmentVariables)
-	log.Println("preeCiStageVariable = ", preeCiStageVariable)
 	stageVariable := make(map[int]map[string]*helper.VariableObject)
 	for i, step := range steps {
-		log.Println("step = ", step)
 		var vars []*helper.VariableObject
 		if stepType == STEP_TYPE_REF_PLUGIN {
 			vars, err = deduceVariables(step.InputVars, globalEnvironmentVariables, nil, nil, stageVariable)
@@ -107,7 +102,6 @@ func RunCiCdSteps(stepType StepType, steps []*helper.StepObject, refStageMap map
 		//---------------------------------------------------------------------------------------------------
 		if step.StepType == helper.STEP_TYPE_INLINE {
 			if step.ExecutorType == helper.SHELL {
-				log.Println("scriptEnvs = ", scriptEnvs)
 				stageOutputVars, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", i), step.Script, scriptEnvs, outVars)
 				if err != nil {
 					return nil, step, err
@@ -261,7 +255,6 @@ func populateOutVars(outData map[string]string, desired []*helper.VariableObject
 func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject, postCiStageVariables map[int]map[string]*helper.VariableObject, refPluginStageVariables map[int]map[string]*helper.VariableObject) ([]*helper.VariableObject, error) {
 	var inputVars []*helper.VariableObject
 	for _, desired := range desiredVars {
-		log.Println("desired = ", desired)
 		switch desired.VariableType {
 		case helper.VALUE:
 			inputVars = append(inputVars, desired)
