@@ -563,9 +563,9 @@ func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
 
 func PushArtifact(dest string) error {
 	//awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
-	dockerPush := fmt.Sprintf("docker push %q", dest)
+	dockerPush := fmt.Sprintf("docker push %s", dest)
 	log.Println("-----> " + dockerPush)
-	dockerPushCMD := exec.Command("/bin/sh", "-c", dockerPush)
+	dockerPushCMD := exec.Command("/bin/sh", "-c", "docker", "push", dest)
 	err := util.RunCommand(dockerPushCMD)
 	if err != nil {
 		log.Println(err)
