@@ -471,9 +471,9 @@ func executeCmd(dockerBuild string) error {
 }
 
 func tagDockerBuild(dockerRepository string, dest string) error {
-	dockerTag := fmt.Sprintf("docker tag %q:latest %q", dockerRepository, dest)
+	dockerTag := fmt.Sprintf("docker tag %s:latest %s", dockerRepository, dest)
 	log.Println(" -----> " + dockerTag)
-	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
+	dockerTagCMD := exec.Command("/bin/sh", "-c", "docker", "tag", fmt.Sprintf("%s:latest", dockerRepository), dest)
 	err := util.RunCommand(dockerTagCMD)
 	if err != nil {
 		log.Println(err)
@@ -597,8 +597,7 @@ func ExtractDigestForBuildx(dest string) (string, error) {
 }
 
 func ExtractDigestUsingPull(dest string) (string, error) {
-	dockerPull := fmt.Sprintf("docker pull %q", dest)
-	dockerPullCmd := exec.Command("/bin/sh", "-c", dockerPull)
+	dockerPullCmd := exec.Command("/bin/sh", "-c", "docker", "pull", dest)
 	digest, err := runGetDockerImageDigest(dockerPullCmd)
 	if err != nil {
 		log.Println(err)
