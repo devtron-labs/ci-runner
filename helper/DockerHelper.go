@@ -750,9 +750,8 @@ func StopDocker() error {
 		return err
 	}
 	if len(out) > 0 {
-		stopCmdS := "docker stop -t 5 $(docker ps -a -q)"
 		log.Println(util.DEVTRON, " -----> stopping docker container")
-		stopCmd := exec.Command("/bin/sh", "-c", stopCmdS)
+		stopCmd := exec.Command("/bin/sh", "-c", "docker", "stop", "-t", "5", "$(docker ps -a -q)")
 		err := util.RunCommand(stopCmd)
 		log.Println(util.DEVTRON, " -----> stopped docker container")
 		if err != nil {
