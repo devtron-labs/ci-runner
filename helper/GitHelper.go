@@ -106,7 +106,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			}
 		}
 
-		_, msgMsg, cErr := gitCli.Clone(gitContext, filepath.Join(util.WORKINGDIR, prj.CheckoutPath), prj.GitRepository)
+		_, msgMsg, cErr := gitCli.Clone(gitContext, prj)
 		if cErr != nil {
 			log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
 		}
