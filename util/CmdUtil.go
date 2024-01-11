@@ -55,7 +55,10 @@ func NewCommand(newArgs ...string) *CommandType {
 
 func (c *CommandType) AppendCommand(newArgs ...string) {
 	for _, newArg := range newArgs {
-		*c = append(*c, strings.TrimSpace(newArg))
+		trimmedArg := strings.TrimSpace(newArg)
+		if trimmedArg != "" {
+			*c = append(*c, trimmedArg)
+		}
 	}
 }
 
