@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -89,7 +90,9 @@ func (impl *GitUtil) Init(rootDir string, remoteUrl string, isBare bool) error {
 	return err
 }
 
-func (impl *GitUtil) Clone(gitContext GitContext, rootDir string, remoteUrl string) (response, errMsg string, err error) {
+func (impl *GitUtil) Clone(gitContext GitContext, prj CiProjectDetails) (response, errMsg string, err error) {
+	rootDir := filepath.Join(util.WORKINGDIR, prj.CheckoutPath)
+	remoteUrl := prj.GitRepository
 	err = impl.Init(rootDir, remoteUrl, false)
 	if err != nil {
 		return "", "", err
