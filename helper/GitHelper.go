@@ -179,7 +179,7 @@ func Checkout(gitContext GitContext, gitCli *GitUtil, checkoutPath string, targe
 	rootDir := filepath.Join(util.WORKINGDIR, checkoutPath)
 
 	// checkout target hash
-	_, eMsg, cErr := gitCli.Checkout(rootDir, targetCheckout)
+	_, eMsg, cErr := gitCli.Checkout(gitContext, rootDir, targetCheckout)
 	if cErr != nil {
 		return eMsg, cErr
 	}

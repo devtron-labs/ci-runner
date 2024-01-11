@@ -28,10 +28,10 @@ func (impl *GitUtil) Fetch(gitContext GitContext, rootDir string) (response, err
 	return output, "", nil
 }
 
-func (impl *GitUtil) Checkout(rootDir string, checkout string) (response, errMsg string, err error) {
+func (impl *GitUtil) Checkout(gitContext GitContext, rootDir string, checkout string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git checkout ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "checkout", checkout, "--force")
-	output, errMsg, err := impl.RunCommand(cmd)
+	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.auth.Username, gitContext.auth.Password)
 	log.Println(util.DEVTRON, "checkout output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, "", nil
 }
