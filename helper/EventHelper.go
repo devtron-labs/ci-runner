@@ -375,6 +375,7 @@ type CiProjectDetails struct {
 	Author          string      `json:"author"`
 	GitOptions      GitOptions  `json:"gitOptions"`
 	WebhookData     WebhookData `json:"webhookData"`
+	CloningMode     string      `json:"cloningMode"`
 }
 
 type RegistryCredentials struct {
