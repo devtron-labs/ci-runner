@@ -42,7 +42,7 @@ type WebhookData struct {
 
 type GitContext struct {
 	context.Context // Embedding original Go context
-	auth            *http.BasicAuth
+	Auth            *http.BasicAuth
 }
 
 type AuthMode string
@@ -94,7 +94,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 		}
 
 		gitContext := GitContext{
-			auth: auth,
+			Auth: auth,
 		}
 		// create ssh private key on disk
 		if authMode == AUTH_MODE_SSH {

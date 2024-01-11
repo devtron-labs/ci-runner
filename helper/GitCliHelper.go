@@ -24,7 +24,7 @@ const GIT_AKS_PASS = "/git-ask-pass.sh"
 func (impl *GitUtil) Fetch(gitContext GitContext, rootDir string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git fetch ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
-	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.auth.Username, gitContext.auth.Password)
+	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.Auth.Username, gitContext.Auth.Password)
 	log.Println(util.DEVTRON, "fetch output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, "", nil
 }
@@ -32,7 +32,7 @@ func (impl *GitUtil) Fetch(gitContext GitContext, rootDir string) (response, err
 func (impl *GitUtil) Checkout(gitContext GitContext, rootDir string, checkout string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git checkout ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "checkout", checkout, "--force")
-	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.auth.Username, gitContext.auth.Password)
+	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.Auth.Username, gitContext.Auth.Password)
 	log.Println(util.DEVTRON, "checkout output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, "", nil
 }
@@ -158,7 +158,7 @@ func (impl *GitUtil) GitCheckout(gitContext GitContext, gitCli *GitUtil, checkou
 				modifiedUrl = modifiedUrl[strings.Index(modifiedUrl, "bitbucket.org"):]
 			}
 			// build url
-			modifiedUrl = "https://" + gitContext.auth.Username + ":" + gitContext.auth.Password + "@" + modifiedUrl
+			modifiedUrl = "https://" + gitContext.Auth.Username + ":" + gitContext.Auth.Password + "@" + modifiedUrl
 
 			_, errMsg, cErr = gitCli.UpdateCredentialHelper(rootDir)
 			if cErr != nil {
