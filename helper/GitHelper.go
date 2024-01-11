@@ -74,7 +74,11 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 	gitCli := NewGitUtil()
 	for index, prj := range ciProjectDetails {
 		// git clone
-		log.Println("-----> git cloning " + prj.GitRepository)
+		if prj.CloningMode == util.CLONING_MODE_SHALLOW {
+			log.Println("-----> git shallow cloning " + prj.GitRepository)
+		} else {
+			log.Println("-----> git cloning " + prj.GitRepository)
+		}
 
 		if prj.CheckoutPath != "./" {
 			if _, err := os.Stat(prj.CheckoutPath); os.IsNotExist(err) {
