@@ -64,8 +64,9 @@ const (
 )
 
 const (
-	WEBHOOK_SELECTOR_TARGET_CHECKOUT_NAME string = "target checkout"
-	WEBHOOK_SELECTOR_SOURCE_CHECKOUT_NAME string = "source checkout"
+	WEBHOOK_SELECTOR_TARGET_CHECKOUT_NAME        string = "target checkout"
+	WEBHOOK_SELECTOR_SOURCE_CHECKOUT_NAME        string = "source checkout"
+	WEBHOOK_SELECTOR_TARGET_CHECKOUT_BRANCH_NAME string = "target branch name"
 
 	WEBHOOK_EVENT_MERGED_ACTION_TYPE     string = "merged"
 	WEBHOOK_EVENT_NON_MERGED_ACTION_TYPE string = "non-merged"
@@ -74,7 +75,6 @@ const (
 func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 	gitCli := NewGitUtil()
 	for index, prj := range ciProjectDetails {
-
 		// git clone
 		log.Println("-----> git cloning " + prj.GitRepository)
 
