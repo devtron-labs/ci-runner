@@ -59,8 +59,7 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 	if err != nil {
 		log.Fatal(err)
 	}
-	dockerdStart := util.NewCommand()
-	dockerdStart.AppendCommand("dockerd")
+	dockerdStart := util.NewCommand("dockerd")
 	if len(defaultAddressPoolBaseCidr) > 0 {
 		if defaultAddressPoolSize <= 0 {
 			defaultAddressPoolSize = 24
@@ -97,6 +96,7 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 		dockerdStart.AppendCommand(dockerMtuValueFlag)
 	}
 	dockerdStart.AppendCommand("--host=tcp://0.0.0.0:2375", ">", "/usr/local/bin/nohup.out", "2>&1", "&")
+	log.Println(util.DEVTRON, " ", dockerdStart.PrintCommand())
 	out, _ := exec.Command("/bin/sh", dockerdStart.GetCommandToBeExecuted("-c")...).Output()
 	log.Println(string(out))
 	waitForDockerDaemon(util.RETRYCOUNT)
