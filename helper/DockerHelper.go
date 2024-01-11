@@ -60,19 +60,17 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 		log.Fatal(err)
 	}
 	dockerdStart := util.NewCommand()
-	defaultAddressPoolFlag := ""
-	dockerMtuValueFlag := ""
+	dockerdStart.AppendCommand("dockerd")
 	if len(defaultAddressPoolBaseCidr) > 0 {
 		if defaultAddressPoolSize <= 0 {
 			defaultAddressPoolSize = 24
 		}
-		defaultAddressPoolFlag = fmt.Sprintf("--default-address-pool base=%s,size=%d", defaultAddressPoolBaseCidr, defaultAddressPoolSize)
+		defaultAddressPoolFlag := fmt.Sprintf("base=%s,size=%d", defaultAddressPoolBaseCidr, defaultAddressPoolSize)
+		dockerdStart.AppendCommand("--default-address-pool", defaultAddressPoolFlag)
 	}
-	if ciRunnerDockerMtuValue > 0 {
-		dockerMtuValueFlag = fmt.Sprintf("--mtu=%d", ciRunnerDockerMtuValue)
-	}
+
 	if connection == util.INSECURE {
-		dockerdStart.AppendCommand("dockerd", defaultAddressPoolFlag, "--insecure-registry", u.Host, "--host=unix:///var/run/docker.sock", dockerMtuValueFlag, "--host=tcp://0.0.0.0:2375", ">", "/usr/local/bin/nohup.out", "2>&1", "&")
+		dockerdStart.AppendCommand("--insecure-registry", u.Host)
 		util.LogStage("Insecure Registry")
 	} else {
 		if connection == util.SECUREWITHCERT {
@@ -92,8 +90,13 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 			}
 			util.LogStage("Secure with Cert")
 		}
-		dockerdStart.AppendCommand("dockerd", defaultAddressPoolFlag, "--host=unix:///var/run/docker.sock", dockerMtuValueFlag, "--host=tcp://0.0.0.0:2375", ">", "/usr/local/bin/nohup.out", "2>&1", "&")
 	}
+	dockerdStart.AppendCommand("--host=unix:///var/run/docker.sock")
+	if ciRunnerDockerMtuValue > 0 {
+		dockerMtuValueFlag := fmt.Sprintf("--mtu=%d", ciRunnerDockerMtuValue)
+		dockerdStart.AppendCommand(dockerMtuValueFlag)
+	}
+	dockerdStart.AppendCommand("--host=tcp://0.0.0.0:2375", ">", "/usr/local/bin/nohup.out", "2>&1", "&")
 	out, _ := exec.Command("/bin/sh", dockerdStart.GetCommandToBeExecuted("-c")...).Output()
 	log.Println(string(out))
 	waitForDockerDaemon(util.RETRYCOUNT)
