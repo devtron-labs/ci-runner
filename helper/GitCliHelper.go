@@ -135,3 +135,64 @@ func (impl *GitUtil) UnsetCredentialHelper(rootDir string) (response, errMsg str
 	log.Println(util.DEVTRON, "git credential helper unset output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, eMsg, err
 }
+
+func (impl *GitUtil) GitCheckout(gitContext GitContext, gitCli *GitUtil, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, gitRepository string) (errMsg string, error error) {
+
+	rootDir := filepath.Join(util.WORKINGDIR, checkoutPath)
+
+	// checkout target hash
+	_, eMsg, cErr := gitCli.Checkout(gitContext, rootDir, targetCheckout)
+	if cErr != nil {
+		return eMsg, cErr
+	}
+
+	log.Println(util.DEVTRON, " fetchSubmodules ", fetchSubmodules, " authMode ", authMode)
+
+	if fetchSubmodules {
+		httpsAuth := (authMode == AUTH_MODE_USERNAME_PASSWORD) || (authMode == AUTH_MODE_ACCESS_TOKEN)
+		if httpsAuth {
+			// first remove protocol
+			modifiedUrl := strings.ReplaceAll(gitRepository, "https://", "")
+			// for bitbucket - if git repo url is started with username, then we need to remove username
+			if strings.Contains(modifiedUrl, "bitbucket.org") && !strings.HasPrefix(modifiedUrl, "bitbucket.org") {
+				modifiedUrl = modifiedUrl[strings.Index(modifiedUrl, "bitbucket.org"):]
+			}
+			// build url
+			modifiedUrl = "https://" + gitContext.auth.Username + ":" + gitContext.auth.Password + "@" + modifiedUrl
+
+			_, errMsg, cErr = gitCli.UpdateCredentialHelper(rootDir)
+			if cErr != nil {
+				return errMsg, cErr
+			}
+
+			cErr = util.CreateGitCredentialFileAndWriteData(modifiedUrl)
+			if cErr != nil {
+				return "Error in creating git credential file", cErr
+			}
+
+		}
+
+		_, errMsg, cErr = gitCli.RecursiveFetchSubmodules(rootDir)
+		if cErr != nil {
+			return errMsg, cErr
+		}
+
+		// cleanup
+
+		if httpsAuth {
+			_, errMsg, cErr = gitCli.UnsetCredentialHelper(rootDir)
+			if cErr != nil {
+				return errMsg, cErr
+			}
+
+			// delete file (~/.git-credentials) (which was created above)
+			cErr = util.CleanupAfterFetchingHttpsSubmodules()
+			if cErr != nil {
+				return "", cErr
+			}
+		}
+	}
+
+	return "", nil
+
+}

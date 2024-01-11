@@ -19,13 +19,11 @@ package helper
 
 import (
 	"context"
+	"github.com/devtron-labs/ci-runner/util"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
-
-	"github.com/devtron-labs/ci-runner/util"
-	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
 type GitOptions struct {
@@ -124,7 +122,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 				checkoutSource = prj.SourceValue
 			}
 			log.Println("checkout commit in branch fix : ", checkoutSource)
-			msgMsg, cErr = Checkout(gitContext, gitCli, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository)
+			msgMsg, cErr = gitCli.GitCheckout(gitContext, gitCli, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 			}
@@ -142,7 +140,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			log.Println("checkout commit in webhook : ", targetCheckout)
 
 			// checkout target hash
-			msgMsg, cErr = Checkout(gitContext, gitCli, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository)
+			msgMsg, cErr = gitCli.GitCheckout(gitContext, gitCli, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
 				return cErr
@@ -172,65 +170,4 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 
 	}
 	return nil
-}
-
-func Checkout(gitContext GitContext, gitCli *GitUtil, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, gitRepository string) (errMsg string, error error) {
-
-	rootDir := filepath.Join(util.WORKINGDIR, checkoutPath)
-
-	// checkout target hash
-	_, eMsg, cErr := gitCli.Checkout(gitContext, rootDir, targetCheckout)
-	if cErr != nil {
-		return eMsg, cErr
-	}
-
-	log.Println(util.DEVTRON, " fetchSubmodules ", fetchSubmodules, " authMode ", authMode)
-
-	if fetchSubmodules {
-		httpsAuth := (authMode == AUTH_MODE_USERNAME_PASSWORD) || (authMode == AUTH_MODE_ACCESS_TOKEN)
-		if httpsAuth {
-			// first remove protocol
-			modifiedUrl := strings.ReplaceAll(gitRepository, "https://", "")
-			// for bitbucket - if git repo url is started with username, then we need to remove username
-			if strings.Contains(modifiedUrl, "bitbucket.org") && !strings.HasPrefix(modifiedUrl, "bitbucket.org") {
-				modifiedUrl = modifiedUrl[strings.Index(modifiedUrl, "bitbucket.org"):]
-			}
-			// build url
-			modifiedUrl = "https://" + gitContext.auth.Username + ":" + gitContext.auth.Password + "@" + modifiedUrl
-
-			_, errMsg, cErr = gitCli.UpdateCredentialHelper(rootDir)
-			if cErr != nil {
-				return errMsg, cErr
-			}
-
-			cErr = util.CreateGitCredentialFileAndWriteData(modifiedUrl)
-			if cErr != nil {
-				return "Error in creating git credential file", cErr
-			}
-
-		}
-
-		_, errMsg, cErr = gitCli.RecursiveFetchSubmodules(rootDir)
-		if cErr != nil {
-			return errMsg, cErr
-		}
-
-		// cleanup
-
-		if httpsAuth {
-			_, errMsg, cErr = gitCli.UnsetCredentialHelper(rootDir)
-			if cErr != nil {
-				return errMsg, cErr
-			}
-
-			// delete file (~/.git-credentials) (which was created above)
-			cErr = util.CleanupAfterFetchingHttpsSubmodules()
-			if cErr != nil {
-				return "", cErr
-			}
-		}
-	}
-
-	return "", nil
-
 }
