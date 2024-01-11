@@ -96,9 +96,10 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 		dockerdStart.AppendCommand(dockerMtuValueFlag)
 	}
 	dockerdStart.AppendCommand("--host=tcp://0.0.0.0:2375", ">", "/usr/local/bin/nohup.out", "2>&1", "&")
-	// TODO Asutosh: remove
+	// TODO Asutosh: remove log
 	log.Println(util.DEVTRON, " ", dockerdStart.PrintCommand())
-	out, _ := exec.Command("/bin/sh", dockerdStart.GetCommandToBeExecuted("-c")...).Output()
+	out, err := exec.Command("/bin/sh", dockerdStart.GetCommandToBeExecuted("-c")...).Output()
+	log.Println(util.DEVTRON, " err: ", err)
 	log.Println(string(out))
 	waitForDockerDaemon(util.RETRYCOUNT)
 }
