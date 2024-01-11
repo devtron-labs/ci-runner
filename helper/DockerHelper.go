@@ -59,7 +59,7 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 	if err != nil {
 		log.Fatal(err)
 	}
-	dockerdstart := ""
+	dockerdStart := util.NewCommand()
 	defaultAddressPoolFlag := ""
 	dockerMtuValueFlag := ""
 	if len(defaultAddressPoolBaseCidr) > 0 {
@@ -72,7 +72,7 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 		dockerMtuValueFlag = fmt.Sprintf("--mtu=%d", ciRunnerDockerMtuValue)
 	}
 	if connection == util.INSECURE {
-		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, u.Host, dockerMtuValueFlag)
+		dockerdStart.AppendCommand("dockerd", defaultAddressPoolFlag, "--insecure-registry", u.Host, "--host=unix:///var/run/docker.sock", dockerMtuValueFlag, "--host=tcp://0.0.0.0:2375", ">", "/usr/local/bin/nohup.out", "2>&1", "&")
 		util.LogStage("Insecure Registry")
 	} else {
 		if connection == util.SECUREWITHCERT {
@@ -92,11 +92,9 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 			}
 			util.LogStage("Secure with Cert")
 		}
-		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
+		dockerdStart.AppendCommand("dockerd", defaultAddressPoolFlag, "--host=unix:///var/run/docker.sock", dockerMtuValueFlag, "--host=tcp://0.0.0.0:2375", ">", "/usr/local/bin/nohup.out", "2>&1", "&")
 	}
-	// TODO: refactor dockerBuild string to []string for removing script injection
-	// Until then use fmt.Sprintf("%q", userInput) to sanitize the input
-	out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
+	out, _ := exec.Command("/bin/sh", dockerdStart.GetCommandToBeExecuted("-c")...).Output()
 	log.Println(string(out))
 	waitForDockerDaemon(util.RETRYCOUNT)
 }
@@ -213,51 +211,48 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 		return "", err
 	}
 	if ciBuildConfig.CiBuildType == SELF_DOCKERFILE_BUILD_TYPE || ciBuildConfig.CiBuildType == MANAGED_DOCKERFILE_BUILD_TYPE {
-		// TODO: refactor dockerBuild string to []string for removing script injection
-		// Until then use fmt.Sprintf("%q", userInput) to sanitize the input
-		dockerBuild := "docker build "
+		dockerBuild := util.NewCommand("docker", "build")
 		if ciRequest.CacheInvalidate && ciRequest.IsPvcMounted {
-			dockerBuild = dockerBuild + "--no-cache "
+			dockerBuild.AppendCommand("--no-cache")
 		}
 		dockerBuildConfig := ciBuildConfig.DockerBuildConfig
 
 		isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
 		useBuildx := dockerBuildConfig.CheckForBuildX()
-		dockerBuildxBuild := "docker buildx build "
+		dockerBuildxBuild := util.NewCommand("docker", "buildx", "build")
 		if useBuildx {
+			dockerBuild = dockerBuildxBuild
 			if ciRequest.CacheInvalidate && ciRequest.IsPvcMounted {
-				dockerBuild = dockerBuildxBuild + "--no-cache "
-			} else {
-				dockerBuild = dockerBuildxBuild + " "
+				dockerBuild.AppendCommand("--no-cache")
 			}
 			if isTargetPlatformSet {
-				dockerBuild += fmt.Sprintf("--platform %q ", dockerBuildConfig.TargetPlatform)
+				dockerBuild.AppendCommand("--platform", dockerBuildConfig.TargetPlatform)
 			}
 		}
-		dockerBuildFlags := make(map[string]string)
 		dockerBuildArgsMap := dockerBuildConfig.Args
 		for k, v := range dockerBuildArgsMap {
-			flagKey := fmt.Sprintf("%s %q", BUILD_ARG_FLAG, strings.TrimSpace(k))
+			dockerBuild.AppendCommand(BUILD_ARG_FLAG)
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=\"%s\"", strings.TrimSpace(valueFromEnv))
+				dockerBuildArg := fmt.Sprintf("%s=\"%s\"", strings.TrimSpace(k), strings.TrimSpace(valueFromEnv))
+				dockerBuild.AppendCommand(dockerBuildArg)
 			} else {
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%q", strings.TrimSpace(v))
+				dockerBuildArg := fmt.Sprintf("%s=%s", strings.TrimSpace(k), strings.TrimSpace(v))
+				dockerBuild.AppendCommand(dockerBuildArg)
 			}
 		}
 		dockerBuildOptionsMap := dockerBuildConfig.DockerBuildOptions
 		for k, v := range dockerBuildOptionsMap {
-			flagKey := "--" + strings.TrimSpace(k)
+			dockerBuildFlag := fmt.Sprintf("--%s", strings.TrimSpace(k))
 			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%q", strings.TrimSpace(valueFromEnv))
+				dockerBuildFlag += fmt.Sprintf("=%s", strings.TrimSpace(valueFromEnv))
 			} else {
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%q", strings.TrimSpace(v))
+				dockerBuildFlag += fmt.Sprintf("=%s", strings.TrimSpace(v))
 			}
+			dockerBuild.AppendCommand(dockerBuildFlag)
 		}
-		for key, value := range dockerBuildFlags {
-			dockerBuild = dockerBuild + " " + key + value
-		}
+
 		if !ciRequest.EnableBuildContext || dockerBuildConfig.BuildContext == "" {
 			dockerBuildConfig.BuildContext = ROOT_PATH
 		}
@@ -295,13 +290,12 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 				}
 				oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
 			}
-
-			dockerBuild = getBuildxBuildCommand(cacheEnabled, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig)
+			createBuildxBuildCommand(dockerBuild, cacheEnabled, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig)
 		} else {
-			dockerBuild = fmt.Sprintf("%s -f %q --network host -t %q %s", dockerBuild, dockerBuildConfig.DockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
+			dockerBuild.AppendCommand("-f", dockerBuildConfig.DockerfilePath, "--network host", "-t", ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
 		if envVars.ShowDockerBuildCmdInLogs {
-			log.Println("Starting docker build : ", dockerBuild)
+			log.Println("Starting docker build : ", dockerBuild.PrintCommand())
 		} else {
 			log.Println("Docker build started..")
 		}
@@ -330,20 +324,18 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 			projectPath = "./" + projectPath
 		}
 		handleLanguageVersion(projectPath, buildPackParams)
-		// TODO: refactor buildPackCmd: string to []string for removing script injection
-		// Until then use fmt.Sprintf("%q", userInput) to sanitize the input
-		buildPackCmd := fmt.Sprintf("pack build %q --path %q --builder %q", dest, projectPath, buildPackParams.BuilderId)
+		buildPackCmd := util.NewCommand("pack", "build", dest, "--path", projectPath, "--builder", buildPackParams.BuilderId)
 		BuildPackArgsMap := buildPackParams.Args
 		for k, v := range BuildPackArgsMap {
-			buildPackCmd = buildPackCmd + " --env " + strings.TrimSpace(k) + "=" + strings.TrimSpace(v)
+			buildPackCmd.AppendCommand("--env", fmt.Sprintf("%s=%s", strings.TrimSpace(k), strings.TrimSpace(v)))
 		}
 
 		if len(buildPackParams.BuildPacks) > 0 {
 			for _, buildPack := range buildPackParams.BuildPacks {
-				buildPackCmd = buildPackCmd + " --buildpack " + strings.TrimSpace(buildPack)
+				buildPackCmd.AppendCommand("--buildpack", strings.TrimSpace(buildPack))
 			}
 		}
-		log.Println(" -----> " + buildPackCmd)
+		log.Println(" -----> " + buildPackCmd.PrintCommand())
 		err = executeCmd(buildPackCmd)
 		if err != nil {
 			return "", err
@@ -358,18 +350,19 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 	return dest, nil
 }
 
-func getBuildxBuildCommand(cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig) string {
-	dockerBuild = fmt.Sprintf("%s -f %q -t %q --push %q --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
+func createBuildxBuildCommand(dockerBuild *util.CommandType, cacheEnabled bool, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig) {
+	dockerBuild.AppendCommand("-f", dockerBuildConfig.DockerfilePath, "-t", dest, "--push", dockerBuildConfig.BuildContext, "--network", "host", "--allow network.host", "--allow security.insecure")
 	if cacheEnabled {
-		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%q,mode=max --cache-from=type=local,src=%q", dockerBuild, localCachePath, oldCacheBuildxPath)
+		cacheDest := fmt.Sprintf("--cache-to=type=local,dest=%s,mode=max", localCachePath)
+		cacheSrc := fmt.Sprintf("--cache-from=type=local,src=%s", oldCacheBuildxPath)
+		dockerBuild.AppendCommand(cacheDest, cacheSrc)
 	}
 
 	provenanceFlag := dockerBuildConfig.GetProvenanceFlag()
-	dockerBuild = fmt.Sprintf("%s %s", dockerBuild, provenanceFlag)
+	dockerBuild.AppendCommand(provenanceFlag)
 	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-	dockerBuild = fmt.Sprintf("%s --metadata-file %s", dockerBuild, manifestLocation)
-
-	return dockerBuild
+	dockerBuild.AppendCommand("--metadata-file", manifestLocation)
+	return
 }
 
 func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig) {
@@ -420,28 +413,26 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 			log.Println("final Path is ", finalPath)
 			ext := filepath.Ext(finalPath)
 			if ext == ".json" {
-				jqCmd := fmt.Sprintf("jq '.engines.node' %s", finalPath)
-				outputBytes, err := exec.Command("/bin/sh", "-c", jqCmd).Output()
+				jqCmd := util.NewCommand("jq", "'.engines.node'", finalPath)
+				outputBytes, err := exec.Command("/bin/sh", jqCmd.GetCommandToBeExecuted("-c")...).Output()
 				if err != nil {
 					log.Println("error occurred while fetching node version", "err", err)
 					return
 				}
 				if strings.TrimSpace(string(outputBytes)) == "null" {
-					// TODO: refactor versionUpdateCmd string to []string for removing script injection
-					// Until then use fmt.Sprintf("%q", userInput) to sanitize the input
+					languageVersionFlag := fmt.Sprintf("'.engines.node = \"%s\"'", languageVersion)
 					tmpJsonFile := "./tmp.json"
-					versionUpdateCmd := fmt.Sprintf("jq '.engines.node = \"%s\"' %s >%s", languageVersion, finalPath, tmpJsonFile)
+					tmpJsonFileFlag := fmt.Sprintf(">%s", tmpJsonFile)
+					versionUpdateCmd := util.NewCommand("jq", languageVersionFlag, finalPath, tmpJsonFileFlag)
 					err := executeCmd(versionUpdateCmd)
 					if err != nil {
 						log.Println("error occurred while inserting node version", "err", err)
 						return
 					}
-					// TODO: refactor fileReplaceCmd string to []string for removing script injection
-					// Until then use fmt.Sprintf("%q", userInput) to sanitize the input
-					fileReplaceCmd := fmt.Sprintf("mv %s %s", tmpJsonFile, finalPath)
+					fileReplaceCmd := util.NewCommand("mv", tmpJsonFile, finalPath)
 					err = executeCmd(fileReplaceCmd)
 					if err != nil {
-						log.Println("error occurred while executing cmd ", fileReplaceCmd, "err", err)
+						log.Println("error occurred while executing cmd ", fileReplaceCmd.PrintCommand(), "err", err)
 						return
 					}
 				}
@@ -459,10 +450,9 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 // DOs:
 // 1- Break the command to name and []args as exec.Command(name, []arg...)
 // 2- Use strings.TrimSpace() to build an user defined flags; e.g: fmt.Sprintf("--%s", strings.TrimSpace(userDefinedFlag))
-// 3- In case a single arg contains multiple user defined inputs, then use fmt.Sprintf() with %q to sanitize user defined inputs; exec.Command(name, "--flag=", fmt.Sprintf("key1=%q,key2=%q,key3=%q", userDefinedArg-1, userDefinedArg-2, userDefinedArg-2))
-func executeCmd(dockerBuild string) error {
-	// TODO: dockerBuild should be []string{arg...}
-	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
+// 3- In case a single arg contains multiple user defined inputs, then use fmt.Sprintf(); exec.Command(name, "--flag=", fmt.Sprintf("key1=%s,key2=%s,key3=%s", userDefinedArg-1, userDefinedArg-2, userDefinedArg-2))
+func executeCmd(dockerBuild *util.CommandType) error {
+	dockerBuildCMD := exec.Command("/bin/sh", dockerBuild.GetCommandToBeExecuted("-c")...)
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
@@ -471,9 +461,9 @@ func executeCmd(dockerBuild string) error {
 }
 
 func tagDockerBuild(dockerRepository string, dest string) error {
-	dockerTag := fmt.Sprintf("docker tag %s:latest %s", dockerRepository, dest)
-	log.Println(" -----> " + dockerTag)
-	dockerTagCMD := exec.Command("/bin/sh", "-c", "docker", "tag", fmt.Sprintf("%s:latest", dockerRepository), dest)
+	dockerTagCmd := util.NewCommand("docker", "tag", fmt.Sprintf("%s:latest", dockerRepository), dest)
+	log.Println(" -----> " + dockerTagCmd.PrintCommand())
+	dockerTagCMD := exec.Command("/bin/sh", dockerTagCmd.GetCommandToBeExecuted("-c")...)
 	err := util.RunCommand(dockerTagCMD)
 	if err != nil {
 		log.Println(err)
@@ -491,16 +481,14 @@ func setupCacheForBuildx(localCachePath string, oldCacheBuildxPath string) error
 	if err != nil {
 		return err
 	}
-	copyContent := "cp -R " + localCachePath + " " + oldCacheBuildxPath
-	copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
+	copyContentCmd := exec.Command("/bin/sh", "-c", "cp", "-R", localCachePath, oldCacheBuildxPath)
 	err = util.RunCommand(copyContentCmd)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 
-	cleanContent := "rm -rf " + localCachePath + "/*"
-	cleanContentCmd := exec.Command("/bin/sh", "-c", cleanContent)
+	cleanContentCmd := exec.Command("/bin/sh", "-c", "rm", "-rf", localCachePath, "/*")
 	err = util.RunCommand(cleanContentCmd)
 	if err != nil {
 		log.Println(err)
@@ -510,9 +498,9 @@ func setupCacheForBuildx(localCachePath string, oldCacheBuildxPath string) error
 }
 
 func createBuildxBuilder() error {
-	multiPlatformCmd := "docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'"
-	log.Println(" -----> " + multiPlatformCmd)
-	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
+	multiPlatformCmd := util.NewCommand("docker", "buildx", "create", "--use", "--buildkitd-flags", "'--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'")
+	log.Println(" -----> " + multiPlatformCmd.PrintCommand())
+	dockerBuildCMD := exec.Command("/bin/sh", multiPlatformCmd.GetCommandToBeExecuted("-c")...)
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
@@ -522,9 +510,9 @@ func createBuildxBuilder() error {
 }
 
 func installAllSupportedPlatforms() error {
-	multiPlatformCmd := "docker run --privileged --rm quay.io/devtron/binfmt:stable --install all"
-	log.Println(" -----> " + multiPlatformCmd)
-	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
+	multiPlatformCmd := util.NewCommand("docker", "run", "--privileged", "--rm", "quay.io/devtron/binfmt:stable", "--install", "all")
+	log.Println(" -----> " + multiPlatformCmd.PrintCommand())
+	dockerBuildCMD := exec.Command("/bin/sh", multiPlatformCmd.GetCommandToBeExecuted("-c")...)
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
@@ -534,8 +522,7 @@ func installAllSupportedPlatforms() error {
 }
 
 func checkAndCreateDirectory(localCachePath string) error {
-	makeDirCmd := "mkdir -p " + localCachePath
-	pathCreateCommand := exec.Command("/bin/sh", "-c", makeDirCmd)
+	pathCreateCommand := exec.Command("/bin/sh", "-c", "mkdir", "-p", localCachePath)
 	err := util.RunCommand(pathCreateCommand)
 	if err != nil {
 		log.Println(err)
@@ -662,11 +649,10 @@ func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string, ciPipeli
 	defaultNodeOpts := builderNodes[0]
 
 	buildxCreate := getBuildxK8sDriverCmd(defaultNodeOpts, ciPipelineId, ciWorkflowId)
-	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--use")
-
+	buildxCreate.AppendCommand("--use")
 	err, errBuf := runCmd(buildxCreate)
 	if err != nil {
-		fmt.Println(util.DEVTRON, "buildxCreate : ", buildxCreate, " err : ", err, " error : ", errBuf.String(), "\n ")
+		fmt.Println(util.DEVTRON, "buildxCreate : ", buildxCreate.PrintCommand(), " err : ", err, " error : ", errBuf.String(), "\n ")
 		return err
 	}
 
@@ -674,11 +660,11 @@ func createBuildxBuilderWithK8sDriver(builderNodes []map[string]string, ciPipeli
 	for i := 1; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
 		appendNode := getBuildxK8sDriverCmd(nodeOpts, ciPipelineId, ciWorkflowId)
-		appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
+		appendNode.AppendCommand("--append")
 
 		err, errBuf = runCmd(appendNode)
 		if err != nil {
-			fmt.Println(util.DEVTRON, " appendNode : ", appendNode, " err : ", err, " error : ", errBuf.String(), "\n ")
+			fmt.Println(util.DEVTRON, " appendNode : ", appendNode.PrintCommand(), " err : ", err, " error : ", errBuf.String(), "\n ")
 			return err
 		}
 	}
@@ -706,15 +692,17 @@ func leaveNodesFromBuildxK8sDriver(nodeNames []string) (error, *bytes.Buffer) {
 	var err error
 	var errBuf *bytes.Buffer
 	defer func() {
-		removeCmd := fmt.Sprintf("docker buildx rm %s", BUILDX_K8S_DRIVER_NAME)
+		removeCmd := util.NewCommand("docker", "buildx", "rm", BUILDX_K8S_DRIVER_NAME)
 		err, errBuf = runCmd(removeCmd)
 		if err != nil {
 			log.Println(util.DEVTRON, "error in removing docker buildx err : ", errBuf.String())
 		}
 	}()
 	for _, node := range nodeNames {
-		cmds := fmt.Sprintf("docker buildx create --name=%s --node=%s --leave", BUILDX_K8S_DRIVER_NAME, node)
-		err, errBuf = runCmd(cmds)
+		k8sDriverNameFlag := fmt.Sprintf("--name=%s", BUILDX_K8S_DRIVER_NAME)
+		k8sDriverNodeFlag := fmt.Sprintf("--node=%s", node, BUILDX_K8S_DRIVER_NAME)
+		k8sDriverLeaveNodeCmd := util.NewCommand("docker", "buildx", "create", k8sDriverNameFlag, k8sDriverNodeFlag, "--leave")
+		err, errBuf = runCmd(k8sDriverLeaveNodeCmd)
 		if err != nil {
 			log.Println(util.DEVTRON, "error in leaving node : ", errBuf.String())
 			return err, errBuf
@@ -723,32 +711,34 @@ func leaveNodesFromBuildxK8sDriver(nodeNames []string) (error, *bytes.Buffer) {
 	return err, errBuf
 }
 
-func runCmd(cmd string) (error, *bytes.Buffer) {
-	fmt.Println(util.DEVTRON, " cmd : ", cmd)
-	builderCreateCmd := exec.Command("/bin/sh", "-c", cmd)
+func runCmd(cmd *util.CommandType) (error, *bytes.Buffer) {
+	fmt.Println(util.DEVTRON, " cmd : ", cmd.PrintCommand())
+	builderCreateCmd := exec.Command("/bin/sh", cmd.GetCommandToBeExecuted("-c")...)
 	errBuf := &bytes.Buffer{}
 	builderCreateCmd.Stderr = errBuf
 	err := builderCreateCmd.Run()
 	return err, errBuf
 }
 
-func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflowId int) string {
-	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%q --bootstrap "
+func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflowId int) *util.CommandType {
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
 		nodeName = BUILDX_NODE_NAME + fmt.Sprintf("%v-%v", ciPipelineId, ciWorkflowId) + util.Generate(3) //need this to generate unique name for builder node in same builder.
 	}
-	buildxCreate = fmt.Sprintf(buildxCreate, BUILDX_K8S_DRIVER_NAME, nodeName)
+	k8sDriverNameFlag := fmt.Sprintf("--name=%s", BUILDX_K8S_DRIVER_NAME)
+	k8sDriverNodeFlag := fmt.Sprintf("--node=%s", nodeName)
+	buildxCreateCmd := util.NewCommand("docker", "buildx", "create", "--buildkitd-flags", "'--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'", k8sDriverNameFlag, "--driver=kubernetes", k8sDriverNodeFlag, "--bootstrap")
+
 	platforms := driverOpts["platform"]
 	if platforms != "" {
-		buildxCreate += " --platform=%q "
-		buildxCreate = fmt.Sprintf(buildxCreate, platforms)
+		buildxPlatformFlag := fmt.Sprintf("--platform=%s", platforms)
+		buildxCreateCmd.AppendCommand(buildxPlatformFlag)
 	}
 	if len(driverOpts["driverOptions"]) > 0 {
-		buildxCreate += " '--driver-opt=%s' "
-		buildxCreate = fmt.Sprintf(buildxCreate, driverOpts["driverOptions"])
+		buildxDriverOptions := fmt.Sprintf("'--driver-opt=%s'", driverOpts["driverOptions"])
+		buildxCreateCmd.AppendCommand(buildxDriverOptions)
 	}
-	return buildxCreate
+	return buildxCreateCmd
 }
 
 func StopDocker() error {
@@ -766,9 +756,9 @@ func StopDocker() error {
 			log.Fatal(err)
 			return err
 		}
-		removeContainerCmds := "docker rm -v -f $(docker ps -a -q)"
+		removeContainerCmds := util.NewCommand("docker", "rm", "-v", "-f", "$(docker ps -a -q)")
 		log.Println(util.DEVTRON, " -----> removing docker container")
-		removeContainerCmd := exec.Command("/bin/sh", "-c", removeContainerCmds)
+		removeContainerCmd := exec.Command("/bin/sh", removeContainerCmds.GetCommandToBeExecuted("-c")...)
 		err = util.RunCommand(removeContainerCmd)
 		log.Println(util.DEVTRON, " -----> removed docker container")
 		if err != nil {
@@ -817,8 +807,8 @@ func waitForDockerDaemon(retryCount int) {
 }
 
 func DockerdUpCheck() error {
-	dockerCheck := "docker ps"
-	dockerCheckCmd := exec.Command("/bin/sh", "-c", dockerCheck)
+	dockerCheck := util.NewCommand("docker", "ps")
+	dockerCheckCmd := exec.Command("/bin/sh", dockerCheck.GetCommandToBeExecuted("-c")...)
 	err := dockerCheckCmd.Run()
 	return err
 }

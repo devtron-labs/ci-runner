@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 func DeleteFile(path string) error {
@@ -42,4 +43,34 @@ func RunCommand(cmd *exec.Cmd) error {
 	}
 	//log.Println(stdBuffer.String())
 	return nil
+}
+
+type CommandType []string
+
+func NewCommand(newArgs ...string) *CommandType {
+	cmd := make(CommandType, 0)
+	cmd.AppendCommand(newArgs...)
+	return &cmd
+}
+
+func (c *CommandType) AppendCommand(newArgs ...string) {
+	for _, newArg := range newArgs {
+		*c = append(*c, strings.TrimSpace(newArg))
+	}
+}
+
+func (c *CommandType) PrintCommand() string {
+	if c == nil {
+		return ""
+	}
+	return strings.Join(*c, " ")
+}
+
+func (c *CommandType) GetCommandToBeExecuted(initialArgs ...string) []string {
+	runCmd := initialArgs
+	if c == nil {
+		return runCmd
+	}
+	runCmd = append(runCmd, *c...)
+	return runCmd
 }
