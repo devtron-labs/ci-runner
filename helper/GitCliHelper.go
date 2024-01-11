@@ -23,7 +23,7 @@ const GIT_AKS_PASS = "/git-ask-pass.sh"
 func (impl *GitUtil) Fetch(gitContext GitContext, rootDir string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git fetch ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
-	output, errMsg, err := impl.runCommandWithCred(cmd, gitContext.auth.Username, gitContext.auth.Password)
+	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.auth.Username, gitContext.auth.Password)
 	log.Println(util.DEVTRON, "fetch output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, "", nil
 }
@@ -31,21 +31,21 @@ func (impl *GitUtil) Fetch(gitContext GitContext, rootDir string) (response, err
 func (impl *GitUtil) Checkout(rootDir string, checkout string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git checkout ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "checkout", checkout, "--force")
-	output, errMsg, err := impl.runCommand(cmd)
+	output, errMsg, err := impl.RunCommand(cmd)
 	log.Println(util.DEVTRON, "checkout output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, "", nil
 }
 
-func (impl *GitUtil) runCommandWithCred(cmd *exec.Cmd, userName, password string) (response, errMsg string, err error) {
+func (impl *GitUtil) RunCommandWithCred(cmd *exec.Cmd, userName, password string) (response, errMsg string, err error) {
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("GIT_ASKPASS=%s", GIT_AKS_PASS),
 		fmt.Sprintf("GIT_USERNAME=%s", userName), // ignored
 		fmt.Sprintf("GIT_PASSWORD=%s", password), // this value is used
 	)
-	return impl.runCommand(cmd)
+	return impl.RunCommand(cmd)
 }
 
-func (impl *GitUtil) runCommand(cmd *exec.Cmd) (response, errMsg string, err error) {
+func (impl *GitUtil) RunCommand(cmd *exec.Cmd) (response, errMsg string, err error) {
 	return impl.runCommandForSuppliedNullifiedEnv(cmd, true)
 }
 
@@ -104,7 +104,7 @@ func (impl *GitUtil) Merge(rootDir string, commit string) (response, errMsg stri
 	log.Println(util.DEVTRON, "git merge ", "location", rootDir)
 	command := "cd " + rootDir + " && git config user.email git@devtron.com && git config user.name Devtron && git merge " + commit + " --no-commit"
 	cmd := exec.Command("/bin/sh", "-c", command)
-	output, errMsg, err := impl.runCommand(cmd)
+	output, errMsg, err := impl.RunCommand(cmd)
 	log.Println(util.DEVTRON, "merge output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, errMsg, err
 }
