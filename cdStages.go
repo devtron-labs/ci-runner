@@ -71,7 +71,6 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		}
 	}
 	log.Println(util.DEVTRON, " /git")
-
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
 	helper.StartDockerDaemon(cicdRequest.CommonWorkflowRequest.DockerConnection, cicdRequest.CommonWorkflowRequest.DockerRegistryURL, cicdRequest.CommonWorkflowRequest.DockerCert, cicdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr, cicdRequest.CommonWorkflowRequest.DefaultAddressPoolSize, -1)

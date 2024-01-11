@@ -364,8 +364,8 @@ func extractOutResultsIfExists() (*helper.ImageDetailsFromCR, error) {
 }
 
 func makeDockerfile(config *helper.DockerBuildConfig, checkoutPath string) error {
-	dockerfileContent := config.DockerfileContent
 	dockerfilePath := filepath.Join(util.WORKINGDIR, checkoutPath, "./Dockerfile")
+	dockerfileContent := config.DockerfileContent
 	f, err := os.Create(dockerfilePath)
 	if err != nil {
 		return err
