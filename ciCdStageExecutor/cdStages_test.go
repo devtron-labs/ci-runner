@@ -19,7 +19,8 @@ func TestHandleCDEvent(t *testing.T) {
 		exitCode := 0
 
 		// Call the function
-		HandleCDEvent(ciCdRequest, &exitCode)
+		cdStage := NewCdStage()
+		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != 0 {
@@ -36,7 +37,8 @@ func TestHandleCDEvent(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function with an error
-		HandleCDEvent(ciCdRequest, &exitCode)
+		cdStage := NewCdStage()
+		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.DefaultErrorCode {
@@ -53,7 +55,8 @@ func TestHandleCDEvent(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function with an error
-		HandleCDEvent(ciCdRequest, &exitCode)
+		cdStage := NewCdStage()
+		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.DefaultErrorCode {
@@ -71,7 +74,8 @@ func TestHandleCDEvent(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		HandleCDEvent(ciCdRequest, &exitCode)
+		cdStage := NewCdStage()
+		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != 0 {
@@ -89,7 +93,8 @@ func TestHandleCDEvent(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		HandleCDEvent(ciCdRequest, &exitCode)
+		cdStage := NewCdStage()
+		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.DefaultErrorCode {
@@ -107,7 +112,8 @@ func TestHandleCDEvent(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		HandleCDEvent(ciCdRequest, &exitCode)
+		cdStage := NewCdStage()
+		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.DefaultErrorCode {
@@ -126,7 +132,8 @@ func TestHandleCDEvent(t *testing.T) {
 		os.RemoveAll(util.WORKINGDIR)
 		os.RemoveAll("/output")
 		// Call the function
-		HandleCDEvent(ciCdRequest, &exitCode)
+		cdStage := NewCdStage()
+		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.DefaultErrorCode {
@@ -145,7 +152,8 @@ func TestHandleCDEvent(t *testing.T) {
 		os.RemoveAll(util.WORKINGDIR)
 		os.RemoveAll("/output")
 		// Call the function
-		HandleCDEvent(ciCdRequest, &exitCode)
+		cdStage := NewCdStage()
+		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.DefaultErrorCode {
@@ -163,7 +171,8 @@ func TestHandleCDEvent(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		HandleCDEvent(ciCdRequest, &exitCode)
+		cdStage := NewCdStage()
+		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != 0 {

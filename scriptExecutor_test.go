@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/devtron-labs/ci-runner/CiCdStageExecutor"
+	"github.com/devtron-labs/ci-runner/ciCdStageExecutor"
 	"github.com/devtron-labs/ci-runner/helper"
 	"io/ioutil"
 	"os"
