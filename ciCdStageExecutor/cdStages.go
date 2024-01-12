@@ -21,6 +21,7 @@ func (impl CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode
 		log.Println(err)
 		*exitCode = util.DefaultErrorCode
 	}
+
 }
 
 func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) error {
