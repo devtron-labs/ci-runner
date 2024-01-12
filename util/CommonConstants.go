@@ -27,7 +27,7 @@ const (
 	RETRYCOUNT                  = 10
 	HOMEDIR                     = "/"
 	WORKINGDIR                  = "/devtroncd"
-	LOCAL_BUILDX_LOCATION       = "/var/lib/devtron/buildx"
+	LOCAL_BUILDX_LOCATION       = "var/lib/devtron/buildx"
 	LOCAL_BUILDX_CACHE_LOCATION = LOCAL_BUILDX_LOCATION + "/cache"
 	CIEVENT                     = "CI"
 	CDSTAGE                     = "CD"
