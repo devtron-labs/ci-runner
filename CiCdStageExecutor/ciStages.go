@@ -1,4 +1,4 @@
-package main
+package CiCdStageExecutor
 
 import (
 	"encoding/json"
@@ -12,14 +12,14 @@ import (
 	"time"
 )
 
-type CiService struct {
+type CiStage struct {
 }
 
-func NewCiService() *CiService {
-	return &CiService{}
+func NewCiStage() *CiStage {
+	return &CiStage{}
 }
 
-func (impl *CiService) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
+func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	ciRequest := ciCdRequest.CommonWorkflowRequest
 	artifactUploaded, err := runCIStages(ciCdRequest)
 	log.Println(util.DEVTRON, artifactUploaded, err)

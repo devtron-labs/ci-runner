@@ -1,4 +1,4 @@
-package main
+package CiCdStageExecutor
 
 import (
 	"github.com/devtron-labs/ci-runner/helper"
@@ -7,14 +7,14 @@ import (
 	"os"
 )
 
-type CdService struct {
+type CdStage struct {
 }
 
-func NewCdService() *CdService {
-	return &CdService{}
+func NewCdStage() *CdStage {
+	return &CdStage{}
 }
 
-func (impl CdService) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
+func (impl CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	err := runCDStages(ciCdRequest)
 	artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CommonWorkflowRequest)
 	if err != nil || artifactUploadErr != nil {

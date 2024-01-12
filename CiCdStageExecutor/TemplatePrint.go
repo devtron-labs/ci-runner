@@ -15,7 +15,7 @@
  *
  */
 
-package main
+package CiCdStageExecutor
 
 import (
 	"bytes"
@@ -32,4 +32,3 @@ func Tprintf(tmpl string, data interface{}) (string, error) {
 	}
 	return buf.String(), nil
 }
-
