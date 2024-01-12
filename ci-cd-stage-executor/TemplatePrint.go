@@ -15,7 +15,7 @@
  *
  */
 
-package ciCdStageExecutor
+package ci_cd_stage_executor
 
 import (
 	"bytes"

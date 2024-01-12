@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/devtron-labs/ci-runner/ciCdStageExecutor"
+	"github.com/devtron-labs/ci-runner/ci-cd-stage-executor"
 	"github.com/devtron-labs/ci-runner/helper"
 	"reflect"
 	"testing"
@@ -84,7 +84,7 @@ func Test_deduceVariables(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ciCdStageExecutor.deduceVariables(tt.args.desiredVars, tt.args.globalVars, tt.args.preeCiStageVariable, tt.args.postCiStageVariables, nil)
+			got, err := ci_cd_stage_executor.deduceVariables(tt.args.desiredVars, tt.args.globalVars, tt.args.preeCiStageVariable, tt.args.postCiStageVariables, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("deduceVariables() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -98,7 +98,7 @@ func Test_deduceVariables(t *testing.T) {
 
 func TestRunCiSteps(t *testing.T) {
 	type args struct {
-		stageType                  ciCdStageExecutor.StepType
+		stageType                  ci_cd_stage_executor.StepType
 		req                        *helper.CommonWorkflowRequest
 		globalEnvironmentVariables map[string]string
 		preeCiStageVariable        map[int]map[string]*helper.VariableObject
@@ -114,7 +114,7 @@ func TestRunCiSteps(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotPreeCiStageVariableOut, gotPostCiStageVariable, err := ciCdStageExecutor.RunCiCdSteps(tt.args.stageType, tt.args.req.PreCiSteps, nil, tt.args.globalEnvironmentVariables, tt.args.preeCiStageVariable)
+			gotPreeCiStageVariableOut, gotPostCiStageVariable, err := ci_cd_stage_executor.RunCiCdSteps(tt.args.stageType, tt.args.req.PreCiSteps, nil, tt.args.globalEnvironmentVariables, tt.args.preeCiStageVariable)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RunCiCdSteps() error = %v, wantErr %v", err, tt.wantErr)
 				return
