@@ -70,8 +70,7 @@ const (
 	WEBHOOK_EVENT_NON_MERGED_ACTION_TYPE string = "non-merged"
 )
 
-func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
-	gitCli := NewGitUtil()
+func CloneAndCheckout(ciProjectDetails []CiProjectDetails, gitCli GitUtil) error {
 	for index, prj := range ciProjectDetails {
 		// git clone
 		if prj.CloningMode == util.CLONING_MODE_SHALLOW {
@@ -126,7 +125,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 				checkoutSource = prj.SourceValue
 			}
 			log.Println("checkout commit in branch fix : ", checkoutSource)
-			msgMsg, cErr = gitCli.GitCheckout(gitContext, gitCli, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository)
+			msgMsg, cErr = gitCli.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 			}
@@ -144,7 +143,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			log.Println("checkout commit in webhook : ", targetCheckout)
 
 			// checkout target hash
-			msgMsg, cErr = gitCli.GitCheckout(gitContext, gitCli, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository)
+			msgMsg, cErr = gitCli.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
 				return cErr

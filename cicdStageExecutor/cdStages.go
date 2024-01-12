@@ -31,8 +31,8 @@ func NewCdStage() *CdStage {
 	return &CdStage{}
 }
 
-func (impl CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
-	err := runCDStages(ciCdRequest)
+func (impl CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int, gitCli helper.GitUtil) {
+	err := runCDStages(ciCdRequest, gitCli)
 	artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CommonWorkflowRequest)
 	if err != nil || artifactUploadErr != nil {
 		log.Println(err)
@@ -71,7 +71,7 @@ func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) error 
 	return helper.UploadArtifact(cloudHelperBaseConfig, artifactFiles, cdRequest.CiArtifactFileName)
 }
 
-func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
+func runCDStages(cicdRequest *helper.CiCdTriggerEvent, gitCli helper.GitUtil) error {
 	err := os.Chdir("/")
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	skipCheckout := cicdRequest.CommonWorkflowRequest.CiPipelineType == helper.CI_JOB
 	if !skipCheckout {
 		log.Println(util.DEVTRON, " git")
-		err = helper.CloneAndCheckout(cicdRequest.CommonWorkflowRequest.CiProjectDetails)
+		err = helper.CloneAndCheckout(cicdRequest.CommonWorkflowRequest.CiProjectDetails, gitCli)
 		if err != nil {
 			log.Println(util.DEVTRON, "clone err: ", err)
 			return err

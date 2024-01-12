@@ -36,9 +36,9 @@ func NewCiStage() *CiStage {
 	return &CiStage{}
 }
 
-func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
+func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, gitCli helper.GitUtil, exitCode *int) {
 	ciRequest := ciCdRequest.CommonWorkflowRequest
-	artifactUploaded, err := runCIStages(ciCdRequest)
+	artifactUploaded, err := runCIStages(ciCdRequest, gitCli)
 	log.Println(util.DEVTRON, artifactUploaded, err)
 	var artifactUploadErr error
 	if !artifactUploaded {
@@ -92,7 +92,7 @@ const (
 	Scan   CiFailReason = "Image scan failed"
 )
 
-func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
+func runCIStages(ciCdRequest *helper.CiCdTriggerEvent, gitCli helper.GitUtil) (artifactUploaded bool, err error) {
 
 	metrics := &helper.CIMetrics{}
 	start := time.Now()
@@ -133,7 +133,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, e
 	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
 	skipCheckout := ciBuildConfigBean != nil && ciBuildConfigBean.PipelineType == helper.CI_JOB
 	if !skipCheckout {
-		err = helper.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
+		err = helper.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails, gitCli)
 	}
 	if err != nil {
 		log.Println(util.DEVTRON, "clone err", err)
