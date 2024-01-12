@@ -128,7 +128,12 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			if cErr != nil {
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 			}
-
+			// merge source
+			_, msgMsg, cErr = gitCli.Merge(filepath.Join(util.WORKINGDIR, prj.CheckoutPath), "main")
+			if cErr != nil {
+				log.Fatal("could not merge ", "sourceCheckout ", "main", " err ", cErr, " msgMsg", msgMsg)
+				return cErr
+			}
 		} else if prj.SourceType == SOURCE_TYPE_WEBHOOK {
 
 			webhookData := prj.WebhookData
