@@ -96,12 +96,10 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 		dockerdStart.AppendCommand(dockerMtuValueFlag)
 	}
 	dockerdStart.AppendCommand("--host=tcp://0.0.0.0:2375", ">", "/usr/local/bin/nohup.out", "2>&1")
-	// TODO Asutosh: remove log
 	log.Println(util.DEVTRON, " ", dockerdStart.GetCommandToBeExecuted("-c"))
 	dockerdStartCmd := exec.Command("/bin/sh", dockerdStart.GetCommandToBeExecuted("-c")...)
 	err = dockerdStartCmd.Start()
-	log.Println(util.DEVTRON, " err: ", err)
-	log.Println(util.DEVTRON, "docker daemon ran in subprocess: ", dockerdStartCmd.Process.Pid)
+	log.Println(util.DEVTRON, "docker daemon ran in subprocess:", dockerdStartCmd.Process.Pid)
 	waitForDockerDaemon(util.RETRYCOUNT)
 }
 
