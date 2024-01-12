@@ -128,7 +128,6 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			if cErr != nil {
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 			}
-
 		} else if prj.SourceType == SOURCE_TYPE_WEBHOOK {
 
 			webhookData := prj.WebhookData
