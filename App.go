@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	_ "github.com/aws/aws-sdk-go/aws"
-	"github.com/devtron-labs/ci-runner/ciCdStageExecutor"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
@@ -96,8 +95,8 @@ func processEvent(args string) {
 	}
 
 	defer handleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
-	ciService := CiCdStageExecutor.NewCiStage()
-	cdService := CiCdStageExecutor.NewCdStage()
+	ciService := ciCdStageExecutor.NewCiStage()
+	cdService := ciCdStageExecutor.NewCdStage()
 	if ciCdRequest.Type == util.CIEVENT {
 		ciService.HandleCIEvent(ciCdRequest, &exitCode)
 	} else {

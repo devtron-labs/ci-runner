@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/devtron-labs/ci-runner/ciCdStageExecutor"
 	"github.com/devtron-labs/ci-runner/helper"
 	"io/ioutil"
 	"os"
@@ -63,7 +62,7 @@ func TestRunScripts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CiCdStageExecutor.RunScripts(tt.args.workDirectory, tt.args.scriptFileName, tt.args.script, tt.args.envVars, tt.args.outputVars)
+			got, err := ciCdStageExecutor.RunScripts(tt.args.workDirectory, tt.args.scriptFileName, tt.args.script, tt.args.envVars, tt.args.outputVars)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RunScripts() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -77,7 +76,7 @@ func TestRunScripts(t *testing.T) {
 
 func Test_buildDockerRunCommand(t *testing.T) {
 	type args struct {
-		executionConf *CiCdStageExecutor.executionConf
+		executionConf *ciCdStageExecutor.executionConf
 	}
 	tests := []struct {
 		name    string
@@ -86,7 +85,7 @@ func Test_buildDockerRunCommand(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "all_single",
-			args: args{executionConf: &CiCdStageExecutor.executionConf{
+			args: args{executionConf: &ciCdStageExecutor.executionConf{
 				DockerImage:         "alpine:latest",
 				EnvInputFileName:    "/tmp/ci-test/abc.env",
 				EntryScriptFileName: "/tmp/code-location/_entry.sh",
@@ -100,7 +99,7 @@ func Test_buildDockerRunCommand(t *testing.T) {
 			want:    "docker run --network host \\\n--env-file /tmp/ci-test/abc.env \\\n-v /tmp/code-location/_entry.sh:/devtron_script/_entry.sh \\\n-v /tmp/ci-test/_env.out:/devtron_script/_out.env \\\n-v /tmp/code-location:/tmp/code-mount-location \\\n-v /src:/des \\\n-v /tmp/custom-script-location:/tmp/script-mount-location \\\n-p 80:8080 \\alpine:latest \\\n/bin/sh /devtron_script/_entry.sh\n",
 		},
 		{name: "all_multi",
-			args: args{executionConf: &CiCdStageExecutor.executionConf{
+			args: args{executionConf: &ciCdStageExecutor.executionConf{
 				DockerImage:         "alpine:latest",
 				EnvInputFileName:    "/tmp/ci-test/abc.env",
 				EntryScriptFileName: "/tmp/code-location/_entry.sh",
@@ -116,7 +115,7 @@ func Test_buildDockerRunCommand(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CiCdStageExecutor.buildDockerRunCommand(tt.args.executionConf)
+			got, err := ciCdStageExecutor.buildDockerRunCommand(tt.args.executionConf)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildDockerRunCommand() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -159,7 +158,7 @@ func Test_buildDockerEntryScript(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CiCdStageExecutor.buildDockerEntryScript(tt.args.command, tt.args.args, tt.args.outputVars)
+			got, err := ciCdStageExecutor.buildDockerEntryScript(tt.args.command, tt.args.args, tt.args.outputVars)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildDockerEntryScript() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -175,7 +174,7 @@ func Test_buildDockerEntryScript(t *testing.T) {
 func TestRunScriptsInDocker(t *testing.T) {
 	t.SkipNow()
 	type args struct {
-		executionConf *CiCdStageExecutor.executionConf
+		executionConf *ciCdStageExecutor.executionConf
 	}
 	tests := []struct {
 		name    string
@@ -185,7 +184,7 @@ func TestRunScriptsInDocker(t *testing.T) {
 	}{
 		{name: "hello",
 			args: args{
-				executionConf: &CiCdStageExecutor.executionConf{
+				executionConf: &ciCdStageExecutor.executionConf{
 					Script:            "ls",
 					EnvInputVars:      map[string]string{"KIND": "TEST"},
 					ExposedPorts:      map[int]int{80: 8080, 90: 9090},
@@ -204,7 +203,7 @@ func TestRunScriptsInDocker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CiCdStageExecutor.RunScriptsInDocker(tt.args.executionConf)
+			got, err := ciCdStageExecutor.RunScriptsInDocker(tt.args.executionConf)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RunScriptsInDocker() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -258,7 +257,7 @@ func Test_writeToEnvFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := CiCdStageExecutor.writeToEnvFile(tt.args.envMap, tt.args.filename)
+			err := ciCdStageExecutor.writeToEnvFile(tt.args.envMap, tt.args.filename)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("writeToEnvFile() error = %v, wantErr %v", err, tt.wantErr)
 				return
