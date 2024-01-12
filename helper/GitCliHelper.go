@@ -130,7 +130,7 @@ func (impl *GitUtil) Clone(gitContext GitContext, rootDir string, remoteUrl stri
 // 3- In case a single arg contains multiple user defined inputs, then use fmt.Sprintf(); exec.Command(name, "--flag=", fmt.Sprintf("key1=%s,key2=%s,key3=%s", userDefinedArg-1, userDefinedArg-2, userDefinedArg-2))
 func (impl *GitUtil) Merge(rootDir string, commit string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git merge ", "location", rootDir)
-	command := util.NewCommand("cd", rootDir, "&&", "git", "config", "user.email", "git@devtron.com", "&&", "git", "config", "user.name", "Devtron", "&&", "git", "merge", "commit", "--no-commit")
+	command := util.NewCommand("cd", rootDir, "&&", "git", "config", "user.email", "git@devtron.com", "&&", "git", "config", "user.name", "Devtron", "&&", "git", "merge", commit, "--no-commit")
 	cmd := exec.Command("/bin/sh", command.GetCommandToBeExecuted("-c")...)
 	output, errMsg, err := impl.runCommand(cmd)
 	log.Println(util.DEVTRON, "merge output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
