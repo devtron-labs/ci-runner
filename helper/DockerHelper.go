@@ -704,7 +704,7 @@ func leaveNodesFromBuildxK8sDriver(nodeNames []string) (error, *bytes.Buffer) {
 	}()
 	for _, node := range nodeNames {
 		k8sDriverNameFlag := fmt.Sprintf("--name=%s", BUILDX_K8S_DRIVER_NAME)
-		k8sDriverNodeFlag := fmt.Sprintf("--node=%s", node, BUILDX_K8S_DRIVER_NAME)
+		k8sDriverNodeFlag := fmt.Sprintf("--node=%s", node)
 		k8sDriverLeaveNodeCmd := util.NewCommand("docker", "buildx", "create", k8sDriverNameFlag, k8sDriverNodeFlag, "--leave")
 		err, errBuf = runCmd(k8sDriverLeaveNodeCmd)
 		if err != nil {
