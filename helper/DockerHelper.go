@@ -526,8 +526,7 @@ func installAllSupportedPlatforms() error {
 }
 
 func checkAndCreateDirectory(localCachePath string) error {
-	makeDirCmd := "mkdir -p " + localCachePath
-	pathCreateCommand := exec.Command("/bin/sh", "-c", makeDirCmd)
+	pathCreateCommand := exec.Command("/bin/sh", "-c", "mkdir", "-pv", localCachePath)
 	err := util.RunCommand(pathCreateCommand)
 	if err != nil {
 		log.Println(err)
