@@ -95,10 +95,12 @@ func processEvent(args string) {
 	}
 
 	defer handleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
+	ciService := NewCiService()
+	cdService := NewCdService()
 	if ciCdRequest.Type == util.CIEVENT {
-		HandleCIEvent(ciCdRequest, &exitCode)
+		ciService.HandleCIEvent(ciCdRequest, &exitCode)
 	} else {
-		HandleCDEvent(ciCdRequest, &exitCode)
+		cdService.HandleCDEvent(ciCdRequest, &exitCode)
 	}
 	return
 }

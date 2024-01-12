@@ -7,7 +7,14 @@ import (
 	"os"
 )
 
-func HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
+type CdService struct {
+}
+
+func NewCdService() *CdService {
+	return &CdService{}
+}
+
+func (impl CdService) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	err := runCDStages(ciCdRequest)
 	artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CommonWorkflowRequest)
 	if err != nil || artifactUploadErr != nil {

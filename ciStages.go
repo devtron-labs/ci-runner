@@ -12,7 +12,14 @@ import (
 	"time"
 )
 
-func HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
+type CiService struct {
+}
+
+func NewCiService() *CiService {
+	return &CiService{}
+}
+
+func (impl *CiService) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	ciRequest := ciCdRequest.CommonWorkflowRequest
 	artifactUploaded, err := runCIStages(ciCdRequest)
 	log.Println(util.DEVTRON, artifactUploaded, err)
