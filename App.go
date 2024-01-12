@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	_ "github.com/aws/aws-sdk-go/aws"
-	ci_cd_stage_executor "github.com/devtron-labs/ci-runner/ci-cd-stage-executor"
+	ci_cd_stage_executor "github.com/devtron-labs/ci-runner/cicdStageExecutor"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	blob_storage "github.com/devtron-labs/common-lib/blob-storage"

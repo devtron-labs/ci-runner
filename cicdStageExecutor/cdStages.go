@@ -15,7 +15,7 @@
  *
  */
 
-package ci_cd_stage_executor
+package cicdStageExecutor
 
 import (
 	"github.com/devtron-labs/ci-runner/helper"
