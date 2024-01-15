@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -129,4 +130,16 @@ func CheckFileExists(filename string) (bool, error) {
 		// Some other error
 		return false, err
 	}
+}
+func ParseUrl(rawURL string) (parsedURL *url.URL, err error) {
+	parsedURL, err = url.Parse(rawURL)
+	if err != nil || parsedURL.Host == "" {
+		hostModifiedURL, repErr := url.Parse("//" + rawURL)
+		if repErr != nil {
+			return nil, err
+		} else {
+			return hostModifiedURL, err
+		}
+	}
+	return parsedURL, nil
 }
