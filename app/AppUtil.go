@@ -16,14 +16,14 @@ import (
 )
 
 type App struct {
-	ciStage *stage.CiStage
-	cdStage *stage.CdStage
+	CiStage *stage.CiStage
+	CdStage *stage.CdStage
 }
 
 func NewApp() *App {
 	return &App{
-		ciStage: stage.NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager())),
-		cdStage: stage.NewCdStage(*helper.NewGitManagerImpl(helper.NewGitCliManager())),
+		CiStage: stage.NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager())),
+		CdStage: stage.NewCdStage(*helper.NewGitManagerImpl(helper.NewGitCliManager())),
 	}
 }
 
