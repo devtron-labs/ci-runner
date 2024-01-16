@@ -20,8 +20,8 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciService := NewCiStage()
-		ciService.HandleCIEvent(ciCdRequest, &exitCode)
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.CiStageFailErrorCode {
@@ -37,8 +37,8 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciService := NewCiStage()
-		ciService.HandleCIEvent(ciCdRequest, &exitCode)
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.CiStageFailErrorCode {
@@ -54,8 +54,8 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciService := NewCiStage()
-		ciService.HandleCIEvent(ciCdRequest, &exitCode)
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.CiStageFailErrorCode {
@@ -71,8 +71,8 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciService := NewCiStage()
-		ciService.HandleCIEvent(ciCdRequest, &exitCode)
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.CiStageFailErrorCode {
@@ -88,8 +88,8 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciService := NewCiStage()
-		ciService.HandleCIEvent(ciCdRequest, &exitCode)
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.CiStageFailErrorCode {
@@ -105,8 +105,8 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciService := NewCiStage()
-		ciService.HandleCIEvent(ciCdRequest, &exitCode)
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.CiStageFailErrorCode {
@@ -122,8 +122,8 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciService := NewCiStage()
-		ciService.HandleCIEvent(ciCdRequest, &exitCode)
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.CiStageFailErrorCode {
@@ -139,8 +139,8 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciService := NewCiStage()
-		ciService.HandleCIEvent(ciCdRequest, &exitCode)
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.CiStageFailErrorCode {
@@ -156,8 +156,8 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciService := NewCiStage()
-		ciService.HandleCIEvent(ciCdRequest, &exitCode)
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.CiStageFailErrorCode {
@@ -173,8 +173,8 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciService := NewCiStage()
-		ciService.HandleCIEvent(ciCdRequest, &exitCode)
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
 		if exitCode != util.CiStageFailErrorCode {

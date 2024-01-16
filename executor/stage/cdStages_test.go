@@ -19,7 +19,7 @@ func TestHandleCDEvent(t *testing.T) {
 		exitCode := 0
 
 		// Call the function
-		cdStage := NewCdStage()
+		cdStage := NewCdStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
 		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -37,7 +37,7 @@ func TestHandleCDEvent(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function with an error
-		cdStage := NewCdStage()
+		cdStage := NewCdStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
 		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -55,7 +55,7 @@ func TestHandleCDEvent(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function with an error
-		cdStage := NewCdStage()
+		cdStage := NewCdStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
 		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -74,7 +74,7 @@ func TestHandleCDEvent(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		cdStage := NewCdStage()
+		cdStage := NewCdStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
 		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -93,7 +93,7 @@ func TestHandleCDEvent(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		cdStage := NewCdStage()
+		cdStage := NewCdStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
 		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -112,7 +112,7 @@ func TestHandleCDEvent(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		cdStage := NewCdStage()
+		cdStage := NewCdStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
 		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -132,7 +132,7 @@ func TestHandleCDEvent(t *testing.T) {
 		os.RemoveAll(util.WORKINGDIR)
 		os.RemoveAll("/output")
 		// Call the function
-		cdStage := NewCdStage()
+		cdStage := NewCdStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
 		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -152,7 +152,7 @@ func TestHandleCDEvent(t *testing.T) {
 		os.RemoveAll(util.WORKINGDIR)
 		os.RemoveAll("/output")
 		// Call the function
-		cdStage := NewCdStage()
+		cdStage := NewCdStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
 		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -171,7 +171,7 @@ func TestHandleCDEvent(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		cdStage := NewCdStage()
+		cdStage := NewCdStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
 		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
