@@ -94,9 +94,16 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 		}
 		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 	}
-	out, _ := exec.Command("/bin/sh", "-c", dockerdstart).Output()
+	out, err := exec.Command("/bin/sh", "-c", dockerdstart).CombinedOutput()
 	log.Println(string(out))
-	waitForDockerDaemon(util.RETRYCOUNT)
+	if err != nil {
+		log.Println("failed to start docker daemon")
+		log.Fatal(err)
+	}
+	err = waitForDockerDaemon(util.RETRYCOUNT)
+	if err != nil {
+		log.Fatal("failed to start docker demon", err)
+	}
 }
 
 const DOCKER_REGISTRY_TYPE_ECR = "ecr"
@@ -784,11 +791,11 @@ func StopDocker() error {
 		return err
 	}
 	log.Println(util.DEVTRON, " -----> checking docker status")
-	DockerdUpCheck()
+	DockerdUpCheck() //FIXME: this call should be removed
 	return nil
 }
 
-func waitForDockerDaemon(retryCount int) {
+func waitForDockerDaemon(retryCount int) error {
 	err := DockerdUpCheck()
 	retry := 0
 	for err != nil {
@@ -799,6 +806,7 @@ func waitForDockerDaemon(retryCount int) {
 		err = DockerdUpCheck()
 		retry++
 	}
+	return err
 }
 
 func DockerdUpCheck() error {
