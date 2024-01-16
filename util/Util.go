@@ -134,11 +134,11 @@ func CheckFileExists(filename string) (bool, error) {
 func ParseUrl(rawURL string) (parsedURL *url.URL, err error) {
 	parsedURL, err = url.Parse(rawURL)
 	if err != nil || parsedURL.Host == "" {
-		hostModifiedURL, repErr := url.Parse("//" + rawURL)
+		schemeModifiedURL, repErr := url.Parse("//" + rawURL)
 		if repErr != nil {
 			return nil, err
 		} else {
-			return hostModifiedURL, err
+			return schemeModifiedURL, err
 		}
 	}
 	return parsedURL, nil
