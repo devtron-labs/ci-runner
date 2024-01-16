@@ -15,7 +15,7 @@
  *
  */
 
-package cicdStageExecutor
+package executor
 
 import (
 	"fmt"

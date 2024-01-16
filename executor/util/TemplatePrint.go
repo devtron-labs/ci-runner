@@ -15,7 +15,7 @@
  *
  */
 
-package cicdStageExecutor
+package util
 
 import (
 	"bytes"

@@ -15,7 +15,7 @@
  *
  */
 
-package cicdStageExecutor
+package util
 
 import (
 	"encoding/json"
@@ -29,7 +29,7 @@ import (
 	"strings"
 )
 
-func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]string, error) {
+func GetGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]string, error) {
 	envs := make(map[string]string)
 	envs["WORKING_DIRECTORY"] = util.WORKINGDIR
 	cfg := &pubsub.PubSubConfig{}
@@ -115,7 +115,7 @@ func getGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 	return envs, nil
 }
 
-func getSystemEnvVariables() map[string]string {
+func GetSystemEnvVariables() map[string]string {
 	envs := make(map[string]string)
 	//get all environment variables
 	envVars := os.Environ()

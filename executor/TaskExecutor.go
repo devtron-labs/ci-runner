@@ -15,4 +15,4 @@
  *
  */
 
-package cicdStageExecutor
+package executor

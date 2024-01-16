@@ -15,9 +15,11 @@
  *
  */
 
-package cicdStageExecutor
+package stage
 
 import (
+	"github.com/devtron-labs/ci-runner/executor"
+	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	"log"
@@ -116,7 +118,7 @@ func (impl CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		return err
 	}
 
-	scriptEnvs, err := getGlobalEnvVariables(cicdRequest)
+	scriptEnvs, err := util2.GetGlobalEnvVariables(cicdRequest)
 
 	if len(cicdRequest.CommonWorkflowRequest.PrePostDeploySteps) > 0 {
 		refStageMap := make(map[int][]*helper.StepObject)
@@ -125,8 +127,8 @@ func (impl CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		}
 		scriptEnvs["DEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
 		scriptEnvs["DIGEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
-		var stage = StepType(cicdRequest.CommonWorkflowRequest.StageType)
-		_, _, err = RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
+		var stage = executor.StepType(cicdRequest.CommonWorkflowRequest.StageType)
+		_, _, err = executor.RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
@@ -151,7 +153,7 @@ func (impl CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		if err != nil {
 			return err
 		}
-		err = RunCdStageTasks(tasks, scriptEnvs)
+		err = executor.RunCdStageTasks(tasks, scriptEnvs)
 		if err != nil {
 			return err
 		}

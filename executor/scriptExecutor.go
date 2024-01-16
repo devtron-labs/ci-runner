@@ -15,10 +15,11 @@
  *
  */
 
-package cicdStageExecutor
+package executor
 
 import (
 	"fmt"
+	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/joho/godotenv"
@@ -42,7 +43,7 @@ export {{ $key }}='{{ $value }}' ;
 	templateData := make(map[string]interface{})
 	templateData["envVr"] = envVars
 	templateData["script"] = script
-	finalScript, err := Tprintf(scriptTemplate, templateData)
+	finalScript, err := util2.Tprintf(scriptTemplate, templateData)
 	if err != nil {
 		log.Println(util.DEVTRON, err)
 		return err
@@ -102,7 +103,7 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 		return nil, err
 	}
 	//add sysytem env variable
-	for k, v := range getSystemEnvVariables() {
+	for k, v := range util2.GetSystemEnvVariables() {
 		//add only when not overriden by user
 		if _, ok := envInputVars[k]; !ok {
 			envInputVars[k] = v
@@ -140,7 +141,7 @@ func prepareFinaleScript(script string, outputVars []string, envOutFileName stri
 	templateData["script"] = script
 	templateData["outputVars"] = outputVars
 	templateData["envOutFileName"] = envOutFileName
-	finalScript, err := Tprintf(scriptTemplate, templateData)
+	finalScript, err := util2.Tprintf(scriptTemplate, templateData)
 	if err != nil {
 		return "", err
 	}
@@ -254,7 +255,7 @@ set -e
 	templateData["command"] = command
 	templateData["envOutFileName"] = "/devtron_script/_out.env"
 	templateData["outputVars"] = outputVars
-	finalScript, err := Tprintf(entryTemplate, templateData)
+	finalScript, err := util2.Tprintf(entryTemplate, templateData)
 	if err != nil {
 		return "", err
 	}
@@ -284,7 +285,7 @@ func buildDockerRunCommand(executionConf *executionConf) (string, error) {
 {{- .DockerImage}} \
 /bin/sh /devtron_script/_entry.sh
 `
-	finalScript, err := Tprintf(cmdTemplate, executionConf)
+	finalScript, err := util2.Tprintf(cmdTemplate, executionConf)
 	if err != nil {
 		return "", err
 	}

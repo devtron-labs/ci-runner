@@ -1,8 +1,10 @@
-package cicdStageExecutor
+package stage
 
 import (
 	"encoding/json"
 	"errors"
+	"github.com/devtron-labs/ci-runner/executor"
+	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	"io/ioutil"
@@ -149,7 +151,7 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 
 	helper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest.DockerConnection, ciCdRequest.CommonWorkflowRequest.DockerRegistryURL, ciCdRequest.CommonWorkflowRequest.DockerCert, ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolSize, ciCdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue)
 
-	scriptEnvs, err := getGlobalEnvVariables(ciCdRequest)
+	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {
 		return artifactUploaded, err
 	}
@@ -252,7 +254,7 @@ func runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetri
 		util.LogStage("running PRE-CI steps")
 	}
 	// run pre artifact processing
-	preCiStageOutVariable, step, err := RunCiCdSteps(STEP_TYPE_PRE, ciCdRequest.CommonWorkflowRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
+	preCiStageOutVariable, step, err := executor.RunCiCdSteps(executor.STEP_TYPE_PRE, ciCdRequest.CommonWorkflowRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
 	preCiDuration := time.Since(start).Seconds()
 	if err != nil {
 		log.Println("error in running pre Ci Steps", "err", err)
@@ -287,7 +289,7 @@ func runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMe
 			// build success will always be false
 			scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
 			// run post artifact processing
-			RunCiCdSteps(STEP_TYPE_POST, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preCiStageOutVariable)
+			executor.RunCiCdSteps(executor.STEP_TYPE_POST, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preCiStageOutVariable)
 		}
 		// code-block ends
 		err = sendFailureNotification(string(Build), ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
@@ -320,7 +322,7 @@ func runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, scriptEnvs map[string]
 	scriptEnvs["DEST"] = dest
 	scriptEnvs["DIGEST"] = digest
 	// run post artifact processing
-	_, step, err := RunCiCdSteps(STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest.PostCiSteps, refStageMap, scriptEnvs, preCiStageOutVariable)
+	_, step, err := executor.RunCiCdSteps(executor.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest.PostCiSteps, refStageMap, scriptEnvs, preCiStageOutVariable)
 	if err != nil {
 		log.Println("error in running Post Ci Steps", "err", err)
 		return sendFailureNotification(string(PostCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)

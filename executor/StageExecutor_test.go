@@ -1,4 +1,4 @@
-package cicdStageExecutor
+package executor
 
 import (
 	"github.com/devtron-labs/ci-runner/helper"

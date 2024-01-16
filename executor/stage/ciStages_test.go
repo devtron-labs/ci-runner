@@ -1,4 +1,4 @@
-package cicdStageExecutor
+package stage
 
 import (
 	"encoding/json"
