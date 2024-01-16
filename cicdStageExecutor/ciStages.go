@@ -30,15 +30,18 @@ import (
  */
 
 type CiStage struct {
+	GitManager helper.GitManagerImpl
 }
 
-func NewCiStage() *CiStage {
-	return &CiStage{}
+func NewCiStage(GitManager helper.GitManagerImpl) *CiStage {
+	return &CiStage{
+		GitManager: GitManager,
+	}
 }
 
-func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, gitCli helper.GitUtil, exitCode *int) {
+func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	ciRequest := ciCdRequest.CommonWorkflowRequest
-	artifactUploaded, err := runCIStages(ciCdRequest, gitCli)
+	artifactUploaded, err := impl.runCIStages(ciCdRequest)
 	log.Println(util.DEVTRON, artifactUploaded, err)
 	var artifactUploadErr error
 	if !artifactUploaded {
@@ -92,7 +95,7 @@ const (
 	Scan   CiFailReason = "Image scan failed"
 )
 
-func runCIStages(ciCdRequest *helper.CiCdTriggerEvent, gitCli helper.GitUtil) (artifactUploaded bool, err error) {
+func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
 
 	metrics := &helper.CIMetrics{}
 	start := time.Now()
@@ -133,7 +136,7 @@ func runCIStages(ciCdRequest *helper.CiCdTriggerEvent, gitCli helper.GitUtil) (a
 	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
 	skipCheckout := ciBuildConfigBean != nil && ciBuildConfigBean.PipelineType == helper.CI_JOB
 	if !skipCheckout {
-		err = helper.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails, gitCli)
+		err = impl.GitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
 	}
 	if err != nil {
 		log.Println(util.DEVTRON, "clone err", err)

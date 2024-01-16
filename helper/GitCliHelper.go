@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-type GitUtil interface {
+type RepoManager interface {
 	Fetch(gitContext GitContext, rootDir string) (response, errMsg string, err error)
 	Checkout(gitContext GitContext, rootDir string, checkout string) (response, errMsg string, err error)
 	RunCommandWithCred(cmd *exec.Cmd, userName, password string) (response, errMsg string, err error)
@@ -27,16 +27,16 @@ type GitUtil interface {
 	GitCheckout(gitContext GitContext, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, gitRepository string) (errMsg string, error error)
 }
 
-type GitUtilImpl struct {
+type RepoManagerImpl struct {
 }
 
-func NewGitUtil() *GitUtilImpl {
-	return &GitUtilImpl{}
+func NewRepoManager() *RepoManagerImpl {
+	return &RepoManagerImpl{}
 }
 
 const GIT_AKS_PASS = "/git-ask-pass.sh"
 
-func (impl *GitUtilImpl) Fetch(gitContext GitContext, rootDir string) (response, errMsg string, err error) {
+func (impl *RepoManagerImpl) Fetch(gitContext GitContext, rootDir string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git fetch ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
 	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.Auth.Username, gitContext.Auth.Password)
@@ -44,7 +44,7 @@ func (impl *GitUtilImpl) Fetch(gitContext GitContext, rootDir string) (response,
 	return output, "", nil
 }
 
-func (impl *GitUtilImpl) Checkout(gitContext GitContext, rootDir string, checkout string) (response, errMsg string, err error) {
+func (impl *RepoManagerImpl) Checkout(gitContext GitContext, rootDir string, checkout string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git checkout ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "checkout", checkout, "--force")
 	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.Auth.Username, gitContext.Auth.Password)
@@ -52,7 +52,7 @@ func (impl *GitUtilImpl) Checkout(gitContext GitContext, rootDir string, checkou
 	return output, "", nil
 }
 
-func (impl *GitUtilImpl) RunCommandWithCred(cmd *exec.Cmd, userName, password string) (response, errMsg string, err error) {
+func (impl *RepoManagerImpl) RunCommandWithCred(cmd *exec.Cmd, userName, password string) (response, errMsg string, err error) {
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("GIT_ASKPASS=%s", GIT_AKS_PASS),
 		fmt.Sprintf("GIT_USERNAME=%s", userName), // ignored
@@ -61,11 +61,11 @@ func (impl *GitUtilImpl) RunCommandWithCred(cmd *exec.Cmd, userName, password st
 	return impl.RunCommand(cmd)
 }
 
-func (impl *GitUtilImpl) RunCommand(cmd *exec.Cmd) (response, errMsg string, err error) {
+func (impl *RepoManagerImpl) RunCommand(cmd *exec.Cmd) (response, errMsg string, err error) {
 	return impl.runCommandForSuppliedNullifiedEnv(cmd, true)
 }
 
-func (impl *GitUtilImpl) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnvToNull bool) (response, errMsg string, err error) {
+func (impl *RepoManagerImpl) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnvToNull bool) (response, errMsg string, err error) {
 	if setHomeEnvToNull {
 		cmd.Env = append(cmd.Env, "HOME=/dev/null")
 	}
@@ -86,7 +86,7 @@ func (impl *GitUtilImpl) runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHom
 	return output, "", nil
 }
 
-func (impl *GitUtilImpl) Init(rootDir string, remoteUrl string, isBare bool) error {
+func (impl *RepoManagerImpl) Init(rootDir string, remoteUrl string, isBare bool) error {
 
 	//-----------------
 
@@ -105,7 +105,7 @@ func (impl *GitUtilImpl) Init(rootDir string, remoteUrl string, isBare bool) err
 	return err
 }
 
-func (impl *GitUtilImpl) Clone(gitContext GitContext, prj CiProjectDetails) (response, errMsg string, err error) {
+func (impl *RepoManagerImpl) Clone(gitContext GitContext, prj CiProjectDetails) (response, errMsg string, err error) {
 	rootDir := filepath.Join(util.WORKINGDIR, prj.CheckoutPath)
 	remoteUrl := prj.GitRepository
 	err = impl.Init(rootDir, remoteUrl, false)
@@ -118,7 +118,7 @@ func (impl *GitUtilImpl) Clone(gitContext GitContext, prj CiProjectDetails) (res
 }
 
 // setting user.name and user.email as for non-fast-forward merge, git ask for user.name and email
-func (impl *GitUtilImpl) Merge(rootDir string, commit string) (response, errMsg string, err error) {
+func (impl *RepoManagerImpl) Merge(rootDir string, commit string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git merge ", "location", rootDir)
 	command := "cd " + rootDir + " && git config user.email git@devtron.com && git config user.name Devtron && git merge " + commit + " --no-commit"
 	cmd := exec.Command("/bin/sh", "-c", command)
@@ -127,7 +127,7 @@ func (impl *GitUtilImpl) Merge(rootDir string, commit string) (response, errMsg 
 	return output, errMsg, err
 }
 
-func (impl *GitUtilImpl) RecursiveFetchSubmodules(rootDir string) (response, errMsg string, error error) {
+func (impl *RepoManagerImpl) RecursiveFetchSubmodules(rootDir string) (response, errMsg string, error error) {
 	log.Println(util.DEVTRON, "git recursive fetch submodules ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "submodule", "update", "--init", "--recursive")
 	output, eMsg, err := impl.runCommandForSuppliedNullifiedEnv(cmd, false)
@@ -135,7 +135,7 @@ func (impl *GitUtilImpl) RecursiveFetchSubmodules(rootDir string) (response, err
 	return output, eMsg, err
 }
 
-func (impl *GitUtilImpl) UpdateCredentialHelper(rootDir string) (response, errMsg string, error error) {
+func (impl *RepoManagerImpl) UpdateCredentialHelper(rootDir string) (response, errMsg string, error error) {
 	log.Println(util.DEVTRON, "git credential helper store ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "config", "--global", "credential.helper", "store")
 	output, eMsg, err := impl.runCommandForSuppliedNullifiedEnv(cmd, false)
@@ -143,7 +143,7 @@ func (impl *GitUtilImpl) UpdateCredentialHelper(rootDir string) (response, errMs
 	return output, eMsg, err
 }
 
-func (impl *GitUtilImpl) UnsetCredentialHelper(rootDir string) (response, errMsg string, error error) {
+func (impl *RepoManagerImpl) UnsetCredentialHelper(rootDir string) (response, errMsg string, error error) {
 	log.Println(util.DEVTRON, "git credential helper unset ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "config", "--global", "--unset", "credential.helper")
 	output, eMsg, err := impl.runCommandForSuppliedNullifiedEnv(cmd, false)
@@ -151,7 +151,7 @@ func (impl *GitUtilImpl) UnsetCredentialHelper(rootDir string) (response, errMsg
 	return output, eMsg, err
 }
 
-func (impl *GitUtilImpl) GitCheckout(gitContext GitContext, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, gitRepository string) (errMsg string, error error) {
+func (impl *RepoManagerImpl) GitCheckout(gitContext GitContext, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, gitRepository string) (errMsg string, error error) {
 
 	rootDir := filepath.Join(util.WORKINGDIR, checkoutPath)
 

@@ -96,13 +96,12 @@ func processEvent(args string) {
 	}
 
 	defer handleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
-	ciService := ci_cd_stage_executor.NewCiStage()
-	cdService := ci_cd_stage_executor.NewCdStage()
-	gitCli := helper.NewGitUtil()
+	ciStage := ci_cd_stage_executor.NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+	cdStage := ci_cd_stage_executor.NewCdStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
 	if ciCdRequest.Type == util.CIEVENT {
-		ciService.HandleCIEvent(ciCdRequest, gitCli, &exitCode)
+		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 	} else {
-		cdService.HandleCDEvent(ciCdRequest, &exitCode, gitCli)
+		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 	}
 	return
 }
