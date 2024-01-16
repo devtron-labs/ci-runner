@@ -71,10 +71,10 @@ const (
 )
 
 type GitManagerImpl struct {
-	GitUtil RepoManager
+	GitUtil GetCliManager
 }
 
-func NewGitManagerImpl(GitUtil RepoManager) *GitManagerImpl {
+func NewGitManagerImpl(GitUtil GetCliManager) *GitManagerImpl {
 	return &GitManagerImpl{
 		GitUtil: GitUtil,
 	}

@@ -96,8 +96,8 @@ func processEvent(args string) {
 	}
 
 	defer handleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
-	ciStage := stage.NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
-	cdStage := stage.NewCdStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+	ciStage := stage.NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager()))
+	cdStage := stage.NewCdStage(*helper.NewGitManagerImpl(helper.NewGitCliManager()))
 	if ciCdRequest.Type == util.CIEVENT {
 		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 	} else {

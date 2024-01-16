@@ -20,7 +20,7 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager()))
 		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -37,7 +37,7 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager()))
 		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -54,7 +54,7 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager()))
 		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -71,7 +71,7 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager()))
 		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -88,7 +88,7 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager()))
 		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -105,7 +105,7 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager()))
 		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -122,7 +122,7 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager()))
 		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -139,7 +139,7 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager()))
 		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -156,7 +156,7 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager()))
 		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
@@ -173,7 +173,7 @@ func TestHandleCIEvent(t *testing.T) {
 		exitCode := 0
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewRepoManager()))
+		ciStage := NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager()))
 		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 
 		// Assert the expected results
