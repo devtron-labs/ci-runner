@@ -32,10 +32,10 @@ import (
  */
 
 type CiStage struct {
-	GitManager helper.GitManagerImpl
+	GitManager helper.GitManager
 }
 
-func NewCiStage(GitManager helper.GitManagerImpl) *CiStage {
+func NewCiStage(GitManager helper.GitManager) *CiStage {
 	return &CiStage{
 		GitManager: GitManager,
 	}

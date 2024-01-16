@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-type GetCliManager interface {
+type GitCliManager interface {
 	Fetch(gitContext GitContext, rootDir string) (response, errMsg string, err error)
 	Checkout(gitContext GitContext, rootDir string, checkout string) (response, errMsg string, err error)
 	RunCommandWithCred(cmd *exec.Cmd, userName, password string) (response, errMsg string, err error)

@@ -27,10 +27,10 @@ import (
 )
 
 type CdStage struct {
-	GitManager helper.GitManagerImpl
+	GitManager helper.GitManager
 }
 
-func NewCdStage(GitManager helper.GitManagerImpl) *CdStage {
+func NewCdStage(GitManager helper.GitManager) *CdStage {
 	return &CdStage{
 		GitManager: GitManager,
 	}
