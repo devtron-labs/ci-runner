@@ -51,11 +51,17 @@ func TestParseUrl(t *testing.T) {
 			wantUrl: &url.URL{Host: "devtron.ai", Path: "/test-path", RawQuery: "abc=test"},
 			wantErr: false,
 		},
+		{
+			name:    "test error",
+			args:    args{rawURL: "skdjncje938u4983(**&^^%$$#@!"},
+			wantUrl: &url.URL{Host: "devtron.ai", Path: "/test-path", RawQuery: "abc=test"},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotUrl, err := ParseUrl(tt.args.rawURL)
-			if (err != nil) != tt.wantErr {
+			if (err != nil) == tt.wantErr {
 				t.Errorf("ParseUrl() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
