@@ -792,7 +792,22 @@ func StopDocker() error {
 	}
 	log.Println(util.DEVTRON, " -----> checking docker status")
 	DockerdUpCheck() //FIXME: this call should be removed
+	//ensureDockerDaemonHasStopped(20)
 	return nil
+}
+
+func ensureDockerDaemonHasStopped(retryCount int) error {
+	var err error
+	retry := 0
+	for err == nil {
+		time.Sleep(1 * time.Second)
+		err = DockerdUpCheck()
+		retry++
+		if retry == retryCount {
+			break
+		}
+	}
+	return err
 }
 
 func waitForDockerDaemon(retryCount int) error {
