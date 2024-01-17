@@ -98,6 +98,7 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 	runScriptCMD := exec.Command("/bin/sh", scriptPath)
 	runScriptCMD.Env = inputEnvironmentVariable
 	err = util.RunCommand(runScriptCMD)
+	log.Println("some error occured while executing command, err = ", err)
 	if err != nil {
 		log.Println(err)
 		return nil, err
