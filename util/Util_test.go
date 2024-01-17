@@ -61,11 +61,11 @@ func TestParseUrl(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotUrl, err := ParseUrl(tt.args.rawURL)
-			if (err != nil) == tt.wantErr {
+			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseUrl() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !UrlEqual(gotUrl, tt.wantUrl) {
+			if !tt.wantErr && !UrlEqual(gotUrl, tt.wantUrl) {
 				t.Errorf("ParseUrl() gotUrl = %v, want %v", gotUrl, tt.wantUrl)
 			}
 		})
