@@ -77,6 +77,8 @@ func GetGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["TRIGGERED_BY"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.TriggeredBy)
 		envs["DOCKER_REGISTRY_ID"] = cicdRequest.CommonWorkflowRequest.DockerRegistryId
 		envs["IMAGE_SCANNER_ENDPOINT"] = cfg.ImageScannerEndpoint
+		envs["IMAGE_SCAN_MAX_RETRIES"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.ImageScanMaxRetries)
+		envs["IMAGE_SCAN_RETRY_DELAY"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.ImageScanRetryDelay)
 
 		// setting extraEnvironmentVariables
 		for k, v := range cicdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables {
@@ -102,6 +104,8 @@ func GetGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["TRIGGERED_BY"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.TriggeredBy)
 		envs["DOCKER_REGISTRY_ID"] = cicdRequest.CommonWorkflowRequest.DockerRegistryId
 		envs["IMAGE_SCANNER_ENDPOINT"] = cfg.ImageScannerEndpoint
+		envs["IMAGE_SCAN_MAX_RETRIES"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.ImageScanMaxRetries)
+		envs["IMAGE_SCAN_RETRY_DELAY"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.ImageScanRetryDelay)
 
 		for k, v := range cicdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables {
 			envs[k] = v
