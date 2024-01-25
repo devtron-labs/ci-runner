@@ -1,4 +1,4 @@
-package app
+package appHelper
 
 import (
 	"encoding/json"
@@ -21,9 +21,15 @@ type App struct {
 }
 
 func NewApp() *App {
+	gitCliManager := helper.NewGitCliManager()
+	gitManager := *helper.NewGitManagerImpl(gitCliManager)
+
+	ciStage := stage.NewCiStage(gitManager)
+	cdStage := stage.NewCdStage(gitManager)
+
 	return &App{
-		CiStage: stage.NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager())),
-		CdStage: stage.NewCdStage(*helper.NewGitManagerImpl(helper.NewGitCliManager())),
+		CiStage: ciStage,
+		CdStage: cdStage,
 	}
 }
 

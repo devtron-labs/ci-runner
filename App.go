@@ -19,7 +19,7 @@ package main
 
 import (
 	_ "github.com/aws/aws-sdk-go/aws"
-	app2 "github.com/devtron-labs/ci-runner/app"
+	app2 "github.com/devtron-labs/ci-runner/appHelper"
 	"github.com/devtron-labs/ci-runner/util"
 	"log"
 	"os"
