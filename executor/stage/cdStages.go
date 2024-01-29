@@ -36,7 +36,7 @@ func NewCdStage(gitManager helper.GitManager) *CdStage {
 	}
 }
 
-func (impl CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
+func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	err := impl.runCDStages(ciCdRequest)
 	artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CommonWorkflowRequest)
 	if err != nil || artifactUploadErr != nil {
@@ -76,7 +76,7 @@ func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) error 
 	return helper.UploadArtifact(cloudHelperBaseConfig, artifactFiles, cdRequest.CiArtifactFileName)
 }
 
-func (impl CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
+func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	err := os.Chdir("/")
 	if err != nil {
 		return err
