@@ -1,4 +1,4 @@
-package appHelper
+package app
 
 import (
 	"encoding/json"
