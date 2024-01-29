@@ -32,12 +32,12 @@ import (
  */
 
 type CiStage struct {
-	GitManager helper.GitManager
+	gitManager helper.GitManager
 }
 
 func NewCiStage(GitManager helper.GitManager) *CiStage {
 	return &CiStage{
-		GitManager: GitManager,
+		gitManager: GitManager,
 	}
 }
 
@@ -138,7 +138,7 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
 	skipCheckout := ciBuildConfigBean != nil && ciBuildConfigBean.PipelineType == helper.CI_JOB
 	if !skipCheckout {
-		err = impl.GitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
+		err = impl.gitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
 	}
 	if err != nil {
 		log.Println(util.DEVTRON, "clone err", err)

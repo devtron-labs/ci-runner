@@ -71,12 +71,12 @@ const (
 )
 
 type GitManager struct {
-	GitCliManager GitCliManager
+	gitCliManager GitCliManager
 }
 
 func NewGitManagerImpl(GitCliManager GitCliManager) *GitManager {
 	return &GitManager{
-		GitCliManager: GitCliManager,
+		gitCliManager: GitCliManager,
 	}
 }
 
@@ -115,7 +115,7 @@ func (impl GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) err
 			}
 		}
 
-		_, msgMsg, cErr := impl.GitCliManager.Clone(gitContext, prj)
+		_, msgMsg, cErr := impl.gitCliManager.Clone(gitContext, prj)
 		if cErr != nil {
 			log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
 		}
@@ -133,7 +133,7 @@ func (impl GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) err
 				checkoutSource = prj.SourceValue
 			}
 			log.Println("checkout commit in branch fix : ", checkoutSource)
-			msgMsg, cErr = impl.GitCliManager.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository)
+			msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 			}
@@ -151,7 +151,7 @@ func (impl GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) err
 			log.Println("checkout commit in webhook : ", targetCheckout)
 
 			// checkout target hash
-			msgMsg, cErr = impl.GitCliManager.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository)
+			msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
 				return cErr
@@ -169,7 +169,7 @@ func (impl GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) err
 				log.Println("merge commit in webhook : ", sourceCheckout)
 
 				// merge source
-				_, msgMsg, cErr = impl.GitCliManager.Merge(filepath.Join(util.WORKINGDIR, prj.CheckoutPath), sourceCheckout)
+				_, msgMsg, cErr = impl.gitCliManager.Merge(filepath.Join(util.WORKINGDIR, prj.CheckoutPath), sourceCheckout)
 				if cErr != nil {
 					log.Fatal("could not merge ", "sourceCheckout ", sourceCheckout, " err ", cErr, " msgMsg", msgMsg)
 					return cErr

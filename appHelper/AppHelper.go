@@ -20,12 +20,12 @@ type App struct {
 	CdStage *stage.CdStage
 }
 
-func NewApp() *App {
+func NewAppHelper() *App {
 	gitCliManager := helper.NewGitCliManager()
-	gitManager := *helper.NewGitManagerImpl(gitCliManager)
+	gitManagerImpl := *helper.NewGitManagerImpl(gitCliManager)
 
-	ciStage := stage.NewCiStage(gitManager)
-	cdStage := stage.NewCdStage(gitManager)
+	ciStage := stage.NewCiStage(gitManagerImpl)
+	cdStage := stage.NewCdStage(gitManagerImpl)
 
 	return &App{
 		CiStage: ciStage,

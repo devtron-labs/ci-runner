@@ -41,6 +41,6 @@ func main() {
 	}
 
 	args := os.Getenv(util.CiCdEventEnvKey)
-	app := app2.NewApp()
+	app := app2.NewAppHelper()
 	app.ProcessEvent(args)
 }
