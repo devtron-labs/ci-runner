@@ -80,7 +80,7 @@ func NewGitManagerImpl(gitCliManager GitCliManager) *GitManager {
 	}
 }
 
-func (impl GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
+func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 	for index, prj := range ciProjectDetails {
 		// git clone
 
