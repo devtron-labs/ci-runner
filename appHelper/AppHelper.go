@@ -16,8 +16,8 @@ import (
 )
 
 type AppHelper struct {
-	ciStage *stage.CiStage
-	cdStage *stage.CdStage
+	CiStage *stage.CiStage
+	CdStage *stage.CdStage
 }
 
 func NewAppHelper() *AppHelper {
@@ -28,8 +28,8 @@ func NewAppHelper() *AppHelper {
 	cdStage := stage.NewCdStage(gitManagerImpl)
 
 	return &AppHelper{
-		ciStage: ciStage,
-		cdStage: cdStage,
+		CiStage: ciStage,
+		CdStage: cdStage,
 	}
 }
 
@@ -78,9 +78,9 @@ func (impl *AppHelper) ProcessEvent(args string) {
 
 	defer impl.HandleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
 	if ciCdRequest.Type == util.CIEVENT {
-		impl.ciStage.HandleCIEvent(ciCdRequest, &exitCode)
+		impl.CiStage.HandleCIEvent(ciCdRequest, &exitCode)
 	} else {
-		impl.cdStage.HandleCDEvent(ciCdRequest, &exitCode)
+		impl.CdStage.HandleCDEvent(ciCdRequest, &exitCode)
 	}
 	return
 }
