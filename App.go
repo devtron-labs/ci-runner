@@ -20,6 +20,8 @@ package main
 import (
 	_ "github.com/aws/aws-sdk-go/aws"
 	"github.com/devtron-labs/ci-runner/appHelper"
+	"github.com/devtron-labs/ci-runner/executor/stage"
+	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	"log"
 	"os"
@@ -41,6 +43,12 @@ func main() {
 	}
 
 	args := os.Getenv(util.CiCdEventEnvKey)
-	appHelper := appHelper.NewAppHelper()
+	gitCliManager := helper.NewGitCliManager()
+	gitManagerImpl := *helper.NewGitManagerImpl(gitCliManager)
+
+	ciStage := stage.NewCiStage(gitManagerImpl)
+	cdStage := stage.NewCdStage(gitManagerImpl)
+
+	appHelper := appHelper.NewAppHelper(ciStage, cdStage)
 	appHelper.ProcessEvent(args)
 }

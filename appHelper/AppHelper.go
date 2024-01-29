@@ -16,20 +16,14 @@ import (
 )
 
 type AppHelper struct {
-	CiStage *stage.CiStage
-	CdStage *stage.CdStage
+	ciStage *stage.CiStage
+	cdStage *stage.CdStage
 }
 
-func NewAppHelper() *AppHelper {
-	gitCliManager := helper.NewGitCliManager()
-	gitManagerImpl := *helper.NewGitManagerImpl(gitCliManager)
-
-	ciStage := stage.NewCiStage(gitManagerImpl)
-	cdStage := stage.NewCdStage(gitManagerImpl)
-
+func NewAppHelper(ciStage *stage.CiStage, cdStage *stage.CdStage) *AppHelper {
 	return &AppHelper{
-		CiStage: ciStage,
-		CdStage: cdStage,
+		ciStage: ciStage,
+		cdStage: cdStage,
 	}
 }
 
@@ -78,9 +72,9 @@ func (impl *AppHelper) ProcessEvent(args string) {
 
 	defer impl.HandleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
 	if ciCdRequest.Type == util.CIEVENT {
-		impl.CiStage.HandleCIEvent(ciCdRequest, &exitCode)
+		impl.ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 	} else {
-		impl.CdStage.HandleCDEvent(ciCdRequest, &exitCode)
+		impl.cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 	}
 	return
 }
