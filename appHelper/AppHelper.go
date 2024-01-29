@@ -15,27 +15,27 @@ import (
 	"syscall"
 )
 
-type App struct {
-	CiStage *stage.CiStage
-	CdStage *stage.CdStage
+type AppHelper struct {
+	ciStage *stage.CiStage
+	cdStage *stage.CdStage
 }
 
-func NewAppHelper() *App {
+func NewAppHelper() *AppHelper {
 	gitCliManager := helper.NewGitCliManager()
 	gitManagerImpl := *helper.NewGitManagerImpl(gitCliManager)
 
 	ciStage := stage.NewCiStage(gitManagerImpl)
 	cdStage := stage.NewCdStage(gitManagerImpl)
 
-	return &App{
-		CiStage: ciStage,
-		CdStage: cdStage,
+	return &AppHelper{
+		ciStage: ciStage,
+		cdStage: cdStage,
 	}
 }
 
 var handleOnce sync.Once
 
-func (impl *App) HandleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *int, source string) {
+func (impl *AppHelper) HandleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *int, source string) {
 	handleOnce.Do(func() {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
@@ -48,7 +48,7 @@ func (impl *App) HandleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *in
 	})
 }
 
-func (impl *App) ProcessEvent(args string) {
+func (impl *AppHelper) ProcessEvent(args string) {
 
 	exitCode := 0
 	ciCdRequest := &helper.CiCdTriggerEvent{}
@@ -77,17 +77,15 @@ func (impl *App) ProcessEvent(args string) {
 	}
 
 	defer impl.HandleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
-	ciStage := stage.NewCiStage(*helper.NewGitManagerImpl(helper.NewGitCliManager()))
-	cdStage := stage.NewCdStage(*helper.NewGitManagerImpl(helper.NewGitCliManager()))
 	if ciCdRequest.Type == util.CIEVENT {
-		ciStage.HandleCIEvent(ciCdRequest, &exitCode)
+		impl.ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 	} else {
-		cdStage.HandleCDEvent(ciCdRequest, &exitCode)
+		impl.cdStage.HandleCDEvent(ciCdRequest, &exitCode)
 	}
 	return
 }
 
-func (impl *App) CleanUpBuildxK8sDriver(ciCdRequest helper.CiCdTriggerEvent, wg *sync.WaitGroup) {
+func (impl *AppHelper) CleanUpBuildxK8sDriver(ciCdRequest helper.CiCdTriggerEvent, wg *sync.WaitGroup) {
 	defer wg.Done()
 	if valid, eligibleBuildxK8sDriverNodes := helper.ValidBuildxK8sDriverOptions(ciCdRequest.CommonWorkflowRequest); valid {
 		log.Println(util.DEVTRON, "starting buildx k8s driver clean up ,before terminating ci-runner")
@@ -98,7 +96,7 @@ func (impl *App) CleanUpBuildxK8sDriver(ciCdRequest helper.CiCdTriggerEvent, wg 
 	}
 }
 
-func (impl *App) UploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
+func (impl *AppHelper) UploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
 	var storageModuleConfigured bool
 	var blobStorageLogKey string
 	var cloudProvider blob_storage.BlobStorageType
