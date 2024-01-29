@@ -27,12 +27,12 @@ import (
 )
 
 type CdStage struct {
-	GitManager helper.GitManager
+	gitManager helper.GitManager
 }
 
 func NewCdStage(GitManager helper.GitManager) *CdStage {
 	return &CdStage{
-		GitManager: GitManager,
+		gitManager: GitManager,
 	}
 }
 
@@ -94,7 +94,7 @@ func (impl CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	skipCheckout := cicdRequest.CommonWorkflowRequest.CiPipelineType == helper.CI_JOB
 	if !skipCheckout {
 		log.Println(util.DEVTRON, " git")
-		err = impl.GitManager.CloneAndCheckout(cicdRequest.CommonWorkflowRequest.CiProjectDetails)
+		err = impl.gitManager.CloneAndCheckout(cicdRequest.CommonWorkflowRequest.CiProjectDetails)
 		if err != nil {
 			log.Println(util.DEVTRON, "clone err: ", err)
 			return err
