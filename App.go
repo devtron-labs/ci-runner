@@ -19,7 +19,7 @@ package main
 
 import (
 	_ "github.com/aws/aws-sdk-go/aws"
-	app2 "github.com/devtron-labs/ci-runner/appHelper"
+	"github.com/devtron-labs/ci-runner/appHelper"
 	"github.com/devtron-labs/ci-runner/util"
 	"log"
 	"os"
@@ -41,6 +41,6 @@ func main() {
 	}
 
 	args := os.Getenv(util.CiCdEventEnvKey)
-	app := app2.NewAppHelper()
-	app.ProcessEvent(args)
+	appHelper := appHelper.NewAppHelper()
+	appHelper.ProcessEvent(args)
 }
