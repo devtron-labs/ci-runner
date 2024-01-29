@@ -378,6 +378,7 @@ type CiProjectDetails struct {
 	Author          string      `json:"author"`
 	GitOptions      GitOptions  `json:"gitOptions"`
 	WebhookData     WebhookData `json:"webhookData"`
+	CloningMode     string      `json:"cloningMode"`
 }
 
 type RegistryCredentials struct {
@@ -651,4 +652,28 @@ func findDefaultBuildxNodes(builderNodes []map[string]string) []map[string]strin
 		}
 	}
 	return builderNodes
+}
+
+func (prj *CiProjectDetails) GetCheckoutBranchName() string {
+	var checkoutBranch string
+	if prj.SourceType == SOURCE_TYPE_WEBHOOK {
+		webhookData := prj.WebhookData
+		webhookDataData := webhookData.Data
+
+		checkoutBranch = webhookDataData[WEBHOOK_SELECTOR_TARGET_CHECKOUT_BRANCH_NAME]
+		if len(checkoutBranch) == 0 {
+			//webhook type is tag based
+			checkoutBranch = webhookDataData[WEBHOOK_SELECTOR_TARGET_CHECKOUT_NAME]
+		}
+	} else {
+		if len(prj.SourceValue) == 0 {
+			checkoutBranch = "main"
+		} else {
+			checkoutBranch = prj.SourceValue
+		}
+	}
+	if len(checkoutBranch) == 0 {
+		log.Fatal("could not get target checkout from request data")
+	}
+	return checkoutBranch
 }

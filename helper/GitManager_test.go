@@ -16,7 +16,7 @@ func TestGitHelper(t *testing.T) {
 		// Prepare test data, ANONYMOUS and SOURCE_TYPE_BRANCH_FIXED data
 		ciCdRequest := &CiCdTriggerEvent{}
 		json.Unmarshal([]byte(test_data.CiTriggerEventPayloadWithoutPrePostStep), ciCdRequest)
-		ciProjectDetails := ciCdRequest.CiRequest.CiProjectDetails
+		ciProjectDetails := ciCdRequest.CommonWorkflowRequest.CiProjectDetails
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
@@ -32,7 +32,7 @@ func TestGitHelper(t *testing.T) {
 		// Prepare test data, USERNAME_PASSWORD and SOURCE_TYPE_BRANCH_FIXED data
 		ciCdRequest := &CiCdTriggerEvent{}
 		json.Unmarshal([]byte(test_data.CdTriggerEventPayloadWithTaskYaml), ciCdRequest)
-		ciProjectDetails := ciCdRequest.CdRequest.CiProjectDetails
+		ciProjectDetails := ciCdRequest.CommonWorkflowRequest.CiProjectDetails
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
@@ -48,7 +48,7 @@ func TestGitHelper(t *testing.T) {
 		// Prepare test data, USERNAME_PASSWORD and WEBHOOK data
 		ciCdRequest := &CiCdTriggerEvent{}
 		json.Unmarshal([]byte(test_data.CiTriggerEventSourceTypeWebhookPRBased), ciCdRequest)
-		ciProjectDetails := ciCdRequest.CiRequest.CiProjectDetails
+		ciProjectDetails := ciCdRequest.CommonWorkflowRequest.CiProjectDetails
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
@@ -64,7 +64,7 @@ func TestGitHelper(t *testing.T) {
 		// Prepare test data, SSH and SOURCE_TYPE_BRANCH_FIXED data
 		ciCdRequest := &CiCdTriggerEvent{}
 		json.Unmarshal([]byte(test_data.CiTriggerEventSSHBased), ciCdRequest)
-		ciProjectDetails := ciCdRequest.CiRequest.CiProjectDetails
+		ciProjectDetails := ciCdRequest.CommonWorkflowRequest.CiProjectDetails
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
@@ -80,7 +80,7 @@ func TestGitHelper(t *testing.T) {
 		// Prepare test data, ANONYMOUS and SOURCE_TYPE_BRANCH_FIXED data
 		ciCdRequest := &CiCdTriggerEvent{}
 		json.Unmarshal([]byte(test_data.CiTriggerEventWithEmptyGitHash), ciCdRequest)
-		ciProjectDetails := ciCdRequest.CiRequest.CiProjectDetails
+		ciProjectDetails := ciCdRequest.CommonWorkflowRequest.CiProjectDetails
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
@@ -96,7 +96,7 @@ func TestGitHelper(t *testing.T) {
 		// Prepare test data, ANONYMOUS and SOURCE_TYPE_BRANCH_FIXED data
 		ciCdRequest := &CiCdTriggerEvent{}
 		json.Unmarshal([]byte(test_data.CiTriggerEventWithEmptyGitHashAndSourceValue), ciCdRequest)
-		ciProjectDetails := ciCdRequest.CiRequest.CiProjectDetails
+		ciProjectDetails := ciCdRequest.CommonWorkflowRequest.CiProjectDetails
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
@@ -112,7 +112,7 @@ func TestGitHelper(t *testing.T) {
 		// Prepare test data, ANONYMOUS and SOURCE_TYPE_BRANCH_FIXED data
 		ciCdRequest := &CiCdTriggerEvent{}
 		json.Unmarshal([]byte(test_data.CiTriggerEventWithValidGitHash), ciCdRequest)
-		ciProjectDetails := ciCdRequest.CiRequest.CiProjectDetails
+		ciProjectDetails := ciCdRequest.CommonWorkflowRequest.CiProjectDetails
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
@@ -128,7 +128,7 @@ func TestGitHelper(t *testing.T) {
 		// Prepare test data, USERNAME_PASSWORD and SOURCE_TYPE_BRANCH_FIXED data
 		ciCdRequest := &CiCdTriggerEvent{}
 		json.Unmarshal([]byte(test_data.CiTriggerEventUsernamePasswordAndPullSubmodules), ciCdRequest)
-		ciProjectDetails := ciCdRequest.CiRequest.CiProjectDetails
+		ciProjectDetails := ciCdRequest.CommonWorkflowRequest.CiProjectDetails
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
@@ -144,7 +144,7 @@ func TestGitHelper(t *testing.T) {
 		// Prepare test data, ANONYMOUS and SOURCE_TYPE_BRANCH_FIXED data
 		ciCdRequest := &CiCdTriggerEvent{}
 		json.Unmarshal([]byte(test_data.CiTriggerEventWithInValidGitHash), ciCdRequest)
-		ciProjectDetails := ciCdRequest.CiRequest.CiProjectDetails
+		ciProjectDetails := ciCdRequest.CommonWorkflowRequest.CiProjectDetails
 
 		clonedRepo := ciProjectDetails[0].GitRepository[strings.LastIndex(ciProjectDetails[0].GitRepository, "/"):]
 		os.RemoveAll(util.WORKINGDIR)
@@ -161,7 +161,7 @@ func TestGitHelper(t *testing.T) {
 		// Prepare test data, USERNAME_PASSWORD and SOURCE_TYPE_BRANCH_FIXED data
 		ciCdRequest := &CiCdTriggerEvent{}
 		json.Unmarshal([]byte(test_data.CiTriggerEventUsernamePasswordAndPullSubmodules), ciCdRequest)
-		ciProjectDetails := ciCdRequest.CiRequest.CiProjectDetails
+		ciProjectDetails := ciCdRequest.CommonWorkflowRequest.CiProjectDetails
 		ciProjectDetails[0].GitOptions.UserName = "hjgbuhibj"
 		ciProjectDetails[0].GitOptions.Password = "ihvfis"
 		clonedRepo := ciProjectDetails[0].GitRepository[strings.LastIndex(ciProjectDetails[0].GitRepository, "/"):]
