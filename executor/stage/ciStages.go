@@ -35,9 +35,9 @@ type CiStage struct {
 	gitManager helper.GitManager
 }
 
-func NewCiStage(GitManager helper.GitManager) *CiStage {
+func NewCiStage(gitManager helper.GitManager) *CiStage {
 	return &CiStage{
-		gitManager: GitManager,
+		gitManager: gitManager,
 	}
 }
 

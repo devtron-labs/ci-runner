@@ -30,9 +30,9 @@ type CdStage struct {
 	gitManager helper.GitManager
 }
 
-func NewCdStage(GitManager helper.GitManager) *CdStage {
+func NewCdStage(gitManager helper.GitManager) *CdStage {
 	return &CdStage{
-		gitManager: GitManager,
+		gitManager: gitManager,
 	}
 }
 

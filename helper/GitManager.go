@@ -74,9 +74,9 @@ type GitManager struct {
 	gitCliManager GitCliManager
 }
 
-func NewGitManagerImpl(GitCliManager GitCliManager) *GitManager {
+func NewGitManagerImpl(gitCliManager GitCliManager) *GitManager {
 	return &GitManager{
-		gitCliManager: GitCliManager,
+		gitCliManager: gitCliManager,
 	}
 }
 
