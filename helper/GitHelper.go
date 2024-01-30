@@ -19,13 +19,13 @@ package helper
 
 import (
 	"context"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/devtron-labs/ci-runner/util"
-	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
 type GitOptions struct {
