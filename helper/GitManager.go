@@ -23,7 +23,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/devtron-labs/ci-runner/util"
 )
@@ -44,7 +43,7 @@ type WebhookData struct {
 
 type GitContext struct {
 	context.Context // Embedding original Go context
-	auth            *http.BasicAuth
+	Auth            *http.BasicAuth
 }
 
 type AuthMode string
@@ -64,19 +63,29 @@ const (
 )
 
 const (
-	WEBHOOK_SELECTOR_TARGET_CHECKOUT_NAME string = "target checkout"
-	WEBHOOK_SELECTOR_SOURCE_CHECKOUT_NAME string = "source checkout"
+	WEBHOOK_SELECTOR_TARGET_CHECKOUT_NAME        string = "target checkout"
+	WEBHOOK_SELECTOR_SOURCE_CHECKOUT_NAME        string = "source checkout"
+	WEBHOOK_SELECTOR_TARGET_CHECKOUT_BRANCH_NAME string = "target branch name"
 
 	WEBHOOK_EVENT_MERGED_ACTION_TYPE     string = "merged"
 	WEBHOOK_EVENT_NON_MERGED_ACTION_TYPE string = "non-merged"
 )
 
-func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
-	gitCli := NewGitUtil()
-	for index, prj := range ciProjectDetails {
+type GitManager struct {
+	gitCliManager GitCliManager
+}
 
+func NewGitManagerImpl(gitCliManager GitCliManager) *GitManager {
+	return &GitManager{
+		gitCliManager: gitCliManager,
+	}
+}
+
+func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
+	for index, prj := range ciProjectDetails {
 		// git clone
-		log.Println("-----> git cloning " + prj.GitRepository)
+
+		log.Println("-----> git " + prj.CloningMode + " cloning " + prj.GitRepository)
 
 		if prj.CheckoutPath != "./" {
 			if _, err := os.Stat(prj.CheckoutPath); os.IsNotExist(err) {
@@ -96,17 +105,18 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 		}
 
 		gitContext := GitContext{
-			auth: auth,
+			Auth: auth,
 		}
 		// create ssh private key on disk
 		if authMode == AUTH_MODE_SSH {
+			cErr = util.CreateSshPrivateKeyOnDisk(index, prj.GitOptions.SshPrivateKey)
 			cErr = util.CreateSshPrivateKeyOnDisk(index, prj.GitOptions.SshPrivateKey)
 			if cErr != nil {
 				log.Fatal("could not create ssh private key on disk ", " err ", cErr)
 			}
 		}
 
-		_, msgMsg, cErr := gitCli.Clone(gitContext, filepath.Join(util.WORKINGDIR, prj.CheckoutPath), prj.GitRepository)
+		_, msgMsg, cErr := impl.gitCliManager.Clone(gitContext, prj)
 		if cErr != nil {
 			log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
 		}
@@ -124,7 +134,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 				checkoutSource = prj.SourceValue
 			}
 			log.Println("checkout commit in branch fix : ", checkoutSource)
-			msgMsg, cErr = Checkout(gitContext, gitCli, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository)
+			msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 			}
@@ -142,7 +152,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 			log.Println("checkout commit in webhook : ", targetCheckout)
 
 			// checkout target hash
-			msgMsg, cErr = Checkout(gitContext, gitCli, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository)
+			msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
 				return cErr
@@ -160,7 +170,7 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 				log.Println("merge commit in webhook : ", sourceCheckout)
 
 				// merge source
-				_, msgMsg, cErr = gitCli.Merge(filepath.Join(util.WORKINGDIR, prj.CheckoutPath), sourceCheckout)
+				_, msgMsg, cErr = impl.gitCliManager.Merge(filepath.Join(util.WORKINGDIR, prj.CheckoutPath), sourceCheckout)
 				if cErr != nil {
 					log.Fatal("could not merge ", "sourceCheckout ", sourceCheckout, " err ", cErr, " msgMsg", msgMsg)
 					return cErr
@@ -172,65 +182,4 @@ func CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 
 	}
 	return nil
-}
-
-func Checkout(gitContext GitContext, gitCli *GitUtil, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, gitRepository string) (errMsg string, error error) {
-
-	rootDir := filepath.Join(util.WORKINGDIR, checkoutPath)
-
-	// checkout target hash
-	_, eMsg, cErr := gitCli.Checkout(rootDir, targetCheckout)
-	if cErr != nil {
-		return eMsg, cErr
-	}
-
-	log.Println(util.DEVTRON, " fetchSubmodules ", fetchSubmodules, " authMode ", authMode)
-
-	if fetchSubmodules {
-		httpsAuth := (authMode == AUTH_MODE_USERNAME_PASSWORD) || (authMode == AUTH_MODE_ACCESS_TOKEN)
-		if httpsAuth {
-			// first remove protocol
-			modifiedUrl := strings.ReplaceAll(gitRepository, "https://", "")
-			// for bitbucket - if git repo url is started with username, then we need to remove username
-			if strings.Contains(modifiedUrl, "bitbucket.org") && !strings.HasPrefix(modifiedUrl, "bitbucket.org") {
-				modifiedUrl = modifiedUrl[strings.Index(modifiedUrl, "bitbucket.org"):]
-			}
-			// build url
-			modifiedUrl = "https://" + gitContext.auth.Username + ":" + gitContext.auth.Password + "@" + modifiedUrl
-
-			_, errMsg, cErr = gitCli.UpdateCredentialHelper(rootDir)
-			if cErr != nil {
-				return errMsg, cErr
-			}
-
-			cErr = util.CreateGitCredentialFileAndWriteData(modifiedUrl)
-			if cErr != nil {
-				return "Error in creating git credential file", cErr
-			}
-
-		}
-
-		_, errMsg, cErr = gitCli.RecursiveFetchSubmodules(rootDir)
-		if cErr != nil {
-			return errMsg, cErr
-		}
-
-		// cleanup
-
-		if httpsAuth {
-			_, errMsg, cErr = gitCli.UnsetCredentialHelper(rootDir)
-			if cErr != nil {
-				return errMsg, cErr
-			}
-
-			// delete file (~/.git-credentials) (which was created above)
-			cErr = util.CleanupAfterFetchingHttpsSubmodules()
-			if cErr != nil {
-				return "", cErr
-			}
-		}
-	}
-
-	return "", nil
-
 }
