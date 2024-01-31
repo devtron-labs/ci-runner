@@ -20,7 +20,6 @@ package helper
 import (
 	"context"
 	"github.com/devtron-labs/ci-runner/util"
-	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"log"
 	"os"
 	"path/filepath"
@@ -42,7 +41,10 @@ type WebhookData struct {
 
 type GitContext struct {
 	context.Context // Embedding original Go context
-	Auth            *http.BasicAuth
+	Auth            *BasicAuth
+}
+type BasicAuth struct {
+	Username, Password string
 }
 
 type AuthMode string
@@ -92,15 +94,15 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 			}
 		}
 		var cErr error
-		var auth *http.BasicAuth
+		var auth *BasicAuth
 		authMode := prj.GitOptions.AuthMode
 		switch authMode {
 		case AUTH_MODE_USERNAME_PASSWORD:
-			auth = &http.BasicAuth{Password: prj.GitOptions.Password, Username: prj.GitOptions.UserName}
+			auth = &BasicAuth{Password: prj.GitOptions.Password, Username: prj.GitOptions.UserName}
 		case AUTH_MODE_ACCESS_TOKEN:
-			auth = &http.BasicAuth{Password: prj.GitOptions.AccessToken, Username: prj.GitOptions.UserName}
+			auth = &BasicAuth{Password: prj.GitOptions.AccessToken, Username: prj.GitOptions.UserName}
 		default:
-			auth = &http.BasicAuth{}
+			auth = &BasicAuth{}
 		}
 
 		gitContext := GitContext{
