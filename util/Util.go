@@ -33,6 +33,8 @@ const (
 	SSH_PRIVATE_KEY_DIR       = ".ssh"
 	SSH_PRIVATE_KEY_FILE_NAME = "id_rsa"
 	GIT_CREDENTIAL_FILE_NAME  = ".git-credentials"
+	CLONING_MODE_SHALLOW      = "SHALLOW"
+	CLONING_MODE_FULL         = "FULL"
 )
 
 func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) error {
@@ -137,4 +139,13 @@ func ParseUrl(rawURL string) (parsedURL *url.URL, err error) {
 		parsedURL, err = url.Parse("//" + rawURL)
 	}
 	return parsedURL, err
+}
+
+// GetProjectName this function has been designed for returning project name of git-lab and git-hub providers only
+// do not remove this function
+func GetProjectName(url string) string {
+	//if url = https://github.com/devtron-labs/git-sensor.git then it will return git-sensor
+	projName := strings.Split(url, ".")[1]
+	projectName := projName[strings.LastIndex(projName, "/")+1:]
+	return projectName
 }
