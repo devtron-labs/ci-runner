@@ -1,19 +1,49 @@
-package main
+/*
+ *  Copyright 2020 Devtron Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package stage
 
 import (
+	"github.com/devtron-labs/ci-runner/executor"
+	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	"log"
 	"os"
 )
 
-func HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
-	err := runCDStages(ciCdRequest)
+type CdStage struct {
+	gitManager helper.GitManager
+}
+
+func NewCdStage(gitManager helper.GitManager) *CdStage {
+	return &CdStage{
+		gitManager: gitManager,
+	}
+}
+
+func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
+	err := impl.runCDStages(ciCdRequest)
 	artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CommonWorkflowRequest)
 	if err != nil || artifactUploadErr != nil {
 		log.Println(err)
 		*exitCode = util.DefaultErrorCode
 	}
+
 }
 
 func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) error {
@@ -46,7 +76,7 @@ func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) error 
 	return helper.UploadArtifact(cloudHelperBaseConfig, artifactFiles, cdRequest.CiArtifactFileName)
 }
 
-func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
+func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	err := os.Chdir("/")
 	if err != nil {
 		return err
@@ -64,14 +94,13 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	skipCheckout := cicdRequest.CommonWorkflowRequest.CiPipelineType == helper.CI_JOB
 	if !skipCheckout {
 		log.Println(util.DEVTRON, " git")
-		err = helper.CloneAndCheckout(cicdRequest.CommonWorkflowRequest.CiProjectDetails)
+		err = impl.gitManager.CloneAndCheckout(cicdRequest.CommonWorkflowRequest.CiProjectDetails)
 		if err != nil {
 			log.Println(util.DEVTRON, "clone err: ", err)
 			return err
 		}
 	}
 	log.Println(util.DEVTRON, " /git")
-
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
 	helper.StartDockerDaemon(cicdRequest.CommonWorkflowRequest.DockerConnection, cicdRequest.CommonWorkflowRequest.DockerRegistryURL, cicdRequest.CommonWorkflowRequest.DockerCert, cicdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr, cicdRequest.CommonWorkflowRequest.DefaultAddressPoolSize, -1)
@@ -89,7 +118,7 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		return err
 	}
 
-	scriptEnvs, err := getGlobalEnvVariables(cicdRequest)
+	scriptEnvs, err := util2.GetGlobalEnvVariables(cicdRequest)
 
 	if len(cicdRequest.CommonWorkflowRequest.PrePostDeploySteps) > 0 {
 		refStageMap := make(map[int][]*helper.StepObject)
@@ -98,8 +127,8 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		}
 		scriptEnvs["DEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
 		scriptEnvs["DIGEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
-		var stage = StepType(cicdRequest.CommonWorkflowRequest.StageType)
-		_, _, err = RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
+		var stage = executor.StepType(cicdRequest.CommonWorkflowRequest.StageType)
+		_, _, err = executor.RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
@@ -124,7 +153,7 @@ func runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		if err != nil {
 			return err
 		}
-		err = RunCdStageTasks(tasks, scriptEnvs)
+		err = executor.RunCdStageTasks(tasks, scriptEnvs)
 		if err != nil {
 			return err
 		}

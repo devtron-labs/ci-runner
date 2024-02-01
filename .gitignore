@@ -1,5 +1,5 @@
 .idea
-ci-runner
+/ci-runner
 cirunner
 .vscode
 .env

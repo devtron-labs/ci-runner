@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 
@@ -153,6 +154,8 @@ type CommonWorkflowRequest struct {
 	ExtBlobStorageCmName       string                            `json:"extBlobStorageCmName"`
 	ExtBlobStorageSecretName   string                            `json:"extBlobStorageSecretName"`
 	UseExternalClusterBlob     bool                              `json:"useExternalClusterBlob"`
+	ImageScanMaxRetries        int                               `json:"imageScanMaxRetries,omitempty"`
+	ImageScanRetryDelay        int                               `json:"imageScanRetryDelay,omitempty"`
 	// Data from CD Workflow service
 	WorkflowRunnerId            int                            `json:"workflowRunnerId"`
 	CdPipelineId                int                            `json:"cdPipelineId"`
@@ -375,6 +378,7 @@ type CiProjectDetails struct {
 	Author          string      `json:"author"`
 	GitOptions      GitOptions  `json:"gitOptions"`
 	WebhookData     WebhookData `json:"webhookData"`
+	CloningMode     string      `json:"cloningMode"`
 }
 
 type RegistryCredentials struct {
@@ -537,7 +541,17 @@ func SendEventToClairUtility(event *ScanEvent) error {
 	}
 
 	client := resty.New()
-	client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+	client.
+		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}).
+		SetRetryCount(event.ImageScanMaxRetries).SetRetryMaxWaitTime(time.Duration(event.ImageScanRetryDelay)).
+		AddRetryCondition(
+			func(r *resty.Response, err error) bool {
+				return err != nil || r.StatusCode() != http.StatusOK
+			},
+		).AddRetryHook(
+		func(r *resty.Response, err error) {
+			println(fmt.Sprintf("IMAGE SCAN failed with status code = %v. RETRYING...", r.StatusCode()))
+		})
 
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
@@ -547,24 +561,31 @@ func SendEventToClairUtility(event *ScanEvent) error {
 		log.Println(util.DEVTRON, "err in image scanner app over rest", err)
 		return err
 	}
+	if resp.StatusCode() != 200 {
+		log.Println(fmt.Sprintf("======== Vulnerability Scanning request failed with HTTP status code %v ========", resp.StatusCode()))
+		return fmt.Errorf("%s", string(resp.Body()))
+	}
+
 	log.Println(util.DEVTRON, resp.StatusCode())
 	log.Println(util.DEVTRON, resp)
 	return nil
 }
 
 type ScanEvent struct {
-	Image            string `json:"image"`
-	ImageDigest      string `json:"imageDigest"`
-	AppId            int    `json:"appId"`
-	EnvId            int    `json:"envId"`
-	PipelineId       int    `json:"pipelineId"`
-	CiArtifactId     int    `json:"ciArtifactId"`
-	UserId           int    `json:"userId"`
-	AccessKey        string `json:"accessKey"`
-	SecretKey        string `json:"secretKey"`
-	Token            string `json:"token"`
-	AwsRegion        string `json:"awsRegion"`
-	DockerRegistryId string `json:"dockerRegistryId"`
+	Image               string `json:"image"`
+	ImageDigest         string `json:"imageDigest"`
+	AppId               int    `json:"appId"`
+	EnvId               int    `json:"envId"`
+	PipelineId          int    `json:"pipelineId"`
+	CiArtifactId        int    `json:"ciArtifactId"`
+	UserId              int    `json:"userId"`
+	AccessKey           string `json:"accessKey"`
+	SecretKey           string `json:"secretKey"`
+	Token               string `json:"token"`
+	AwsRegion           string `json:"awsRegion"`
+	DockerRegistryId    string `json:"dockerRegistryId"`
+	ImageScanMaxRetries int    `json:"imageScanMaxRetries,omitempty"`
+	ImageScanRetryDelay int    `json:"imageScanRetryDelay,omitempty"`
 }
 
 func (dockerBuildConfig *DockerBuildConfig) GetProvenanceFlag() string {
@@ -631,4 +652,28 @@ func findDefaultBuildxNodes(builderNodes []map[string]string) []map[string]strin
 		}
 	}
 	return builderNodes
+}
+
+func (prj *CiProjectDetails) GetCheckoutBranchName() string {
+	var checkoutBranch string
+	if prj.SourceType == SOURCE_TYPE_WEBHOOK {
+		webhookData := prj.WebhookData
+		webhookDataData := webhookData.Data
+
+		checkoutBranch = webhookDataData[WEBHOOK_SELECTOR_TARGET_CHECKOUT_BRANCH_NAME]
+		if len(checkoutBranch) == 0 {
+			//webhook type is tag based
+			checkoutBranch = webhookDataData[WEBHOOK_SELECTOR_TARGET_CHECKOUT_NAME]
+		}
+	} else {
+		if len(prj.SourceValue) == 0 {
+			checkoutBranch = "main"
+		} else {
+			checkoutBranch = prj.SourceValue
+		}
+	}
+	if len(checkoutBranch) == 0 {
+		log.Fatal("could not get target checkout from request data")
+	}
+	return checkoutBranch
 }
