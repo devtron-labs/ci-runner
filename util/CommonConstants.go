@@ -20,30 +20,30 @@ package util
 import "path/filepath"
 
 const (
-	DEVTRON                     = "DEVTRON"
-	DEFAULT_KEY                 = "default"
-	INSECURE                    = "insecure"
-	SECUREWITHCERT              = "secure-with-cert"
-	RETRYCOUNT                  = 10
-	HOMEDIR                     = "/"
-	WORKINGDIR                  = "/devtroncd"
-	LOCAL_BUILDX_LOCATION       = "/var/lib/devtron/buildx"
-	LOCAL_BUILDX_CACHE_LOCATION = LOCAL_BUILDX_LOCATION + "/cache"
-	CIEVENT                     = "CI"
-	CDSTAGE                     = "CD"
-	DRY_RUN                     = "DryRun"
-	ENV_VARIABLE_BUILD_SUCCESS  = "BUILD_SUCCESS"
-	CiCdEventEnvKey             = "CI_CD_EVENT"
-	Source_Signal               = "Source_Signal"
-	Source_Defer                = "Source_Defer"
-	DefaultErrorCode            = 1
-	AbortErrorCode              = 143
-	CiStageFailErrorCode        = 2
-	InAppLogging                = "IN_APP_LOGGING"
-	CiRunnerCommand             = "./cirunner"
-	TeeCommand                  = "tee"
-	LogFileName                 = "main.log"
-	NewLineChar                 = "\n"
+	DEVTRON                      = "DEVTRON"
+	DEFAULT_KEY                  = "default"
+	INSECURE                     = "insecure"
+	SECUREWITHCERT               = "secure-with-cert"
+	DOCKER_PS_START_WAIT_SECONDS = 150
+	HOMEDIR                      = "/"
+	WORKINGDIR                   = "/devtroncd"
+	LOCAL_BUILDX_LOCATION        = "/var/lib/devtron/buildx"
+	LOCAL_BUILDX_CACHE_LOCATION  = LOCAL_BUILDX_LOCATION + "/cache"
+	CIEVENT                      = "CI"
+	CDSTAGE                      = "CD"
+	DRY_RUN                      = "DryRun"
+	ENV_VARIABLE_BUILD_SUCCESS   = "BUILD_SUCCESS"
+	CiCdEventEnvKey              = "CI_CD_EVENT"
+	Source_Signal                = "Source_Signal"
+	Source_Defer                 = "Source_Defer"
+	DefaultErrorCode             = 1
+	AbortErrorCode               = 143
+	CiStageFailErrorCode         = 2
+	InAppLogging                 = "IN_APP_LOGGING"
+	CiRunnerCommand              = "./cirunner"
+	TeeCommand                   = "tee"
+	LogFileName                  = "main.log"
+	NewLineChar                  = "\n"
 )
 
 const (
