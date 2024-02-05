@@ -100,7 +100,7 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 		log.Println("failed to start docker daemon")
 		log.Fatal(err)
 	}
-	err = waitForDockerDaemon(util.RETRYCOUNT)
+	err = waitForDockerDaemon(util.DOCKER_PS_START_WAIT_SECONDS)
 	if err != nil {
 		log.Fatal("failed to start docker demon", err)
 	}
