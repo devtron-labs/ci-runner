@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -131,6 +132,13 @@ func CheckFileExists(filename string) (bool, error) {
 		// Some other error
 		return false, err
 	}
+}
+func ParseUrl(rawURL string) (parsedURL *url.URL, err error) {
+	parsedURL, err = url.Parse(rawURL)
+	if err != nil || parsedURL.Host == "" {
+		parsedURL, err = url.Parse("//" + rawURL)
+	}
+	return parsedURL, err
 }
 
 // GetProjectName this function has been designed for returning project name of git-lab and git-hub providers only

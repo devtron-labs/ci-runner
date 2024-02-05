@@ -26,7 +26,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -55,10 +54,11 @@ const (
 
 func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int, ciRunnerDockerMtuValue int) {
 	connection := dockerConnection
-	u, err := url.Parse(dockerRegistryUrl)
+	registryUrl, err := util.ParseUrl(dockerRegistryUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
+	host := registryUrl.Host
 	dockerdstart := ""
 	defaultAddressPoolFlag := ""
 	dockerMtuValueFlag := ""
@@ -72,12 +72,12 @@ func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultA
 		dockerMtuValueFlag = fmt.Sprintf("--mtu=%d", ciRunnerDockerMtuValue)
 	}
 	if connection == util.INSECURE {
-		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, u.Host, dockerMtuValueFlag)
+		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, host, dockerMtuValueFlag)
 		util.LogStage("Insecure Registry")
 	} else {
 		if connection == util.SECUREWITHCERT {
-			os.MkdirAll(fmt.Sprintf("/etc/docker/certs.d/%s", u.Host), os.ModePerm)
-			f, err := os.Create(fmt.Sprintf("/etc/docker/certs.d/%s/ca.crt", u.Host))
+			os.MkdirAll(fmt.Sprintf("/etc/docker/certs.d/%s", host), os.ModePerm)
+			f, err := os.Create(fmt.Sprintf("/etc/docker/certs.d/%s/ca.crt", host))
 
 			if err != nil {
 				log.Fatal(err)
@@ -540,7 +540,7 @@ func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
 	if DOCKER_REGISTRY_TYPE_DOCKERHUB == ciRequest.DockerRegistryType {
 		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
 	} else {
-		u, err := url.Parse(ciRequest.DockerRegistryURL)
+		u, err := util.ParseUrl(ciRequest.DockerRegistryURL)
 		if err != nil {
 			log.Println("not a valid docker repository url")
 			return "", err
