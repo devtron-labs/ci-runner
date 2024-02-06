@@ -3,8 +3,8 @@ package helper
 import (
 	"fmt"
 	"github.com/devtron-labs/ci-runner/util"
-	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/config"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"log"
 	"os"
 	"os/exec"
