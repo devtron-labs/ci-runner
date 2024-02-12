@@ -302,7 +302,13 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 
 			dockerBuild = getBuildxBuildCommand(cacheEnabled, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig)
 		} else {
-			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerBuildConfig.DockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
+			var dockerFilePath string
+			if ciBuildConfig.CiBuildType == MANAGED_DOCKERFILE_BUILD_TYPE {
+				dockerFilePath = GetSelfManagedDockerfilePath(ciRequest.CheckoutPath)
+			} else {
+				dockerFilePath = dockerBuildConfig.DockerfilePath
+			}
+			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerFilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
 		if envVars.ShowDockerBuildCmdInLogs {
 			log.Println("Starting docker build : ", dockerBuild)
@@ -837,4 +843,8 @@ func ValidBuildxK8sDriverOptions(ciRequest *CommonWorkflowRequest) (bool, []map[
 		return ciRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildXK8sDriver()
 	}
 	return false, nil
+}
+
+func GetSelfManagedDockerfilePath(checkoutPath string) string {
+	return filepath.Join(util.WORKINGDIR, checkoutPath, "./Dockerfile")
 }
