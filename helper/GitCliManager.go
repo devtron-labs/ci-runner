@@ -3,8 +3,6 @@ package helper
 import (
 	"fmt"
 	"github.com/devtron-labs/ci-runner/util"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
 	"log"
 	"os"
 	"os/exec"
@@ -35,6 +33,7 @@ func NewGitCliManager() *GitCliManagerImpl {
 }
 
 const GIT_AKS_PASS = "/git-ask-pass.sh"
+const DefaultRemoteName = "origin"
 
 func (impl *GitCliManagerImpl) Fetch(gitContext GitContext, rootDir string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git fetch ", "location", rootDir)
@@ -94,14 +93,30 @@ func (impl *GitCliManagerImpl) Init(rootDir string, remoteUrl string, isBare boo
 	if err != nil {
 		return err
 	}
-	repo, err := git.PlainInit(rootDir, isBare)
+	err = impl.AddRepo(rootDir, remoteUrl)
+	return err
+}
+func (impl *GitCliManagerImpl) AddRepo(rootDir string, remoteUrl string) error {
+	err := impl.gitInit(rootDir)
 	if err != nil {
 		return err
 	}
-	_, err = repo.CreateRemote(&config.RemoteConfig{
-		Name: git.DefaultRemoteName,
-		URLs: []string{remoteUrl},
-	})
+	return impl.gitCreateRemote(rootDir, remoteUrl)
+}
+
+func (impl *GitCliManagerImpl) gitInit(rootDir string) error {
+	log.Println(util.DEVTRON, "git", "-C", rootDir, "init")
+	cmd := exec.Command("git", "-C", rootDir, "init")
+	output, errMsg, err := impl.RunCommand(cmd)
+	log.Println(util.DEVTRON, "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
+	return err
+}
+
+func (impl *GitCliManagerImpl) gitCreateRemote(rootDir string, url string) error {
+	log.Println(util.DEVTRON, "git", "-C", rootDir, "remote", "add", DefaultRemoteName, url)
+	cmd := exec.Command("git", "-C", rootDir, "remote", "add", DefaultRemoteName, url)
+	output, errMsg, err := impl.RunCommand(cmd)
+	log.Println(util.DEVTRON, "url", url, "opt", output, "errMsg", errMsg, "error", err)
 	return err
 }
 
