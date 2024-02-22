@@ -266,6 +266,9 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 			dockerBuildConfig.BuildContext = ROOT_PATH
 		}
 		dockerBuildConfig.BuildContext = path.Join(ROOT_PATH, dockerBuildConfig.BuildContext)
+
+		dockerfilePath := getDockerfilePath(ciBuildConfig, ciRequest.CheckoutPath)
+
 		if useBuildx {
 			err := checkAndCreateDirectory(util.LOCAL_BUILDX_LOCATION)
 			if err != nil {
@@ -300,9 +303,9 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 				oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
 			}
 
-			dockerBuild = getBuildxBuildCommand(cacheEnabled, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig)
+			dockerBuild = getBuildxBuildCommand(cacheEnabled, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
 		} else {
-			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerBuildConfig.DockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
+			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
 		if envVars.ShowDockerBuildCmdInLogs {
 			log.Println("Starting docker build : ", dockerBuild)
@@ -361,8 +364,18 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 	return dest, nil
 }
 
-func getBuildxBuildCommand(cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig) string {
-	dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.DockerfilePath, dest, dockerBuildConfig.BuildContext)
+func getDockerfilePath(CiBuildConfig *CiBuildConfigBean, checkoutPath string) string {
+	var dockerFilePath string
+	if CiBuildConfig.CiBuildType == MANAGED_DOCKERFILE_BUILD_TYPE {
+		dockerFilePath = GetSelfManagedDockerfilePath(checkoutPath)
+	} else {
+		dockerFilePath = CiBuildConfig.DockerBuildConfig.DockerfilePath
+	}
+	return dockerFilePath
+}
+
+func getBuildxBuildCommand(cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) string {
+	dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerfilePath, dest, dockerBuildConfig.BuildContext)
 	if cacheEnabled {
 		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s", dockerBuild, localCachePath, oldCacheBuildxPath)
 	}
@@ -837,4 +850,8 @@ func ValidBuildxK8sDriverOptions(ciRequest *CommonWorkflowRequest) (bool, []map[
 		return ciRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildXK8sDriver()
 	}
 	return false, nil
+}
+
+func GetSelfManagedDockerfilePath(checkoutPath string) string {
+	return filepath.Join(util.WORKINGDIR, checkoutPath, "./Dockerfile")
 }

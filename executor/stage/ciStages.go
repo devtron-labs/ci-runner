@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -395,7 +394,7 @@ func extractOutResultsIfExists() (*helper.ImageDetailsFromCR, error) {
 }
 
 func makeDockerfile(config *helper.DockerBuildConfig, checkoutPath string) error {
-	dockerfilePath := filepath.Join(util.WORKINGDIR, checkoutPath, "./Dockerfile")
+	dockerfilePath := helper.GetSelfManagedDockerfilePath(checkoutPath)
 	dockerfileContent := config.DockerfileContent
 	f, err := os.Create(dockerfilePath)
 	if err != nil {
