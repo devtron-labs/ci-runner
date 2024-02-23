@@ -53,7 +53,7 @@ const (
 )
 
 type DockerHelper interface {
-	StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int, ciRunnerDockerMtuValue int)
+	StartDockerDaemon(dockerDaemonConfig *DockerDaemonConfig)
 	DockerLogin(dockerCredentials *DockerCredentials) error
 	BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error)
 }
@@ -65,9 +65,15 @@ func NewDockerHelperImpl() *DockerHelperImpl {
 	return &DockerHelperImpl{}
 }
 
-func (impl *DockerHelperImpl) StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int, ciRunnerDockerMtuValue int) {
-	connection := dockerConnection
-	registryUrl, err := util.ParseUrl(dockerRegistryUrl)
+type DockerDaemonConfig struct {
+	DockerConnection, DockerRegistryUrl, DockerCert, DefaultAddressPoolBaseCidr string
+	DefaultAddressPoolSize, CiRunnerDockerMtuValue                              int
+	ProxyEnv                                                                    []string
+}
+
+func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemonConfig) {
+	connection := dockerDaemonConfig.DockerConnection
+	registryUrl, err := util.ParseUrl(dockerDaemonConfig.DockerRegistryUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,14 +81,14 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerConnection, dockerRegistry
 	dockerdstart := ""
 	defaultAddressPoolFlag := ""
 	dockerMtuValueFlag := ""
-	if len(defaultAddressPoolBaseCidr) > 0 {
-		if defaultAddressPoolSize <= 0 {
-			defaultAddressPoolSize = 24
+	if len(dockerDaemonConfig.DefaultAddressPoolBaseCidr) > 0 {
+		if dockerDaemonConfig.DefaultAddressPoolSize <= 0 {
+			dockerDaemonConfig.DefaultAddressPoolSize = 24
 		}
-		defaultAddressPoolFlag = fmt.Sprintf("--default-address-pool base=%s,size=%d", defaultAddressPoolBaseCidr, defaultAddressPoolSize)
+		defaultAddressPoolFlag = fmt.Sprintf("--default-address-pool base=%s,size=%d", dockerDaemonConfig.DefaultAddressPoolBaseCidr, dockerDaemonConfig.DefaultAddressPoolSize)
 	}
-	if ciRunnerDockerMtuValue > 0 {
-		dockerMtuValueFlag = fmt.Sprintf("--mtu=%d", ciRunnerDockerMtuValue)
+	if dockerDaemonConfig.CiRunnerDockerMtuValue > 0 {
+		dockerMtuValueFlag = fmt.Sprintf("--mtu=%d", dockerDaemonConfig.CiRunnerDockerMtuValue)
 	}
 	if connection == util.INSECURE {
 		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, host, dockerMtuValueFlag)
@@ -98,7 +104,7 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerConnection, dockerRegistry
 
 			defer f.Close()
 
-			_, err2 := f.WriteString(dockerCert)
+			_, err2 := f.WriteString(dockerDaemonConfig.DockerCert)
 
 			if err2 != nil {
 				log.Fatal(err2)
