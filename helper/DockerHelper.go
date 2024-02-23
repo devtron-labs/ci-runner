@@ -52,7 +52,20 @@ const (
 	BUILDX_NODE_NAME       = "devtron-buildx-node-"
 )
 
-func StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int, ciRunnerDockerMtuValue int) {
+type DockerHelper interface {
+	StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int, ciRunnerDockerMtuValue int)
+	DockerLogin(dockerCredentials *DockerCredentials) error
+	BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error)
+}
+
+type DockerHelperImpl struct {
+}
+
+func NewDockerHelperImpl() *DockerHelperImpl {
+	return &DockerHelperImpl{}
+}
+
+func (impl *DockerHelperImpl) StartDockerDaemon(dockerConnection, dockerRegistryUrl, dockerCert, defaultAddressPoolBaseCidr string, defaultAddressPoolSize int, ciRunnerDockerMtuValue int) {
 	connection := dockerConnection
 	registryUrl, err := util.ParseUrl(dockerRegistryUrl)
 	if err != nil {
@@ -121,7 +134,7 @@ type EnvironmentVariables struct {
 	ShowDockerBuildCmdInLogs bool `env:"SHOW_DOCKER_BUILD_ARGS" envDefault:"true"`
 }
 
-func DockerLogin(dockerCredentials *DockerCredentials) error {
+func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) error {
 	username := dockerCredentials.DockerUsername
 	pwd := dockerCredentials.DockerPassword
 	if dockerCredentials.DockerRegistryType == DOCKER_REGISTRY_TYPE_ECR {
@@ -188,8 +201,8 @@ func DockerLogin(dockerCredentials *DockerCredentials) error {
 	log.Println("Docker login successful with username ", username, " on docker registry URL ", dockerCredentials.DockerRegistryURL)
 	return nil
 }
-func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
-	err := DockerLogin(&DockerCredentials{
+func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
+	err := impl.DockerLogin(&DockerCredentials{
 		DockerUsername:     ciRequest.DockerUsername,
 		DockerPassword:     ciRequest.DockerPassword,
 		AwsRegion:          ciRequest.AwsRegion,
