@@ -27,12 +27,14 @@ import (
 )
 
 type CdStage struct {
-	gitManager helper.GitManager
+	gitManager   helper.GitManager
+	dockerHelper helper.DockerHelper
 }
 
-func NewCdStage(gitManager helper.GitManager) *CdStage {
+func NewCdStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper) *CdStage {
 	return &CdStage{
-		gitManager: gitManager,
+		gitManager:   gitManager,
+		dockerHelper: dockerHelper,
 	}
 }
 
@@ -103,9 +105,17 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	log.Println(util.DEVTRON, " /git")
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
-	helper.StartDockerDaemon(cicdRequest.CommonWorkflowRequest.DockerConnection, cicdRequest.CommonWorkflowRequest.DockerRegistryURL, cicdRequest.CommonWorkflowRequest.DockerCert, cicdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr, cicdRequest.CommonWorkflowRequest.DefaultAddressPoolSize, -1)
+	dockerDaemonConfig := &helper.DockerDaemonConfig{
+		DockerConnection:           cicdRequest.CommonWorkflowRequest.DockerConnection,
+		DockerRegistryUrl:          cicdRequest.CommonWorkflowRequest.DockerRegistryURL,
+		DockerCert:                 cicdRequest.CommonWorkflowRequest.DockerCert,
+		DefaultAddressPoolBaseCidr: cicdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr,
+		DefaultAddressPoolSize:     cicdRequest.CommonWorkflowRequest.DefaultAddressPoolSize,
+		CiRunnerDockerMtuValue:     cicdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
+	}
+	impl.dockerHelper.StartDockerDaemon(dockerDaemonConfig)
 
-	err = helper.DockerLogin(&helper.DockerCredentials{
+	err = impl.dockerHelper.DockerLogin(&helper.DockerCredentials{
 		DockerUsername:     cicdRequest.CommonWorkflowRequest.DockerUsername,
 		DockerPassword:     cicdRequest.CommonWorkflowRequest.DockerPassword,
 		AwsRegion:          cicdRequest.CommonWorkflowRequest.AwsRegion,

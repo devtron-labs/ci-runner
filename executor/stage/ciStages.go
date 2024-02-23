@@ -98,11 +98,6 @@ const (
 	Scan   CiFailReason = "Image scan failed"
 )
 
-func (impl *CiStage) StartDockerDaemonWithConnectionConfigProvided(ciCdRequest *helper.CiCdTriggerEvent) {
-	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest.DockerConnection, ciCdRequest.CommonWorkflowRequest.DockerRegistryURL, ciCdRequest.CommonWorkflowRequest.DockerCert, ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolSize, ciCdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue)
-
-}
-
 func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
 
 	metrics := &helper.CIMetrics{}
@@ -154,8 +149,15 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-build")
-
-	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest.DockerConnection, ciCdRequest.CommonWorkflowRequest.DockerRegistryURL, ciCdRequest.CommonWorkflowRequest.DockerCert, ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolSize, ciCdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue)
+	dockerDaemonConfig := &helper.DockerDaemonConfig{
+		DockerConnection:           ciCdRequest.CommonWorkflowRequest.DockerConnection,
+		DockerRegistryUrl:          ciCdRequest.CommonWorkflowRequest.DockerRegistryURL,
+		DockerCert:                 ciCdRequest.CommonWorkflowRequest.DockerCert,
+		DefaultAddressPoolBaseCidr: ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr,
+		DefaultAddressPoolSize:     ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolSize,
+		CiRunnerDockerMtuValue:     ciCdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
+	}
+	impl.dockerHelper.StartDockerDaemon(dockerDaemonConfig)
 
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {

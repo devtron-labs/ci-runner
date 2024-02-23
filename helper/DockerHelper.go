@@ -69,6 +69,7 @@ type DockerDaemonConfig struct {
 	DockerConnection, DockerRegistryUrl, DockerCert, DefaultAddressPoolBaseCidr string
 	DefaultAddressPoolSize, CiRunnerDockerMtuValue                              int
 	ProxyEnv                                                                    []string
+	CiCdRequest                                                                 *CiCdTriggerEvent
 }
 
 func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemonConfig) {
@@ -113,7 +114,9 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemon
 		}
 		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 	}
-	out, err := exec.Command("/bin/sh", "-c", dockerdstart).CombinedOutput()
+	cmd := exec.Command("/bin/sh", "-c", dockerdstart)
+	cmd.Env = dockerDaemonConfig.ProxyEnv
+	out, err := cmd.CombinedOutput()
 	log.Println(string(out))
 	if err != nil {
 		log.Println("failed to start docker daemon")
