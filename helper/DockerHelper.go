@@ -312,7 +312,7 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 		} else {
 			log.Println("Docker build started..")
 		}
-		err = executeCmd(dockerBuild)
+		err = executeCmd(dockerBuild, ciRequest.ExtraEnvironmentVariables)
 		if err != nil {
 			return "", err
 		}
@@ -349,7 +349,7 @@ func BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 			}
 		}
 		log.Println(" -----> " + buildPackCmd)
-		err = executeCmd(buildPackCmd)
+		err = executeCmd(buildPackCmd, ciRequest.ExtraEnvironmentVariables)
 		if err != nil {
 			return "", err
 		}
@@ -445,13 +445,13 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 				if strings.TrimSpace(string(outputBytes)) == "null" {
 					tmpJsonFile := "./tmp.json"
 					versionUpdateCmd := fmt.Sprintf("jq '.engines.node = \"%s\"' %s >%s", languageVersion, finalPath, tmpJsonFile)
-					err := executeCmd(versionUpdateCmd)
+					err := executeCmd(versionUpdateCmd, nil)
 					if err != nil {
 						log.Println("error occurred while inserting node version", "err", err)
 						return
 					}
 					fileReplaceCmd := fmt.Sprintf("mv %s %s", tmpJsonFile, finalPath)
-					err = executeCmd(fileReplaceCmd)
+					err = executeCmd(fileReplaceCmd, nil)
 					if err != nil {
 						log.Println("error occurred while executing cmd ", fileReplaceCmd, "err", err)
 						return
@@ -465,8 +465,13 @@ func handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig)
 
 }
 
-func executeCmd(dockerBuild string) error {
+func executeCmd(dockerBuild string, envVars map[string]string) error {
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
+	if envVars != nil {
+		for key, value := range envVars {
+			dockerBuildCMD.Env = append(dockerBuildCMD.Env, fmt.Sprintf("%s=%s", key, value))
+		}
+	}
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
