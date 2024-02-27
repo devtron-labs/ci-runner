@@ -105,16 +105,7 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	log.Println(util.DEVTRON, " /git")
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
-	dockerDaemonConfig := &helper.DockerDaemonConfig{
-		DockerConnection:           cicdRequest.CommonWorkflowRequest.DockerConnection,
-		DockerRegistryUrl:          cicdRequest.CommonWorkflowRequest.DockerRegistryURL,
-		DockerCert:                 cicdRequest.CommonWorkflowRequest.DockerCert,
-		DefaultAddressPoolBaseCidr: cicdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr,
-		DefaultAddressPoolSize:     cicdRequest.CommonWorkflowRequest.DefaultAddressPoolSize,
-		CiRunnerDockerMtuValue:     cicdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
-	}
-	impl.dockerHelper.StartDockerDaemon(dockerDaemonConfig)
-
+	impl.dockerHelper.StartDockerDaemon(cicdRequest.CommonWorkflowRequest.DockerConnection, cicdRequest.CommonWorkflowRequest.DockerRegistryURL, cicdRequest.CommonWorkflowRequest.DockerCert, cicdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr, cicdRequest.CommonWorkflowRequest.DefaultAddressPoolSize, cicdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue)
 	err = impl.dockerHelper.DockerLogin(&helper.DockerCredentials{
 		DockerUsername:     cicdRequest.CommonWorkflowRequest.DockerUsername,
 		DockerPassword:     cicdRequest.CommonWorkflowRequest.DockerPassword,
@@ -179,7 +170,7 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		}
 		log.Println(util.DEVTRON, " /event")
 	}
-	err = helper.StopDocker()
+	err = impl.dockerHelper.StopDocker()
 	if err != nil {
 		log.Println("error while stopping docker", err)
 		return err

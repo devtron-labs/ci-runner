@@ -149,16 +149,7 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-build")
-	dockerDaemonConfig := &helper.DockerDaemonConfig{
-		DockerConnection:           ciCdRequest.CommonWorkflowRequest.DockerConnection,
-		DockerRegistryUrl:          ciCdRequest.CommonWorkflowRequest.DockerRegistryURL,
-		DockerCert:                 ciCdRequest.CommonWorkflowRequest.DockerCert,
-		DefaultAddressPoolBaseCidr: ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr,
-		DefaultAddressPoolSize:     ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolSize,
-		CiRunnerDockerMtuValue:     ciCdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
-	}
-	impl.dockerHelper.StartDockerDaemon(dockerDaemonConfig)
-	ciCdRequest = dockerDaemonConfig.CiCdRequest
+	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest.DockerConnection, ciCdRequest.CommonWorkflowRequest.DockerRegistryURL, ciCdRequest.CommonWorkflowRequest.DockerCert, ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolSize, ciCdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue)
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {
 		return artifactUploaded, err
@@ -244,7 +235,7 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 	}
 	log.Println(util.DEVTRON, " /event")
 
-	err = helper.StopDocker()
+	err = impl.dockerHelper.StopDocker()
 	if err != nil {
 		log.Println("err", err)
 		return artifactUploaded, err
@@ -306,19 +297,19 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 	return dest, err
 }
 
-func extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest string, metrics *helper.CIMetrics, artifactUploaded bool) (string, error) {
+func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest string, metrics *helper.CIMetrics, artifactUploaded bool) (string, error) {
 	ciBuildConfigBean := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
 	isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && ciBuildConfigBean.DockerBuildConfig.CheckForBuildX()
 	var digest string
 	var err error
 	if isBuildX {
-		digest, err = helper.ExtractDigestForBuildx(dest)
+		digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
 	} else {
 		util.LogStage("docker push")
 		// push to dest
 		log.Println(util.DEVTRON, "Docker push Artifact", "dest", dest)
-		pushArtifact(ciCdRequest, dest, digest, metrics, artifactUploaded)
-		digest, err = helper.ExtractDigestUsingPull(dest)
+		impl.pushArtifact(ciCdRequest, dest, digest, metrics, artifactUploaded)
+		digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
 	}
 	return digest, err
 }
@@ -360,7 +351,7 @@ func (impl *CiStage) getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent,
 	if err != nil {
 		return "", "", err
 	}
-	digest, err := extractDigest(ciCdRequest, dest, metrics, artifactUploaded)
+	digest, err := impl.extractDigest(ciCdRequest, dest, metrics, artifactUploaded)
 	if err != nil {
 		log.Println("Error in extracting digest", "err", err)
 		return "", "", err
@@ -425,7 +416,7 @@ func sendFailureNotification(failureMessage string, ciRequest *helper.CommonWork
 	return &helper.CiStageError{Err: err}
 }
 
-func pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest string, digest string, metrics *helper.CIMetrics, artifactUploaded bool) error {
+func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest string, digest string, metrics *helper.CIMetrics, artifactUploaded bool) error {
 	imageRetryCountValue := ciCdRequest.CommonWorkflowRequest.ImageRetryCount
 	imageRetryIntervalValue := ciCdRequest.CommonWorkflowRequest.ImageRetryInterval
 	var err error
@@ -433,7 +424,7 @@ func pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest string, digest stri
 		if i != 0 {
 			time.Sleep(time.Duration(imageRetryIntervalValue) * time.Second)
 		}
-		err = helper.PushArtifact(dest)
+		err = impl.dockerHelper.PushArtifact(dest)
 		if err == nil {
 			break
 		}
