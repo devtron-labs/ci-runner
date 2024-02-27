@@ -66,7 +66,7 @@ type DockerHelperImpl struct {
 	ProxyEnv []string
 }
 
-func NewDockerHelperImpl(proxyEnv []string) *DockerHelperImpl {
+func NewDockerHelperImpl() *DockerHelperImpl {
 	return &DockerHelperImpl{
 		ProxyEnv: make([]string, 0),
 	}
