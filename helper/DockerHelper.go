@@ -63,12 +63,12 @@ type DockerHelper interface {
 }
 
 type DockerHelperImpl struct {
-	proxyEnv []string
+	ProxyEnv []string
 }
 
 func NewDockerHelperImpl(proxyEnv []string) *DockerHelperImpl {
 	return &DockerHelperImpl{
-		proxyEnv: make([]string, 0),
+		ProxyEnv: make([]string, 0),
 	}
 }
 
@@ -76,6 +76,7 @@ type DockerDaemonConfig struct {
 	DockerConnection, DockerRegistryUrl, DockerCert, DefaultAddressPoolBaseCidr string
 	DefaultAddressPoolSize, CiRunnerDockerMtuValue                              int
 	RegistryConnectionConfig                                                    *bean.ServerConnectionConfigBean
+	CommonWorkflowRequest                                                       *CommonWorkflowRequest
 }
 
 func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemonConfig) {
@@ -121,7 +122,7 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemon
 		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 	}
 	cmd := exec.Command("/bin/sh", "-c", dockerdstart)
-	cmd.Env = impl.proxyEnv
+	cmd.Env = impl.ProxyEnv
 	out, err := cmd.CombinedOutput()
 	log.Println(string(out))
 	if err != nil {
@@ -208,7 +209,7 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 	}
 	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, dockerCredentials.DockerRegistryURL)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
-	awsLoginCmd.Env = impl.proxyEnv
+	awsLoginCmd.Env = impl.ProxyEnv
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
 		log.Println(err)
@@ -384,7 +385,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		}
 		builderRmCmdString := "docker image rm " + buildPackParams.BuilderId
 		builderRmCmd := exec.Command("/bin/sh", "-c", builderRmCmdString)
-		builderRmCmd.Env = impl.proxyEnv
+		builderRmCmd.Env = impl.ProxyEnv
 		err := builderRmCmd.Run()
 		if err != nil {
 			return "", err
@@ -497,7 +498,7 @@ func (impl *DockerHelperImpl) handleLanguageVersion(projectPath string, buildpac
 
 func (impl *DockerHelperImpl) executeCmd(dockerBuild string) error {
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
-	dockerBuildCMD.Env = impl.proxyEnv
+	dockerBuildCMD.Env = impl.ProxyEnv
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
@@ -509,7 +510,7 @@ func (impl *DockerHelperImpl) tagDockerBuild(dockerRepository string, dest strin
 	dockerTag := "docker tag " + dockerRepository + ":latest" + " " + dest
 	log.Println(" -----> " + dockerTag)
 	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
-	dockerTagCMD.Env = impl.proxyEnv
+	dockerTagCMD.Env = impl.ProxyEnv
 	err := util.RunCommand(dockerTagCMD)
 	if err != nil {
 		log.Println(err)
@@ -549,7 +550,7 @@ func (impl *DockerHelperImpl) createBuildxBuilder() error {
 	multiPlatformCmd := "docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'"
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
-	dockerBuildCMD.Env = impl.proxyEnv
+	dockerBuildCMD.Env = impl.ProxyEnv
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
@@ -562,7 +563,7 @@ func (impl *DockerHelperImpl) installAllSupportedPlatforms() error {
 	multiPlatformCmd := "docker run --privileged --rm quay.io/devtron/binfmt:stable --install all"
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
-	dockerBuildCMD.Env = impl.proxyEnv
+	dockerBuildCMD.Env = impl.ProxyEnv
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
@@ -604,7 +605,7 @@ func (impl *DockerHelperImpl) PushArtifact(dest string) error {
 	dockerPush := "docker push " + dest
 	log.Println("-----> " + dockerPush)
 	dockerPushCMD := exec.Command("/bin/sh", "-c", dockerPush)
-	dockerPushCMD.Env = impl.proxyEnv
+	dockerPushCMD.Env = impl.ProxyEnv
 	err := util.RunCommand(dockerPushCMD)
 	if err != nil {
 		log.Println(err)
@@ -638,7 +639,7 @@ func (impl *DockerHelperImpl) ExtractDigestForBuildx(dest string) (string, error
 func (impl *DockerHelperImpl) ExtractDigestUsingPull(dest string) (string, error) {
 	dockerPull := "docker pull " + dest
 	dockerPullCmd := exec.Command("/bin/sh", "-c", dockerPull)
-	dockerPullCmd.Env = impl.proxyEnv
+	dockerPullCmd.Env = impl.ProxyEnv
 	digest, err := runGetDockerImageDigest(dockerPullCmd)
 	if err != nil {
 		log.Println(err)
@@ -769,7 +770,7 @@ func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	builderCreateCmd := exec.Command("/bin/sh", "-c", cmd)
 	errBuf := &bytes.Buffer{}
 	builderCreateCmd.Stderr = errBuf
-	builderCreateCmd.Env = impl.proxyEnv
+	builderCreateCmd.Env = impl.ProxyEnv
 	err := builderCreateCmd.Run()
 	return err, errBuf
 }
@@ -795,7 +796,7 @@ func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflo
 
 func (impl *DockerHelperImpl) StopDocker() error {
 	cmd := exec.Command("docker", "ps", "-a", "-q")
-	cmd.Env = impl.proxyEnv
+	cmd.Env = impl.ProxyEnv
 	out, err := cmd.Output()
 	if err != nil {
 		return err
@@ -804,7 +805,7 @@ func (impl *DockerHelperImpl) StopDocker() error {
 		stopCmdS := "docker stop -t 5 $(docker ps -a -q)"
 		log.Println(util.DEVTRON, " -----> stopping docker container")
 		stopCmd := exec.Command("/bin/sh", "-c", stopCmdS)
-		stopCmd.Env = impl.proxyEnv
+		stopCmd.Env = impl.ProxyEnv
 		err := util.RunCommand(stopCmd)
 		log.Println(util.DEVTRON, " -----> stopped docker container")
 		if err != nil {
@@ -814,7 +815,7 @@ func (impl *DockerHelperImpl) StopDocker() error {
 		removeContainerCmds := "docker rm -v -f $(docker ps -a -q)"
 		log.Println(util.DEVTRON, " -----> removing docker container")
 		removeContainerCmd := exec.Command("/bin/sh", "-c", removeContainerCmds)
-		removeContainerCmd.Env = impl.proxyEnv
+		removeContainerCmd.Env = impl.ProxyEnv
 		err = util.RunCommand(removeContainerCmd)
 		log.Println(util.DEVTRON, " -----> removed docker container")
 		if err != nil {
@@ -881,7 +882,7 @@ func (impl *DockerHelperImpl) waitForDockerDaemon(retryCount int) error {
 func (impl *DockerHelperImpl) DockerdUpCheck() error {
 	dockerCheck := "docker ps"
 	dockerCheckCmd := exec.Command("/bin/sh", "-c", dockerCheck)
-	dockerCheckCmd.Env = impl.proxyEnv
+	dockerCheckCmd.Env = impl.ProxyEnv
 	err := dockerCheckCmd.Run()
 	return err
 }

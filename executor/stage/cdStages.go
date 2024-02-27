@@ -105,7 +105,17 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	log.Println(util.DEVTRON, " /git")
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
-	impl.dockerHelper.StartDockerDaemon(cicdRequest.CommonWorkflowRequest.DockerConnection, cicdRequest.CommonWorkflowRequest.DockerRegistryURL, cicdRequest.CommonWorkflowRequest.DockerCert, cicdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr, cicdRequest.CommonWorkflowRequest.DefaultAddressPoolSize, cicdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue)
+	dockerDaemonConfig := &helper.DockerDaemonConfig{
+		DockerConnection:           cicdRequest.CommonWorkflowRequest.DockerConnection,
+		DockerRegistryUrl:          cicdRequest.CommonWorkflowRequest.DockerRegistryURL,
+		DockerCert:                 cicdRequest.CommonWorkflowRequest.DockerCert,
+		DefaultAddressPoolBaseCidr: cicdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr,
+		DefaultAddressPoolSize:     cicdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
+		CiRunnerDockerMtuValue:     cicdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
+		RegistryConnectionConfig:   cicdRequest.CommonWorkflowRequest.DockerRegistryConnectionConfig,
+		CommonWorkflowRequest:      cicdRequest.CommonWorkflowRequest,
+	}
+	impl.dockerHelper.StartDockerDaemon(dockerDaemonConfig)
 	err = impl.dockerHelper.DockerLogin(&helper.DockerCredentials{
 		DockerUsername:     cicdRequest.CommonWorkflowRequest.DockerUsername,
 		DockerPassword:     cicdRequest.CommonWorkflowRequest.DockerPassword,
