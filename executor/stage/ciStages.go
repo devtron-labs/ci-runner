@@ -158,7 +158,7 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 		CiRunnerDockerMtuValue:     ciCdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
 	}
 	impl.dockerHelper.StartDockerDaemon(dockerDaemonConfig)
-
+	ciCdRequest = dockerDaemonConfig.CiCdRequest
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {
 		return artifactUploaded, err

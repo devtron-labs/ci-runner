@@ -137,6 +137,7 @@ const JSON_KEY_USERNAME = "_json_key"
 
 type DockerCredentials struct {
 	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType string
+	ProxyEnv                                                                                               []string
 }
 
 type EnvironmentVariables struct {
@@ -202,6 +203,7 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 	}
 	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, dockerCredentials.DockerRegistryURL)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
+	awsLoginCmd.Env = dockerCredentials.ProxyEnv
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
 		log.Println(err)
@@ -210,7 +212,8 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 	log.Println("Docker login successful with username ", username, " on docker registry URL ", dockerCredentials.DockerRegistryURL)
 	return nil
 }
-func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
+func (impl *DockerHelperImpl) BuildArtifact(config *DockerDaemonConfig) (string, error) {
+	ciRequest := config.CiCdRequest.CommonWorkflowRequest
 	err := impl.DockerLogin(&DockerCredentials{
 		DockerUsername:     ciRequest.DockerUsername,
 		DockerPassword:     ciRequest.DockerPassword,
@@ -219,6 +222,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		SecretKey:          ciRequest.SecretKey,
 		DockerRegistryURL:  ciRequest.DockerRegistryURL,
 		DockerRegistryType: ciRequest.DockerRegistryType,
+		ProxyEnv:           config.ProxyEnv,
 	})
 	if err != nil {
 		return "", err
