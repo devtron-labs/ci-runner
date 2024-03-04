@@ -60,6 +60,7 @@ type DockerHelper interface {
 	StopDocker() error
 	PushArtifact(dest string) error
 	ExtractDigestForBuildx(dest string) (string, error)
+	CleanBuildxK8sDriver(nodes []map[string]string) error
 }
 
 type DockerHelperImpl struct {

@@ -16,14 +16,16 @@ import (
 )
 
 type AppHelper struct {
-	ciStage *stage.CiStage
-	cdStage *stage.CdStage
+	ciStage      *stage.CiStage
+	cdStage      *stage.CdStage
+	dockerHelper helper.DockerHelper
 }
 
-func NewAppHelper(ciStage *stage.CiStage, cdStage *stage.CdStage) *AppHelper {
+func NewAppHelper(ciStage *stage.CiStage, cdStage *stage.CdStage, dockerHelper helper.DockerHelper) *AppHelper {
 	return &AppHelper{
-		ciStage: ciStage,
-		cdStage: cdStage,
+		ciStage:      ciStage,
+		cdStage:      cdStage,
+		dockerHelper: dockerHelper,
 	}
 }
 
@@ -83,7 +85,7 @@ func (impl *AppHelper) CleanUpBuildxK8sDriver(ciCdRequest helper.CiCdTriggerEven
 	defer wg.Done()
 	if valid, eligibleBuildxK8sDriverNodes := helper.ValidBuildxK8sDriverOptions(ciCdRequest.CommonWorkflowRequest); valid {
 		log.Println(util.DEVTRON, "starting buildx k8s driver clean up ,before terminating ci-runner")
-		err := helper.CleanBuildxK8sDriver(eligibleBuildxK8sDriverNodes)
+		err := impl.dockerHelper.CleanBuildxK8sDriver(eligibleBuildxK8sDriverNodes)
 		if err != nil {
 			log.Println(util.DEVTRON, "error in cleaning up buildx K8s driver, err : ", err)
 		}
