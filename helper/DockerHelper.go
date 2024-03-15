@@ -65,88 +65,6 @@ type DockerHelper interface {
 
 type DockerHelperImpl struct{}
 
-const daemonJSONPath = "/etc/docker/daemon.json" // Update this with the correct path
-
-type DockerConfig struct {
-	InsecureRegistries []string `json:"insecure-registries"`
-}
-
-func readOrCreateDaemonConfig(path string) (*DockerConfig, error) {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		log.Println("error occurred while creating directory", "err", err)
-		return nil, err
-	}
-
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		log.Println("error occurred while creating/opening file", "err", err)
-		return nil, err
-	}
-	defer file.Close()
-
-	bytes, err := ioutil.ReadAll(file)
-	if err != nil {
-		log.Println("error occurred while reading file", "err", err)
-		return nil, err
-	}
-
-	var config DockerConfig
-	if len(bytes) == 0 {
-		config = DockerConfig{
-			InsecureRegistries: []string{},
-		}
-		defaultBytes, err := json.MarshalIndent(config, "", "  ")
-		if err != nil {
-			log.Println("error occurred while marshalling default configuration", "err", err)
-			return nil, err
-		}
-		if _, err := file.Write(defaultBytes); err != nil {
-			log.Println("error occurred while writing default configuration to file", "err", err)
-			return nil, err
-		}
-		if _, err := file.Seek(0, 0); err != nil {
-			log.Println("error occurred while resetting file cursor", "err", err)
-			return nil, err
-		}
-		bytes = defaultBytes
-	}
-	err = json.Unmarshal(bytes, &config)
-	if err != nil {
-		log.Println("error occurred while unmarshalling", "err", err, "bytes", string(bytes))
-		return nil, err
-	}
-	return &config, nil
-}
-
-func writeDaemonConfig(path string, config *DockerConfig) error {
-	bytes, err := json.MarshalIndent(config, "", "  ")
-	if err != nil {
-		log.Println("error occured while marshaling indent", "err", err)
-		return err
-	}
-	err = ioutil.WriteFile(path, bytes, 0644)
-	if err != nil {
-		log.Println("error occured while writing file", "err", err)
-		return err
-	}
-	return nil
-}
-
-func (impl *DockerHelperImpl) addInsecureRegistry(insecureRegistry string) {
-	config, err := readOrCreateDaemonConfig(daemonJSONPath)
-	if err != nil {
-		log.Println("error occured while creating/opening file", "err", err)
-		panic(err)
-	}
-	config.InsecureRegistries = append(config.InsecureRegistries, insecureRegistry)
-	err = writeDaemonConfig(daemonJSONPath, config)
-	if err != nil {
-		log.Println("error occured while writing file", "err", err)
-		panic(err)
-	}
-}
-
 func NewDockerHelperImpl() *DockerHelperImpl {
 	return &DockerHelperImpl{}
 }
@@ -182,8 +100,7 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemon
 		dockerMtuValueFlag = fmt.Sprintf("--mtu=%d", dockerDaemonConfig.CiRunnerDockerMtuValue)
 	}
 	if connection == util.INSECURE {
-		impl.addInsecureRegistry(dockerDaemonConfig.DockerRegistryUrl)
-		dockerdstart = fmt.Sprintf("dockerd  %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
+		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, host, dockerMtuValueFlag)
 		util.LogStage("Insecure Registry")
 	} else {
 		if connection == util.SECUREWITHCERT {
