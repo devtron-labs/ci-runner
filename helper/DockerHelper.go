@@ -63,24 +63,16 @@ type DockerHelper interface {
 	CleanBuildxK8sDriver(nodes []map[string]string) error
 }
 
-type DockerHelperImpl struct {
-	ProxyEnv []string
-}
+type DockerHelperImpl struct{}
 
 const daemonJSONPath = "/etc/docker/daemon.json" // Update this with the correct path
-//const daemonJSONPath = "Users/ashish/.docker/daemon.json"
 
 type DockerConfig struct {
 	InsecureRegistries []string `json:"insecure-registries"`
 }
 
 func readOrCreateDaemonConfig(path string) (*DockerConfig, error) {
-	log.Println("reading started..........")
-
-	// Extract the directory from the given path
 	dir := filepath.Dir(path)
-
-	// Create the directory if it doesn't exist
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		log.Println("error occurred while creating directory", "err", err)
 		return nil, err
@@ -100,42 +92,30 @@ func readOrCreateDaemonConfig(path string) (*DockerConfig, error) {
 	}
 
 	var config DockerConfig
-
-	// If file is empty, create a default configuration with insecure-registries field
 	if len(bytes) == 0 {
 		config = DockerConfig{
 			InsecureRegistries: []string{},
-			// Add other default fields as needed
 		}
-
-		// Marshal the default configuration and write it to the file
 		defaultBytes, err := json.MarshalIndent(config, "", "  ")
 		if err != nil {
 			log.Println("error occurred while marshalling default configuration", "err", err)
 			return nil, err
 		}
-
 		if _, err := file.Write(defaultBytes); err != nil {
 			log.Println("error occurred while writing default configuration to file", "err", err)
 			return nil, err
 		}
-
-		// Reset file cursor to the beginning for subsequent reading
 		if _, err := file.Seek(0, 0); err != nil {
 			log.Println("error occurred while resetting file cursor", "err", err)
 			return nil, err
 		}
-
-		// Update bytes to contain the default configuration
 		bytes = defaultBytes
 	}
-
 	err = json.Unmarshal(bytes, &config)
 	if err != nil {
 		log.Println("error occurred while unmarshalling", "err", err, "bytes", string(bytes))
 		return nil, err
 	}
-
 	return &config, nil
 }
 
@@ -145,58 +125,46 @@ func writeDaemonConfig(path string, config *DockerConfig) error {
 		log.Println("error occured while marshaling indent", "err", err)
 		return err
 	}
-
 	err = ioutil.WriteFile(path, bytes, 0644)
 	if err != nil {
 		log.Println("error occured while writing file", "err", err)
 		return err
 	}
-
 	return nil
 }
 
 func (impl *DockerHelperImpl) addInsecureRegistry(insecureRegistry string) {
-	//insecureRegistry := "proxy-docker.devtron.info:5000"
-	log.Println("adding insecure registry. started....")
-	// Read existing daemon.json file
 	config, err := readOrCreateDaemonConfig(daemonJSONPath)
 	if err != nil {
 		log.Println("error occured while creating/opening file", "err", err)
 		panic(err)
 	}
-
-	log.Println("read successful............")
-
-	// Add the insecure registry to the config
 	config.InsecureRegistries = append(config.InsecureRegistries, insecureRegistry)
-
-	log.Println("append successfull..........")
-
-	// Write the updated config back to daemon.json
 	err = writeDaemonConfig(daemonJSONPath, config)
 	if err != nil {
 		log.Println("error occured while writing file", "err", err)
 		panic(err)
 	}
-	log.Println("added insecure registry, write successfull...........")
 }
 
 func NewDockerHelperImpl() *DockerHelperImpl {
-	return &DockerHelperImpl{
-		ProxyEnv: make([]string, 0),
-	}
+	return &DockerHelperImpl{}
 }
 
 type DockerDaemonConfig struct {
-	DockerConnection, DockerRegistryUrl, DockerCert, DefaultAddressPoolBaseCidr string
-	DefaultAddressPoolSize, CiRunnerDockerMtuValue                              int
-	RegistryConnectionConfig                                                    *bean.ServerConnectionConfigBean
-	CommonWorkflowRequest                                                       *CommonWorkflowRequest
+	DockerConnection, DockerRegistryUrl, TunnelUrl, DockerCert, DefaultAddressPoolBaseCidr string
+	DefaultAddressPoolSize, CiRunnerDockerMtuValue                                         int
+	RegistryConnectionConfig                                                               *bean.ServerConnectionConfigBean
+	CommonWorkflowRequest                                                                  *CommonWorkflowRequest
 }
 
 func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemonConfig) {
 	connection := dockerDaemonConfig.DockerConnection
-	registryUrl, err := util.ParseUrl(dockerDaemonConfig.DockerRegistryUrl)
+	dockerRegistryUrl := dockerDaemonConfig.DockerRegistryUrl
+	if len(dockerDaemonConfig.TunnelUrl) > 0 {
+		dockerRegistryUrl = dockerDaemonConfig.TunnelUrl
+	}
+	registryUrl, err := util.ParseUrl(dockerRegistryUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -238,7 +206,6 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemon
 		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 	}
 	cmd := exec.Command("/bin/sh", "-c", dockerdstart)
-	//cmd.Env = impl.ProxyEnv
 	out, err := cmd.CombinedOutput()
 	log.Println(string(out))
 	if err != nil {
@@ -259,7 +226,7 @@ const REGISTRY_TYPE_GCR = "gcr"
 const JSON_KEY_USERNAME = "_json_key"
 
 type DockerCredentials struct {
-	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType string
+	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, TunnelUrl, DockerRegistryType string
 }
 
 type EnvironmentVariables struct {
@@ -323,9 +290,12 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 			pwd = pwd[:len(pwd)-1]
 		}
 	}
-	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, dockerCredentials.DockerRegistryURL)
+	host := dockerCredentials.DockerRegistryURL
+	if len(dockerCredentials.TunnelUrl) > 0 {
+		host = dockerCredentials.TunnelUrl
+	}
+	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, host)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
-	//awsLoginCmd.Env = impl.ProxyEnv
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
 		log.Println(err)
@@ -343,6 +313,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		SecretKey:          ciRequest.SecretKey,
 		DockerRegistryURL:  ciRequest.DockerRegistryURL,
 		DockerRegistryType: ciRequest.DockerRegistryType,
+		TunnelUrl:          ciRequest.TunnelUrl,
 	})
 	if err != nil {
 		return "", err
@@ -501,7 +472,6 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		}
 		builderRmCmdString := "docker image rm " + buildPackParams.BuilderId
 		builderRmCmd := exec.Command("/bin/sh", "-c", builderRmCmdString)
-		//builderRmCmd.Env = impl.ProxyEnv
 		err := builderRmCmd.Run()
 		if err != nil {
 			return "", err
@@ -614,7 +584,6 @@ func (impl *DockerHelperImpl) handleLanguageVersion(projectPath string, buildpac
 
 func (impl *DockerHelperImpl) executeCmd(dockerBuild string) error {
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
-	//dockerBuildCMD.Env = impl.ProxyEnv
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
@@ -626,7 +595,6 @@ func (impl *DockerHelperImpl) tagDockerBuild(dockerRepository string, dest strin
 	dockerTag := "docker tag " + dockerRepository + ":latest" + " " + dest
 	log.Println(" -----> " + dockerTag)
 	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
-	//dockerTagCMD.Env = impl.ProxyEnv
 	err := util.RunCommand(dockerTagCMD)
 	if err != nil {
 		log.Println(err)
@@ -666,7 +634,6 @@ func (impl *DockerHelperImpl) createBuildxBuilder() error {
 	multiPlatformCmd := "docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'"
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
-	//dockerBuildCMD.Env = impl.ProxyEnv
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
@@ -679,7 +646,6 @@ func (impl *DockerHelperImpl) installAllSupportedPlatforms() error {
 	multiPlatformCmd := "docker run --privileged --rm quay.io/devtron/binfmt:stable --install all"
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
-	//dockerBuildCMD.Env = impl.ProxyEnv
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
@@ -704,7 +670,11 @@ func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
 	if DOCKER_REGISTRY_TYPE_DOCKERHUB == ciRequest.DockerRegistryType {
 		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
 	} else {
-		u, err := util.ParseUrl(ciRequest.DockerRegistryURL)
+		registryUrl := ciRequest.DockerRegistryURL
+		if len(ciRequest.TunnelUrl) > 0 {
+			registryUrl = ciRequest.TunnelUrl
+		}
+		u, err := util.ParseUrl(registryUrl)
 		if err != nil {
 			log.Println("not a valid docker repository url")
 			return "", err
@@ -721,7 +691,6 @@ func (impl *DockerHelperImpl) PushArtifact(dest string) error {
 	dockerPush := "docker push " + dest
 	log.Println("-----> " + dockerPush)
 	dockerPushCMD := exec.Command("/bin/sh", "-c", dockerPush)
-	//dockerPushCMD.Env = impl.ProxyEnv
 	err := util.RunCommand(dockerPushCMD)
 	if err != nil {
 		log.Println(err)
@@ -755,7 +724,6 @@ func (impl *DockerHelperImpl) ExtractDigestForBuildx(dest string) (string, error
 func (impl *DockerHelperImpl) ExtractDigestUsingPull(dest string) (string, error) {
 	dockerPull := "docker pull " + dest
 	dockerPullCmd := exec.Command("/bin/sh", "-c", dockerPull)
-	//dockerPullCmd.Env = impl.ProxyEnv
 	digest, err := runGetDockerImageDigest(dockerPullCmd)
 	if err != nil {
 		log.Println(err)
@@ -886,7 +854,6 @@ func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	builderCreateCmd := exec.Command("/bin/sh", "-c", cmd)
 	errBuf := &bytes.Buffer{}
 	builderCreateCmd.Stderr = errBuf
-	//builderCreateCmd.Env = impl.ProxyEnv
 	err := builderCreateCmd.Run()
 	return err, errBuf
 }
@@ -912,7 +879,6 @@ func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflo
 
 func (impl *DockerHelperImpl) StopDocker() error {
 	cmd := exec.Command("docker", "ps", "-a", "-q")
-	//cmd.Env = impl.ProxyEnv
 	out, err := cmd.Output()
 	if err != nil {
 		return err
@@ -921,7 +887,6 @@ func (impl *DockerHelperImpl) StopDocker() error {
 		stopCmdS := "docker stop -t 5 $(docker ps -a -q)"
 		log.Println(util.DEVTRON, " -----> stopping docker container")
 		stopCmd := exec.Command("/bin/sh", "-c", stopCmdS)
-		//stopCmd.Env = impl.ProxyEnv
 		err := util.RunCommand(stopCmd)
 		log.Println(util.DEVTRON, " -----> stopped docker container")
 		if err != nil {
@@ -931,7 +896,6 @@ func (impl *DockerHelperImpl) StopDocker() error {
 		removeContainerCmds := "docker rm -v -f $(docker ps -a -q)"
 		log.Println(util.DEVTRON, " -----> removing docker container")
 		removeContainerCmd := exec.Command("/bin/sh", "-c", removeContainerCmds)
-		//removeContainerCmd.Env = impl.ProxyEnv
 		err = util.RunCommand(removeContainerCmd)
 		log.Println(util.DEVTRON, " -----> removed docker container")
 		if err != nil {
@@ -998,7 +962,6 @@ func (impl *DockerHelperImpl) waitForDockerDaemon(retryCount int) error {
 func (impl *DockerHelperImpl) DockerdUpCheck() error {
 	dockerCheck := "docker ps"
 	dockerCheckCmd := exec.Command("/bin/sh", "-c", dockerCheck)
-	//dockerCheckCmd.Env = impl.ProxyEnv
 	err := dockerCheckCmd.Run()
 	return err
 }

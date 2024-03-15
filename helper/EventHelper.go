@@ -97,6 +97,7 @@ type CommonWorkflowRequest struct {
 	DockerRegistryId               string                            `json:"dockerRegistryId"`
 	DockerRegistryType             string                            `json:"dockerRegistryType"`
 	DockerRegistryURL              string                            `json:"dockerRegistryURL"`
+	TunnelUrl                      string                            `json:"-"`
 	DockerRegistryConnectionConfig *bean.ServerConnectionConfigBean  `json:"dockerRegistryConnectionConfig"`
 	DockerConnection               string                            `json:"dockerConnection"`
 	DockerCert                     string                            `json:"dockerCert"`
@@ -586,6 +587,8 @@ type ScanEvent struct {
 	Token                  string                           `json:"token"`
 	AwsRegion              string                           `json:"awsRegion"`
 	DockerRegistryId       string                           `json:"dockerRegistryId"`
+	DockerUsername         string                           `json:"dockerUsername"`
+	DockerPassword         string                           `json:"dockerPassword"`
 	ServerConnectionConfig *bean.ServerConnectionConfigBean `json:"serverConnectionConfig"`
 	ImageScanMaxRetries    int                              `json:"imageScanMaxRetries,omitempty"`
 	ImageScanRetryDelay    int                              `json:"imageScanRetryDelay,omitempty"`
