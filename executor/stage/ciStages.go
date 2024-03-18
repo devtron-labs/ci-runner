@@ -230,7 +230,7 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 	log.Println(util.DEVTRON, " /artifact-upload")
 
 	if ciCdRequest.CommonWorkflowRequest.DockerRegistryConnectionConfig != nil &&
-		len(ciCdRequest.CommonWorkflowRequest.DockerRegistryConnectionConfig.ConnectionMethod) == 0 {
+		len(ciCdRequest.CommonWorkflowRequest.DockerRegistryConnectionConfig.ConnectionMethod) != 0 {
 		destSplit := strings.Split(dest, "/")
 		registryUrl, err := url.ParseRequestURI(ciCdRequest.CommonWorkflowRequest.DockerRegistryURL)
 		if err != nil {
