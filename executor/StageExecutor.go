@@ -67,6 +67,9 @@ func RunCiCdSteps(stepType StepType, steps []*helper.StepObject, refStageMap map
 				emptyVariableList = append(emptyVariableList, v.Name)
 			}
 		}
+		for key, value := range globalEnvironmentVariables {
+			scriptEnvs[key] = value
+		}
 		if stepType == STEP_TYPE_PRE || stepType == STEP_TYPE_POST {
 			log.Println(fmt.Sprintf("variables with empty value : %v", emptyVariableList))
 		}
