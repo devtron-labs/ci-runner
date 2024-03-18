@@ -229,6 +229,16 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 	//}
 	log.Println(util.DEVTRON, " /artifact-upload")
 
+	if ciCdRequest.CommonWorkflowRequest.DockerRegistryConnectionConfig != nil &&
+		len(ciCdRequest.CommonWorkflowRequest.DockerRegistryConnectionConfig.ConnectionMethod) == 0 {
+		destSplit := strings.Split(dest, "/")
+		registryUrl, err := url.ParseRequestURI(ciCdRequest.CommonWorkflowRequest.DockerRegistryURL)
+		if err != nil {
+			return artifactUploaded, err
+		}
+		destSplit[0] = registryUrl.Hostname() + ":" + registryUrl.Port()
+		dest = strings.Join(destSplit, "/")
+	}
 	// scan only if ci scan enabled
 	if ciCdRequest.CommonWorkflowRequest.ScanEnabled {
 		err = runImageScanning(dest, digest, ciCdRequest, metrics, artifactUploaded)
@@ -239,14 +249,6 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 
 	log.Println(util.DEVTRON, " event")
 	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
-
-	destSplit := strings.Split(dest, "/")
-	registryUrl, err := url.ParseRequestURI(ciCdRequest.CommonWorkflowRequest.DockerRegistryURL)
-	if err != nil {
-		return artifactUploaded, err
-	}
-	destSplit[0] = registryUrl.Hostname() + ":" + registryUrl.Port()
-	dest = strings.Join(destSplit, "/")
 
 	err = helper.SendEvents(ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, "", resultsFromPlugin)
 	if err != nil {
