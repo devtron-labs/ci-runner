@@ -122,11 +122,11 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemon
 	cmd := exec.Command("/bin/sh", "-c", dockerdstart)
 	cmd.Env = append(cmd.Env, impl.ProxyEnv...)
 	out, err := cmd.CombinedOutput()
-	log.Println(string(out))
 	if err != nil {
 		log.Println("failed to start docker daemon")
 		log.Fatal(err)
 	}
+	log.Println("docker daemon started ", string(out))
 	err = impl.waitForDockerDaemon(util.DOCKER_PS_START_WAIT_SECONDS)
 	if err != nil {
 		log.Fatal("failed to start docker demon", err)
@@ -210,6 +210,7 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 	//	host = dockerCredentials.TunnelUrl
 	//}
 	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, host)
+	log.Println("Docker login command ", dockerLogin)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
 	awsLoginCmd.Env = append(awsLoginCmd.Env, impl.ProxyEnv...)
 	err := util.RunCommand(awsLoginCmd)
