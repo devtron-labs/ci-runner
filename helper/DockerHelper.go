@@ -62,7 +62,9 @@ type DockerHelper interface {
 	CleanBuildxK8sDriver(nodes []map[string]string) error
 }
 
-type DockerHelperImpl struct{}
+type DockerHelperImpl struct {
+	ProxyEnv []string
+}
 
 func NewDockerHelperImpl() *DockerHelperImpl {
 	return &DockerHelperImpl{}
@@ -118,6 +120,7 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemon
 		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 	}
 	cmd := exec.Command("/bin/sh", "-c", dockerdstart)
+	cmd.Env = append(cmd.Env, impl.ProxyEnv...)
 	out, err := cmd.CombinedOutput()
 	log.Println(string(out))
 	if err != nil {
@@ -203,11 +206,12 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 		}
 	}
 	host := dockerCredentials.DockerRegistryURL
-	if len(dockerCredentials.TunnelUrl) > 0 {
-		host = dockerCredentials.TunnelUrl
-	}
+	//if len(dockerCredentials.TunnelUrl) > 0 {
+	//	host = dockerCredentials.TunnelUrl
+	//}
 	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, host)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
+	awsLoginCmd.Env = append(awsLoginCmd.Env, impl.ProxyEnv...)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
 		log.Println(err)
@@ -496,6 +500,7 @@ func (impl *DockerHelperImpl) handleLanguageVersion(projectPath string, buildpac
 
 func (impl *DockerHelperImpl) executeCmd(dockerBuild string) error {
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
+	dockerBuildCMD.Env = append(dockerBuildCMD.Env, impl.ProxyEnv...)
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
@@ -583,9 +588,9 @@ func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
 		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
 	} else {
 		registryUrl := ciRequest.DockerRegistryURL
-		if len(ciRequest.TunnelUrl) > 0 {
-			registryUrl = ciRequest.TunnelUrl
-		}
+		//if len(ciRequest.TunnelUrl) > 0 {
+		//	registryUrl = ciRequest.TunnelUrl
+		//}
 		u, err := util.ParseUrl(registryUrl)
 		if err != nil {
 			log.Println("not a valid docker repository url")
@@ -603,6 +608,7 @@ func (impl *DockerHelperImpl) PushArtifact(dest string) error {
 	dockerPush := "docker push " + dest
 	log.Println("-----> " + dockerPush)
 	dockerPushCMD := exec.Command("/bin/sh", "-c", dockerPush)
+	dockerPushCMD.Env = append(dockerPushCMD.Env, impl.ProxyEnv...)
 	err := util.RunCommand(dockerPushCMD)
 	if err != nil {
 		log.Println(err)
@@ -636,6 +642,7 @@ func (impl *DockerHelperImpl) ExtractDigestForBuildx(dest string) (string, error
 func (impl *DockerHelperImpl) ExtractDigestUsingPull(dest string) (string, error) {
 	dockerPull := "docker pull " + dest
 	dockerPullCmd := exec.Command("/bin/sh", "-c", dockerPull)
+	dockerPullCmd.Env = append(dockerPullCmd.Env, impl.ProxyEnv...)
 	digest, err := runGetDockerImageDigest(dockerPullCmd)
 	if err != nil {
 		log.Println(err)
@@ -766,6 +773,7 @@ func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	builderCreateCmd := exec.Command("/bin/sh", "-c", cmd)
 	errBuf := &bytes.Buffer{}
 	builderCreateCmd.Stderr = errBuf
+	builderCreateCmd.Env = append(builderCreateCmd.Env, impl.ProxyEnv...)
 	err := builderCreateCmd.Run()
 	return err, errBuf
 }
