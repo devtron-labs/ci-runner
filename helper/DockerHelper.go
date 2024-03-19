@@ -120,7 +120,7 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemon
 		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 	}
 	cmd := exec.Command("/bin/sh", "-c", dockerdstart)
-	//cmd.Env = append(cmd.Env, impl.ProxyEnv...)
+	cmd.Env = append(cmd.Env, impl.ProxyEnv...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Println("failed to start docker daemon")
@@ -141,7 +141,7 @@ const REGISTRY_TYPE_GCR = "gcr"
 const JSON_KEY_USERNAME = "_json_key"
 
 type DockerCredentials struct {
-	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, TunnelUrl, DockerRegistryType string
+	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType string
 }
 
 type EnvironmentVariables struct {
@@ -206,13 +206,10 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 		}
 	}
 	host := dockerCredentials.DockerRegistryURL
-	//if len(dockerCredentials.TunnelUrl) > 0 {
-	//	host = dockerCredentials.TunnelUrl
-	//}
 	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, host)
 	log.Println("Docker login command ", dockerLogin)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
-	//awsLoginCmd.Env = append(awsLoginCmd.Env, impl.ProxyEnv...)
+	awsLoginCmd.Env = append(awsLoginCmd.Env, impl.ProxyEnv...)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
 		log.Println(err)
@@ -230,7 +227,6 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		SecretKey:          ciRequest.SecretKey,
 		DockerRegistryURL:  ciRequest.DockerRegistryURL,
 		DockerRegistryType: ciRequest.DockerRegistryType,
-		TunnelUrl:          ciRequest.TunnelUrl,
 	})
 	if err != nil {
 		return "", err
@@ -589,9 +585,6 @@ func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
 		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
 	} else {
 		registryUrl := ciRequest.DockerRegistryURL
-		//if len(ciRequest.TunnelUrl) > 0 {
-		//	registryUrl = ciRequest.TunnelUrl
-		//}
 		u, err := util.ParseUrl(registryUrl)
 		if err != nil {
 			log.Println("not a valid docker repository url")
