@@ -120,7 +120,7 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemon
 		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 	}
 	cmd := exec.Command("/bin/sh", "-c", dockerdstart)
-	cmd.Env = append(cmd.Env, impl.ProxyEnv...)
+	//cmd.Env = append(cmd.Env, impl.ProxyEnv...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Println("failed to start docker daemon")
@@ -212,7 +212,7 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, host)
 	log.Println("Docker login command ", dockerLogin)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
-	awsLoginCmd.Env = append(awsLoginCmd.Env, impl.ProxyEnv...)
+	//awsLoginCmd.Env = append(awsLoginCmd.Env, impl.ProxyEnv...)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
 		log.Println(err)
