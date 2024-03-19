@@ -60,6 +60,7 @@ type DockerHelper interface {
 	PushArtifact(dest string) error
 	ExtractDigestForBuildx(dest string) (string, error)
 	CleanBuildxK8sDriver(nodes []map[string]string) error
+	GetDestForNatsEvent(dockerDaemonConfig *DockerDaemonConfig, dest string) (string, error)
 }
 
 type DockerHelperImpl struct {
@@ -70,6 +71,10 @@ func NewDockerHelperImpl() *DockerHelperImpl {
 	return &DockerHelperImpl{}
 }
 
+func (impl *DockerHelperImpl) GetDestForNatsEvent(dockerDaemonConfig *DockerDaemonConfig, dest string) (string, error) {
+	return dest, nil
+}
+
 type DockerDaemonConfig struct {
 	DockerConnection, DockerRegistryUrl, DockerCert, DefaultAddressPoolBaseCidr string
 	DefaultAddressPoolSize, CiRunnerDockerMtuValue                              int
@@ -78,7 +83,7 @@ type DockerDaemonConfig struct {
 
 func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemonConfig) {
 	connection := dockerDaemonConfig.DockerConnection
-	dockerRegistryUrl := dockerDaemonConfig.DockerRegistryUrl
+	dockerRegistryUrl := dockerDaemonConfig.CommonWorkflowRequest.DockerRegistryURL
 	registryUrl, err := util.ParseUrl(dockerRegistryUrl)
 	if err != nil {
 		log.Fatal(err)

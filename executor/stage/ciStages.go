@@ -9,9 +9,7 @@ import (
 	"github.com/devtron-labs/ci-runner/util"
 	"io/ioutil"
 	"log"
-	"net/url"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -228,15 +226,9 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 	//}
 	log.Println(util.DEVTRON, " /artifact-upload")
 
-	if ciCdRequest.CommonWorkflowRequest.DockerRegistryConnectionConfig != nil &&
-		len(ciCdRequest.CommonWorkflowRequest.DockerRegistryConnectionConfig.ConnectionMethod) != 0 {
-		destSplit := strings.Split(dest, "/")
-		registryUrl, err := url.ParseRequestURI(ciCdRequest.CommonWorkflowRequest.DockerRegistryURL)
-		if err != nil {
-			return artifactUploaded, err
-		}
-		destSplit[0] = registryUrl.Hostname() + ":" + registryUrl.Port()
-		dest = strings.Join(destSplit, "/")
+	dest, err = impl.dockerHelper.GetDestForNatsEvent(dockerDaemonConfig, dest)
+	if err != nil {
+		return artifactUploaded, err
 	}
 	// scan only if ci scan enabled
 	if ciCdRequest.CommonWorkflowRequest.ScanEnabled {
