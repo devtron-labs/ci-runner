@@ -158,7 +158,6 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 		DefaultAddressPoolBaseCidr: ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr,
 		DefaultAddressPoolSize:     ciCdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
 		CiRunnerDockerMtuValue:     ciCdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
-		RegistryConnectionConfig:   ciCdRequest.CommonWorkflowRequest.DockerRegistryConnectionConfig,
 		CommonWorkflowRequest:      ciCdRequest.CommonWorkflowRequest,
 	}
 	impl.dockerHelper.StartDockerDaemon(dockerDaemonConfig)

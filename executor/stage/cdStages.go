@@ -112,7 +112,6 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		DefaultAddressPoolBaseCidr: cicdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr,
 		DefaultAddressPoolSize:     cicdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
 		CiRunnerDockerMtuValue:     cicdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
-		RegistryConnectionConfig:   cicdRequest.CommonWorkflowRequest.DockerRegistryConnectionConfig,
 		CommonWorkflowRequest:      cicdRequest.CommonWorkflowRequest,
 	}
 	impl.dockerHelper.StartDockerDaemon(dockerDaemonConfig)

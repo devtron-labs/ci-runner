@@ -29,7 +29,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/caarlos0/env"
-	"github.com/devtron-labs/common-lib/utils/serverConnection/bean"
 	"io"
 	"io/ioutil"
 	"log"
@@ -70,18 +69,14 @@ func NewDockerHelperImpl() *DockerHelperImpl {
 }
 
 type DockerDaemonConfig struct {
-	DockerConnection, DockerRegistryUrl, TunnelUrl, DockerCert, DefaultAddressPoolBaseCidr string
-	DefaultAddressPoolSize, CiRunnerDockerMtuValue                                         int
-	RegistryConnectionConfig                                                               *bean.ServerConnectionConfigBean
-	CommonWorkflowRequest                                                                  *CommonWorkflowRequest
+	DockerConnection, DockerRegistryUrl, DockerCert, DefaultAddressPoolBaseCidr string
+	DefaultAddressPoolSize, CiRunnerDockerMtuValue                              int
+	CommonWorkflowRequest                                                       *CommonWorkflowRequest
 }
 
 func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemonConfig) {
 	connection := dockerDaemonConfig.DockerConnection
 	dockerRegistryUrl := dockerDaemonConfig.DockerRegistryUrl
-	if len(dockerDaemonConfig.TunnelUrl) > 0 {
-		dockerRegistryUrl = dockerDaemonConfig.TunnelUrl
-	}
 	registryUrl, err := util.ParseUrl(dockerRegistryUrl)
 	if err != nil {
 		log.Fatal(err)
