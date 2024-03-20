@@ -39,6 +39,10 @@ const (
 type StageExecutorImpl struct {
 }
 
+type StageExecutor interface {
+	RunCiCdSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error)
+}
+
 func NewStageExecutorImpl() *StageExecutorImpl {
 	return &StageExecutorImpl{}
 }

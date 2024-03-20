@@ -31,14 +31,14 @@ import (
  */
 
 type CiStage struct {
-	gitManager    helper.GitManager
-	stageExecutor *executor.StageExecutorImpl
+	gitManager           helper.GitManager
+	stageExecutorManager executor.StageExecutor
 }
 
-func NewCiStage(gitManager helper.GitManager, stageExecutor *executor.StageExecutorImpl) *CiStage {
+func NewCiStage(gitManager helper.GitManager, stageExecutor executor.StageExecutor) *CiStage {
 	return &CiStage{
-		gitManager:    gitManager,
-		stageExecutor: stageExecutor,
+		gitManager:           gitManager,
+		stageExecutorManager: stageExecutor,
 	}
 }
 
@@ -255,7 +255,7 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 		util.LogStage("running PRE-CI steps")
 	}
 	// run pre artifact processing
-	preCiStageOutVariable, step, err := impl.stageExecutor.RunCiCdSteps(executor.STEP_TYPE_PRE, ciCdRequest.CommonWorkflowRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
+	preCiStageOutVariable, step, err := impl.stageExecutorManager.RunCiCdSteps(executor.STEP_TYPE_PRE, ciCdRequest.CommonWorkflowRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
 	preCiDuration := time.Since(start).Seconds()
 	if err != nil {
 		log.Println("error in running pre Ci Steps", "err", err)
@@ -290,7 +290,7 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 			// build success will always be false
 			scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
 			// run post artifact processing
-			impl.stageExecutor.RunCiCdSteps(executor.STEP_TYPE_POST, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preCiStageOutVariable)
+			impl.stageExecutorManager.RunCiCdSteps(executor.STEP_TYPE_POST, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preCiStageOutVariable)
 		}
 		// code-block ends
 		err = sendFailureNotification(string(Build), ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
@@ -323,7 +323,7 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 	scriptEnvs["DEST"] = dest
 	scriptEnvs["DIGEST"] = digest
 	// run post artifact processing
-	_, step, err := impl.stageExecutor.RunCiCdSteps(executor.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest.PostCiSteps, refStageMap, scriptEnvs, preCiStageOutVariable)
+	_, step, err := impl.stageExecutorManager.RunCiCdSteps(executor.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest.PostCiSteps, refStageMap, scriptEnvs, preCiStageOutVariable)
 	if err != nil {
 		log.Println("error in running Post Ci Steps", "err", err)
 		return sendFailureNotification(string(PostCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
