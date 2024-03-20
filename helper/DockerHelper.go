@@ -882,6 +882,7 @@ func (impl *DockerHelperImpl) waitForDockerDaemon(retryCount int) error {
 func (impl *DockerHelperImpl) DockerdUpCheck() error {
 	dockerCheck := "docker ps"
 	dockerCheckCmd := exec.Command("/bin/sh", "-c", dockerCheck)
+	dockerCheckCmd.Env = append(os.Environ(), impl.ProxyEnv...)
 	err := dockerCheckCmd.Run()
 	return err
 }
