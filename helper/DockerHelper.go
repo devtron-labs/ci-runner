@@ -211,7 +211,6 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 		}
 	}
 	host := dockerCredentials.DockerRegistryURL
-	host = strings.TrimPrefix(host, "https://")
 	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, host)
 	log.Println("Docker login command ", dockerLogin)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
