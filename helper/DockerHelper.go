@@ -125,8 +125,7 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemon
 		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 	}
 	cmd := exec.Command("/bin/sh", "-c", dockerdstart)
-	log.Println("impl.Proxy === ", impl.ProxyEnv)
-	cmd.Env = append(cmd.Env, impl.ProxyEnv...)
+	cmd.Env = append(os.Environ(), impl.ProxyEnv...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Println("failed to start docker daemon")
@@ -212,10 +211,11 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 		}
 	}
 	host := dockerCredentials.DockerRegistryURL
+	host = strings.TrimPrefix(host, "https://")
 	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, host)
 	log.Println("Docker login command ", dockerLogin)
 	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
-	awsLoginCmd.Env = append(awsLoginCmd.Env, impl.ProxyEnv...)
+	awsLoginCmd.Env = append(os.Environ(), impl.ProxyEnv...)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
 		log.Println(err)
@@ -391,6 +391,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		}
 		builderRmCmdString := "docker image rm " + buildPackParams.BuilderId
 		builderRmCmd := exec.Command("/bin/sh", "-c", builderRmCmdString)
+		builderRmCmd.Env = append(os.Environ(), impl.ProxyEnv...)
 		err := builderRmCmd.Run()
 		if err != nil {
 			return "", err
@@ -503,7 +504,7 @@ func (impl *DockerHelperImpl) handleLanguageVersion(projectPath string, buildpac
 
 func (impl *DockerHelperImpl) executeCmd(dockerBuild string) error {
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
-	dockerBuildCMD.Env = append(dockerBuildCMD.Env, impl.ProxyEnv...)
+	dockerBuildCMD.Env = append(os.Environ(), impl.ProxyEnv...)
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
@@ -515,6 +516,7 @@ func (impl *DockerHelperImpl) tagDockerBuild(dockerRepository string, dest strin
 	dockerTag := "docker tag " + dockerRepository + ":latest" + " " + dest
 	log.Println(" -----> " + dockerTag)
 	dockerTagCMD := exec.Command("/bin/sh", "-c", dockerTag)
+	dockerTagCMD.Env = append(os.Environ(), impl.ProxyEnv...)
 	err := util.RunCommand(dockerTagCMD)
 	if err != nil {
 		log.Println(err)
@@ -554,6 +556,7 @@ func (impl *DockerHelperImpl) createBuildxBuilder() error {
 	multiPlatformCmd := "docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'"
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
+	dockerBuildCMD.Env = append(os.Environ(), impl.ProxyEnv...)
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
@@ -566,6 +569,7 @@ func (impl *DockerHelperImpl) installAllSupportedPlatforms() error {
 	multiPlatformCmd := "docker run --privileged --rm quay.io/devtron/binfmt:stable --install all"
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := exec.Command("/bin/sh", "-c", multiPlatformCmd)
+	dockerBuildCMD.Env = append(os.Environ(), impl.ProxyEnv...)
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
@@ -608,7 +612,7 @@ func (impl *DockerHelperImpl) PushArtifact(dest string) error {
 	dockerPush := "docker push " + dest
 	log.Println("-----> " + dockerPush)
 	dockerPushCMD := exec.Command("/bin/sh", "-c", dockerPush)
-	dockerPushCMD.Env = append(dockerPushCMD.Env, impl.ProxyEnv...)
+	dockerPushCMD.Env = append(os.Environ(), impl.ProxyEnv...)
 	err := util.RunCommand(dockerPushCMD)
 	if err != nil {
 		log.Println(err)
@@ -642,7 +646,7 @@ func (impl *DockerHelperImpl) ExtractDigestForBuildx(dest string) (string, error
 func (impl *DockerHelperImpl) ExtractDigestUsingPull(dest string) (string, error) {
 	dockerPull := "docker pull " + dest
 	dockerPullCmd := exec.Command("/bin/sh", "-c", dockerPull)
-	dockerPullCmd.Env = append(dockerPullCmd.Env, impl.ProxyEnv...)
+	dockerPullCmd.Env = append(os.Environ(), impl.ProxyEnv...)
 	digest, err := runGetDockerImageDigest(dockerPullCmd)
 	if err != nil {
 		log.Println(err)
@@ -771,7 +775,7 @@ func (impl *DockerHelperImpl) leaveNodesFromBuildxK8sDriver(nodeNames []string) 
 func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	fmt.Println(util.DEVTRON, " cmd : ", cmd)
 	builderCreateCmd := exec.Command("/bin/sh", "-c", cmd)
-	builderCreateCmd.Env = append(builderCreateCmd.Env, impl.ProxyEnv...)
+	builderCreateCmd.Env = append(os.Environ(), impl.ProxyEnv...)
 	errBuf := &bytes.Buffer{}
 	builderCreateCmd.Stderr = errBuf
 	err := builderCreateCmd.Run()
@@ -807,6 +811,7 @@ func (impl *DockerHelperImpl) StopDocker() error {
 		stopCmdS := "docker stop -t 5 $(docker ps -a -q)"
 		log.Println(util.DEVTRON, " -----> stopping docker container")
 		stopCmd := exec.Command("/bin/sh", "-c", stopCmdS)
+		stopCmd.Env = append(os.Environ(), impl.ProxyEnv...)
 		err := util.RunCommand(stopCmd)
 		log.Println(util.DEVTRON, " -----> stopped docker container")
 		if err != nil {
@@ -816,6 +821,7 @@ func (impl *DockerHelperImpl) StopDocker() error {
 		removeContainerCmds := "docker rm -v -f $(docker ps -a -q)"
 		log.Println(util.DEVTRON, " -----> removing docker container")
 		removeContainerCmd := exec.Command("/bin/sh", "-c", removeContainerCmds)
+		removeContainerCmd.Env = append(os.Environ(), impl.ProxyEnv...)
 		err = util.RunCommand(removeContainerCmd)
 		log.Println(util.DEVTRON, " -----> removed docker container")
 		if err != nil {
