@@ -64,11 +64,13 @@ type DockerHelper interface {
 }
 
 type DockerHelperImpl struct {
-	ProxyEnv []string
+	DockerCommandEnv []string
 }
 
 func NewDockerHelperImpl() *DockerHelperImpl {
-	return &DockerHelperImpl{}
+	return &DockerHelperImpl{
+		DockerCommandEnv: os.Environ(),
+	}
 }
 
 func (impl *DockerHelperImpl) GetDestForNatsEvent(dockerDaemonConfig *DockerDaemonConfig, dest string) (string, error) {
@@ -154,7 +156,7 @@ type EnvironmentVariables struct {
 
 func (impl *DockerHelperImpl) GetCommandToExecute(cmd string) *exec.Cmd {
 	execCmd := exec.Command("/bin/sh", "-c", cmd)
-	execCmd.Env = append(os.Environ(), impl.ProxyEnv...)
+	execCmd.Env = append(execCmd.Env, impl.DockerCommandEnv...)
 	return execCmd
 }
 
