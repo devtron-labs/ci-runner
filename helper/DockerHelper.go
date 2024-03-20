@@ -53,14 +53,14 @@ const (
 )
 
 type DockerHelper interface {
-	StartDockerDaemon(dockerDaemonConfig *DockerDaemonConfig)
+	StartDockerDaemon(commonWorkflowRequest *CommonWorkflowRequest)
 	DockerLogin(dockerCredentials *DockerCredentials) error
 	BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error)
 	StopDocker() error
 	PushArtifact(dest string) error
 	ExtractDigestForBuildx(dest string) (string, error)
 	CleanBuildxK8sDriver(nodes []map[string]string) error
-	GetDestForNatsEvent(dockerDaemonConfig *DockerDaemonConfig, dest string) (string, error)
+	GetDestForNatsEvent(commonWorkflowRequest *CommonWorkflowRequest, dest string) (string, error)
 }
 
 type DockerHelperImpl struct {
@@ -73,19 +73,13 @@ func NewDockerHelperImpl() *DockerHelperImpl {
 	}
 }
 
-func (impl *DockerHelperImpl) GetDestForNatsEvent(dockerDaemonConfig *DockerDaemonConfig, dest string) (string, error) {
+func (impl *DockerHelperImpl) GetDestForNatsEvent(commonWorkflowRequest *CommonWorkflowRequest, dest string) (string, error) {
 	return dest, nil
 }
 
-type DockerDaemonConfig struct {
-	DockerConnection, DockerRegistryUrl, DockerCert, DefaultAddressPoolBaseCidr string
-	DefaultAddressPoolSize, CiRunnerDockerMtuValue                              int
-	CommonWorkflowRequest                                                       *CommonWorkflowRequest
-}
-
-func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemonConfig) {
-	connection := dockerDaemonConfig.DockerConnection
-	dockerRegistryUrl := dockerDaemonConfig.CommonWorkflowRequest.DockerRegistryURL
+func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWorkflowRequest) {
+	connection := commonWorkflowRequest.DockerConnection
+	dockerRegistryUrl := commonWorkflowRequest.InternalDockerRegistryUrl
 	registryUrl, err := util.ParseUrl(dockerRegistryUrl)
 	if err != nil {
 		log.Fatal(err)
@@ -94,14 +88,14 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemon
 	dockerdstart := ""
 	defaultAddressPoolFlag := ""
 	dockerMtuValueFlag := ""
-	if len(dockerDaemonConfig.DefaultAddressPoolBaseCidr) > 0 {
-		if dockerDaemonConfig.DefaultAddressPoolSize <= 0 {
-			dockerDaemonConfig.DefaultAddressPoolSize = 24
+	if len(commonWorkflowRequest.DefaultAddressPoolBaseCidr) > 0 {
+		if commonWorkflowRequest.DefaultAddressPoolSize <= 0 {
+			commonWorkflowRequest.DefaultAddressPoolSize = 24
 		}
-		defaultAddressPoolFlag = fmt.Sprintf("--default-address-pool base=%s,size=%d", dockerDaemonConfig.DefaultAddressPoolBaseCidr, dockerDaemonConfig.DefaultAddressPoolSize)
+		defaultAddressPoolFlag = fmt.Sprintf("--default-address-pool base=%s,size=%d", commonWorkflowRequest.DefaultAddressPoolBaseCidr, commonWorkflowRequest.DefaultAddressPoolSize)
 	}
-	if dockerDaemonConfig.CiRunnerDockerMtuValue > 0 {
-		dockerMtuValueFlag = fmt.Sprintf("--mtu=%d", dockerDaemonConfig.CiRunnerDockerMtuValue)
+	if commonWorkflowRequest.CiBuildDockerMtuValue > 0 {
+		dockerMtuValueFlag = fmt.Sprintf("--mtu=%d", commonWorkflowRequest.CiBuildDockerMtuValue)
 	}
 	if connection == util.INSECURE {
 		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, host, dockerMtuValueFlag)
@@ -117,7 +111,7 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemon
 
 			defer f.Close()
 
-			_, err2 := f.WriteString(dockerDaemonConfig.DockerCert)
+			_, err2 := f.WriteString(commonWorkflowRequest.DockerCert)
 
 			if err2 != nil {
 				log.Fatal(err2)
@@ -236,7 +230,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		AwsRegion:          ciRequest.AwsRegion,
 		AccessKey:          ciRequest.AccessKey,
 		SecretKey:          ciRequest.SecretKey,
-		DockerRegistryURL:  ciRequest.DockerRegistryURL,
+		DockerRegistryURL:  ciRequest.InternalDockerRegistryUrl,
 		DockerRegistryType: ciRequest.DockerRegistryType,
 	})
 	if err != nil {
@@ -594,7 +588,7 @@ func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
 	if DOCKER_REGISTRY_TYPE_DOCKERHUB == ciRequest.DockerRegistryType {
 		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
 	} else {
-		registryUrl := ciRequest.DockerRegistryURL
+		registryUrl := ciRequest.InternalDockerRegistryUrl
 		u, err := util.ParseUrl(registryUrl)
 		if err != nil {
 			log.Println("not a valid docker repository url")

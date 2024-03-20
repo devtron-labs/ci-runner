@@ -149,16 +149,7 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-build")
-	dockerDaemonConfig := &helper.DockerDaemonConfig{
-		DockerConnection:           ciCdRequest.CommonWorkflowRequest.DockerConnection,
-		DockerRegistryUrl:          ciCdRequest.CommonWorkflowRequest.DockerRegistryURL,
-		DockerCert:                 ciCdRequest.CommonWorkflowRequest.DockerCert,
-		DefaultAddressPoolBaseCidr: ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr,
-		DefaultAddressPoolSize:     ciCdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
-		CiRunnerDockerMtuValue:     ciCdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
-		CommonWorkflowRequest:      ciCdRequest.CommonWorkflowRequest,
-	}
-	impl.dockerHelper.StartDockerDaemon(dockerDaemonConfig)
+	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest)
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {
 		return artifactUploaded, err
@@ -226,7 +217,7 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 	//}
 	log.Println(util.DEVTRON, " /artifact-upload")
 
-	dest, err = impl.dockerHelper.GetDestForNatsEvent(dockerDaemonConfig, dest)
+	dest, err = impl.dockerHelper.GetDestForNatsEvent(ciCdRequest.CommonWorkflowRequest, dest)
 	if err != nil {
 		return artifactUploaded, err
 	}

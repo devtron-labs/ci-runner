@@ -90,13 +90,13 @@ type BuildpackVersionConfig struct {
 }
 
 type CommonWorkflowRequest struct {
-	WorkflowNamePrefix             string                            `json:"workflowNamePrefix"`
-	PipelineName                   string                            `json:"pipelineName"`
-	PipelineId                     int                               `json:"pipelineId"`
-	DockerImageTag                 string                            `json:"dockerImageTag"`
-	DockerRegistryId               string                            `json:"dockerRegistryId"`
-	DockerRegistryType             string                            `json:"dockerRegistryType"`
-	DockerRegistryURL              string                            `json:"dockerRegistryURL"`
+	WorkflowNamePrefix string `json:"workflowNamePrefix"`
+	PipelineName       string `json:"pipelineName"`
+	PipelineId         int    `json:"pipelineId"`
+	DockerImageTag     string `json:"dockerImageTag"`
+	DockerRegistryId   string `json:"dockerRegistryId"`
+	DockerRegistryType string `json:"dockerRegistryType"`
+	//DockerRegistryURL              string                            `json:"dockerRegistryURL"`
 	DockerRegistryConnectionConfig *bean.ServerConnectionConfigBean  `json:"dockerRegistryConnectionConfig"`
 	DockerConnection               string                            `json:"dockerConnection"`
 	DockerCert                     string                            `json:"dockerCert"`
@@ -181,6 +181,7 @@ type CommonWorkflowRequest struct {
 	RegistryCredentialMap       map[string]RegistryCredentials `json:"registryCredentialMap"`
 	PluginArtifactStage         string                         `json:"pluginArtifactStage"`
 	PushImageBeforePostCI       bool                           `json:"pushImageBeforePostCI"`
+	InternalDockerRegistryUrl   string                         `json:"-"` // this URL will be used for all operations and can be mutated
 }
 
 func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {
