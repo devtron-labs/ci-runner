@@ -346,6 +346,7 @@ type CiCompleteEvent struct {
 	ImageDetailsFromCR            *ImageDetailsFromCR `json:"imageDetailsFromCR"`
 	PluginRegistryArtifactDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
 	PluginArtifactStage           string              `json:"pluginArtifactStage"`
+	IsScanEnabled                 bool                `json:"isScanEnabled"`
 }
 
 type CdStageCompleteEvent struct {
@@ -449,6 +450,7 @@ func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, m
 		ImageDetailsFromCR:            imageDetailsFromCR,
 		PluginRegistryArtifactDetails: ciRequest.RegistryDestinationImageMap,
 		PluginArtifactStage:           ciRequest.PluginArtifactStage,
+		IsScanEnabled:                 ciRequest.ScanEnabled,
 	}
 
 	err := SendCiCompleteEvent(ciRequest, event)
