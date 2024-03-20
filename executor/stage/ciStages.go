@@ -33,14 +33,12 @@ import (
 type CiStage struct {
 	gitManager   helper.GitManager
 	dockerHelper helper.DockerHelper
-	cmdHelper    helper.CmdHelper
 }
 
-func NewCiStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, cmdHelper helper.CmdHelper) *CiStage {
+func NewCiStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper) *CiStage {
 	return &CiStage{
 		gitManager:   gitManager,
 		dockerHelper: dockerHelper,
-		cmdHelper:    cmdHelper,
 	}
 }
 

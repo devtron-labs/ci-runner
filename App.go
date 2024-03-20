@@ -46,11 +46,10 @@ func main() {
 	gitCliManager := helper.NewGitCliManager()
 	gitManagerImpl := *helper.NewGitManagerImpl(gitCliManager)
 
-	cmdHelperImpl := helper.NewCmdHelperImpl()
-	dockerHelperImpl := helper.NewDockerHelperImpl(cmdHelperImpl)
+	dockerHelperImpl := helper.NewDockerHelperImpl()
 
-	ciStage := stage.NewCiStage(gitManagerImpl, dockerHelperImpl, cmdHelperImpl)
-	cdStage := stage.NewCdStage(gitManagerImpl, dockerHelperImpl, cmdHelperImpl)
+	ciStage := stage.NewCiStage(gitManagerImpl, dockerHelperImpl)
+	cdStage := stage.NewCdStage(gitManagerImpl, dockerHelperImpl)
 
 	appHelper := app.NewAppHelper(ciStage, cdStage, dockerHelperImpl)
 	appHelper.ProcessEvent(args)
