@@ -352,6 +352,7 @@ type CiCompleteEvent struct {
 
 type ImageScanningEvent struct {
 	CiPipelineId     int    `json:"ciPipelineId"`
+	CdPipelineId     int    `json:"cdPipelineId"`
 	TriggerBy        int    `json:"triggeredBy"`
 	Image            string `json:"image"`
 	Digest           string `json:"digest"`

@@ -14,6 +14,7 @@ func GetExternalEnvRequest(ciCdRequest helper.CommonWorkflowRequest) helper.ExtE
 func GetImageScanningEvent(ciCdRequest helper.CommonWorkflowRequest) helper.ImageScanningEvent {
 	event := helper.ImageScanningEvent{
 		CiPipelineId:     ciCdRequest.PipelineId,
+		CdPipelineId:     ciCdRequest.CdPipelineId,
 		TriggerBy:        ciCdRequest.TriggeredBy,
 		DockerRegistryId: ciCdRequest.DockerRegistryId,
 		Image:            ciCdRequest.CiArtifactDTO.Image,
