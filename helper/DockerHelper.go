@@ -64,11 +64,14 @@ type DockerHelper interface {
 }
 
 type DockerHelperImpl struct {
-	ProxyEnv []string
+	CmdHelper CmdHelper
+	ProxyEnv  []string
 }
 
-func NewDockerHelperImpl() *DockerHelperImpl {
-	return &DockerHelperImpl{}
+func NewDockerHelperImpl(CmdHelper CmdHelper) *DockerHelperImpl {
+	return &DockerHelperImpl{
+		CmdHelper: CmdHelper,
+	}
 }
 
 func (impl *DockerHelperImpl) GetDestForNatsEvent(dockerDaemonConfig *DockerDaemonConfig, dest string) (string, error) {
@@ -124,8 +127,7 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemon
 		}
 		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 	}
-	cmd := exec.Command("/bin/sh", "-c", dockerdstart)
-	cmd.Env = append(cmd.Env, impl.ProxyEnv...)
+	cmd := impl.CmdHelper.GetCommandToExecute(dockerdstart)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Println("failed to start docker daemon")
@@ -213,8 +215,7 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 	host := dockerCredentials.DockerRegistryURL
 	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, host)
 	log.Println("Docker login command ", dockerLogin)
-	awsLoginCmd := exec.Command("/bin/sh", "-c", dockerLogin)
-	awsLoginCmd.Env = append(awsLoginCmd.Env, impl.ProxyEnv...)
+	awsLoginCmd := impl.CmdHelper.GetCommandToExecute(dockerLogin)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
 		log.Println(err)
@@ -501,8 +502,7 @@ func (impl *DockerHelperImpl) handleLanguageVersion(projectPath string, buildpac
 }
 
 func (impl *DockerHelperImpl) executeCmd(dockerBuild string) error {
-	dockerBuildCMD := exec.Command("/bin/sh", "-c", dockerBuild)
-	dockerBuildCMD.Env = append(dockerBuildCMD.Env, impl.ProxyEnv...)
+	dockerBuildCMD := impl.CmdHelper.GetCommandToExecute(dockerBuild)
 	err := util.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
@@ -606,8 +606,7 @@ func (impl *DockerHelperImpl) PushArtifact(dest string) error {
 	//awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
 	dockerPush := "docker push " + dest
 	log.Println("-----> " + dockerPush)
-	dockerPushCMD := exec.Command("/bin/sh", "-c", dockerPush)
-	dockerPushCMD.Env = append(dockerPushCMD.Env, impl.ProxyEnv...)
+	dockerPushCMD := impl.CmdHelper.GetCommandToExecute(dockerPush)
 	err := util.RunCommand(dockerPushCMD)
 	if err != nil {
 		log.Println(err)
@@ -640,8 +639,7 @@ func (impl *DockerHelperImpl) ExtractDigestForBuildx(dest string) (string, error
 
 func (impl *DockerHelperImpl) ExtractDigestUsingPull(dest string) (string, error) {
 	dockerPull := "docker pull " + dest
-	dockerPullCmd := exec.Command("/bin/sh", "-c", dockerPull)
-	dockerPullCmd.Env = append(dockerPullCmd.Env, impl.ProxyEnv...)
+	dockerPullCmd := impl.CmdHelper.GetCommandToExecute(dockerPull)
 	digest, err := runGetDockerImageDigest(dockerPullCmd)
 	if err != nil {
 		log.Println(err)
@@ -769,10 +767,9 @@ func (impl *DockerHelperImpl) leaveNodesFromBuildxK8sDriver(nodeNames []string) 
 
 func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	fmt.Println(util.DEVTRON, " cmd : ", cmd)
-	builderCreateCmd := exec.Command("/bin/sh", "-c", cmd)
+	builderCreateCmd := impl.CmdHelper.GetCommandToExecute(cmd)
 	errBuf := &bytes.Buffer{}
 	builderCreateCmd.Stderr = errBuf
-	builderCreateCmd.Env = append(builderCreateCmd.Env, impl.ProxyEnv...)
 	err := builderCreateCmd.Run()
 	return err, errBuf
 }
