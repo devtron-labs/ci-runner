@@ -49,8 +49,8 @@ func main() {
 	cmdHelperImpl := helper.NewCmdHelperImpl()
 	dockerHelperImpl := helper.NewDockerHelperImpl(cmdHelperImpl)
 
-	ciStage := stage.NewCiStage(gitManagerImpl, dockerHelperImpl)
-	cdStage := stage.NewCdStage(gitManagerImpl, dockerHelperImpl)
+	ciStage := stage.NewCiStage(gitManagerImpl, dockerHelperImpl, cmdHelperImpl)
+	cdStage := stage.NewCdStage(gitManagerImpl, dockerHelperImpl, cmdHelperImpl)
 
 	appHelper := app.NewAppHelper(ciStage, cdStage, dockerHelperImpl)
 	appHelper.ProcessEvent(args)

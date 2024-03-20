@@ -29,12 +29,14 @@ import (
 type CdStage struct {
 	gitManager   helper.GitManager
 	dockerHelper helper.DockerHelper
+	cmdHelper    helper.CmdHelper
 }
 
-func NewCdStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper) *CdStage {
+func NewCdStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, cmdHelper helper.CmdHelper) *CdStage {
 	return &CdStage{
 		gitManager:   gitManager,
 		dockerHelper: dockerHelper,
+		cmdHelper:    cmdHelper,
 	}
 }
 
