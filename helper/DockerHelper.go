@@ -125,6 +125,7 @@ func (impl *DockerHelperImpl) StartDockerDaemon(dockerDaemonConfig *DockerDaemon
 		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 	}
 	cmd := exec.Command("/bin/sh", "-c", dockerdstart)
+	log.Println("impl.Proxy === ", impl.ProxyEnv)
 	cmd.Env = append(cmd.Env, impl.ProxyEnv...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
