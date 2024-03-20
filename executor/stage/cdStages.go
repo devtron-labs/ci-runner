@@ -105,23 +105,14 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	log.Println(util.DEVTRON, " /git")
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
-	dockerDaemonConfig := &helper.DockerDaemonConfig{
-		DockerConnection:           cicdRequest.CommonWorkflowRequest.DockerConnection,
-		DockerRegistryUrl:          cicdRequest.CommonWorkflowRequest.DockerRegistryURL,
-		DockerCert:                 cicdRequest.CommonWorkflowRequest.DockerCert,
-		DefaultAddressPoolBaseCidr: cicdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr,
-		DefaultAddressPoolSize:     cicdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
-		CiRunnerDockerMtuValue:     cicdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue,
-		CommonWorkflowRequest:      cicdRequest.CommonWorkflowRequest,
-	}
-	impl.dockerHelper.StartDockerDaemon(dockerDaemonConfig)
+	impl.dockerHelper.StartDockerDaemon(cicdRequest.CommonWorkflowRequest)
 	err = impl.dockerHelper.DockerLogin(&helper.DockerCredentials{
 		DockerUsername:     cicdRequest.CommonWorkflowRequest.DockerUsername,
 		DockerPassword:     cicdRequest.CommonWorkflowRequest.DockerPassword,
 		AwsRegion:          cicdRequest.CommonWorkflowRequest.AwsRegion,
 		AccessKey:          cicdRequest.CommonWorkflowRequest.AccessKey,
 		SecretKey:          cicdRequest.CommonWorkflowRequest.SecretKey,
-		DockerRegistryURL:  cicdRequest.CommonWorkflowRequest.DockerRegistryURL,
+		DockerRegistryURL:  cicdRequest.CommonWorkflowRequest.InternalDockerRegistryUrl,
 		DockerRegistryType: cicdRequest.CommonWorkflowRequest.DockerRegistryType,
 	})
 	if err != nil {

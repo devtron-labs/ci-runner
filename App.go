@@ -45,12 +45,9 @@ func main() {
 	args := os.Getenv(util.CiCdEventEnvKey)
 	gitCliManager := helper.NewGitCliManager()
 	gitManagerImpl := *helper.NewGitManagerImpl(gitCliManager)
-
 	dockerHelperImpl := helper.NewDockerHelperImpl()
-
 	ciStage := stage.NewCiStage(gitManagerImpl, dockerHelperImpl)
 	cdStage := stage.NewCdStage(gitManagerImpl, dockerHelperImpl)
-
 	appHelper := app.NewAppHelper(ciStage, cdStage, dockerHelperImpl)
 	appHelper.ProcessEvent(args)
 }

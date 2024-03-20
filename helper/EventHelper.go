@@ -90,13 +90,13 @@ type BuildpackVersionConfig struct {
 }
 
 type CommonWorkflowRequest struct {
-	WorkflowNamePrefix string `json:"workflowNamePrefix"`
-	PipelineName       string `json:"pipelineName"`
-	PipelineId         int    `json:"pipelineId"`
-	DockerImageTag     string `json:"dockerImageTag"`
-	DockerRegistryId   string `json:"dockerRegistryId"`
-	DockerRegistryType string `json:"dockerRegistryType"`
-	//DockerRegistryURL              string                            `json:"dockerRegistryURL"`
+	WorkflowNamePrefix             string                            `json:"workflowNamePrefix"`
+	PipelineName                   string                            `json:"pipelineName"`
+	PipelineId                     int                               `json:"pipelineId"`
+	DockerImageTag                 string                            `json:"dockerImageTag"`
+	DockerRegistryId               string                            `json:"dockerRegistryId"`
+	DockerRegistryType             string                            `json:"dockerRegistryType"`
+	DockerRegistryURL              string                            `json:"dockerRegistryURL"`
 	DockerRegistryConnectionConfig *bean.ServerConnectionConfigBean  `json:"dockerRegistryConnectionConfig"`
 	DockerConnection               string                            `json:"dockerConnection"`
 	DockerCert                     string                            `json:"dockerCert"`

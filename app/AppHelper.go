@@ -45,16 +45,26 @@ func (impl *AppHelper) HandleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCo
 }
 
 func (impl *AppHelper) ProcessEvent(args string) {
+	impl.ProcessCiCdEvent(impl.getCiCdRequestFromArg(args))
+	return
+}
 
-	exitCode := 0
+func (impl *AppHelper) getCiCdRequestFromArg(args string) (*helper.CiCdTriggerEvent, error) {
 	ciCdRequest := &helper.CiCdTriggerEvent{}
 	err := json.Unmarshal([]byte(args), ciCdRequest)
-	if err != nil {
-		log.Println(err)
+	if ciCdRequest != nil && ciCdRequest.CommonWorkflowRequest != nil {
+		ciCdRequest.CommonWorkflowRequest.InternalDockerRegistryUrl = ciCdRequest.CommonWorkflowRequest.DockerRegistryId
+	}
+	return ciCdRequest, err
+}
+
+func (impl *AppHelper) ProcessCiCdEvent(ciCdRequest *helper.CiCdTriggerEvent, ciCdRequestErr error) {
+	exitCode := 0
+	if ciCdRequestErr != nil {
+		log.Println(ciCdRequestErr)
 		exitCode = util.DefaultErrorCode
 		return
 	}
-
 	// Create a channel to receive the SIGTERM signal
 	sigTerm := make(chan os.Signal, 1)
 	signal.Notify(sigTerm, syscall.SIGTERM)
@@ -69,7 +79,7 @@ func (impl *AppHelper) ProcessEvent(args string) {
 
 	logLevel := os.Getenv("LOG_LEVEL")
 	if logLevel == "" || logLevel == "DEBUG" {
-		log.Println(util.DEVTRON, " ci-cd request details -----> ", args)
+		log.Println(util.DEVTRON, " ci-cd request details -----> ", ciCdRequest)
 	}
 
 	defer impl.HandleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
