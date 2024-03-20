@@ -40,20 +40,20 @@ type StageExecutorImpl struct {
 }
 
 type StageExecutor interface {
-	RunCiCdSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error)
+	RunCiCdSteps(stepType StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error)
 }
 
 func NewStageExecutorImpl() *StageExecutorImpl {
 	return &StageExecutorImpl{}
 }
 
-func (impl *StageExecutorImpl) RunCiCdSteps(stepType StepType, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error) {
+func (impl *StageExecutorImpl) RunCiCdSteps(stepType StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error) {
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
 	stageVariable := make(map[int]map[string]*helper.VariableObject)
 	for i, step := range steps {
-		failedStep, err = impl.RunCiCdStep(stepType, i, step, refStageMap, globalEnvironmentVariables, preCiStageVariable, stageVariable)
+		failedStep, err = impl.RunCiCdStep(stepType, *ciCdRequest, i, step, refStageMap, globalEnvironmentVariables, preCiStageVariable, stageVariable)
 		if err != nil {
 			return nil, failedStep, err
 		}
@@ -61,7 +61,7 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType StepType, steps []*helper.S
 	return stageVariable, nil, nil
 }
 
-func (impl *StageExecutorImpl) RunCiCdStep(stepType StepType, index int, step *helper.StepObject,
+func (impl *StageExecutorImpl) RunCiCdStep(stepType StepType, ciCdRequest helper.CommonWorkflowRequest, index int, step *helper.StepObject,
 	refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string,
 	preCiStageVariable map[int]map[string]*helper.VariableObject,
 	stageVariable map[int]map[string]*helper.VariableObject) (failedStep *helper.StepObject, err error) {
@@ -214,7 +214,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType StepType, index int, step *h
 				}
 			}
 		}
-		opt, _, err := impl.RunCiCdSteps(STEP_TYPE_REF_PLUGIN, steps, refStageMap, globalEnvironmentVariables, nil)
+		opt, _, err := impl.RunCiCdSteps(STEP_TYPE_REF_PLUGIN, &ciCdRequest, steps, refStageMap, globalEnvironmentVariables, nil)
 		if err != nil {
 			fmt.Println(err)
 			return step, err

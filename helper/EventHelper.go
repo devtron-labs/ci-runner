@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/devtron-labs/ci-runner/helper/adapter"
 	"log"
 	"net/http"
 	"strings"
@@ -349,6 +350,14 @@ type CiCompleteEvent struct {
 	IsScanEnabled                 bool                `json:"isScanEnabled"`
 }
 
+type ImageScanningEvent struct {
+	CiPipelineId     int    `json:"ciPipelineId"`
+	TriggerBy        int    `json:"triggeredBy"`
+	Image            string `json:"image"`
+	Digest           string `json:"digest"`
+	DockerRegistryId string `json:"dockerRegistryId"`
+}
+
 type CdStageCompleteEvent struct {
 	CiProjectDetails              []CiProjectDetails  `json:"ciProjectDetails"`
 	WorkflowId                    int                 `json:"workflowId"`
@@ -468,11 +477,7 @@ func SendCiCompleteEvent(ciRequest *CommonWorkflowRequest, event CiCompleteEvent
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	extEnvRequest := ExtEnvRequest{
-		OrchestratorHost:  ciRequest.OrchestratorHost,
-		OrchestratorToken: ciRequest.OrchestratorToken,
-		IsExtRun:          ciRequest.IsExtRun,
-	}
+	extEnvRequest := adapter.GetExternalEnvRequest(*ciRequest)
 	err = PublishEvent(jsonBody, pubsub1.CI_COMPLETE_TOPIC, &extEnvRequest)
 	log.Println(util.DEVTRON, "ci complete event notification done")
 	return err
@@ -484,11 +489,7 @@ func SendCdCompleteEvent(cdRequest *CommonWorkflowRequest, event CdStageComplete
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	extEnvRequest := ExtEnvRequest{
-		OrchestratorHost:  cdRequest.OrchestratorHost,
-		OrchestratorToken: cdRequest.OrchestratorToken,
-		IsExtRun:          cdRequest.IsExtRun,
-	}
+	extEnvRequest := adapter.GetExternalEnvRequest(*cdRequest)
 	err = PublishCDEvent(jsonBody, pubsub1.CD_STAGE_COMPLETE_TOPIC, &extEnvRequest)
 	log.Println(util.DEVTRON, "cd stage complete event notification done")
 	return err

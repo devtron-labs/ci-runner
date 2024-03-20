@@ -130,7 +130,7 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		scriptEnvs["DEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
 		scriptEnvs["DIGEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
 		var stage = executor.StepType(cicdRequest.CommonWorkflowRequest.StageType)
-		_, _, err = impl.stageExecutorManager.RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
+		_, _, err = impl.stageExecutorManager.RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
