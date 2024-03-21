@@ -1,6 +1,9 @@
 package adapter
 
-import "github.com/devtron-labs/ci-runner/helper"
+import (
+	"github.com/devtron-labs/ci-runner/executor"
+	"github.com/devtron-labs/ci-runner/helper"
+)
 
 func GetExternalEnvRequest(ciCdRequest helper.CommonWorkflowRequest) helper.ExtEnvRequest {
 	extEnvRequest := helper.ExtEnvRequest{
@@ -20,5 +23,12 @@ func GetImageScanningEvent(ciCdRequest helper.CommonWorkflowRequest) helper.Imag
 		Image:            ciCdRequest.CiArtifactDTO.Image,
 		Digest:           ciCdRequest.CiArtifactDTO.ImageDigest,
 	}
+	var stage helper.NotifyPipelineType
+	if ciCdRequest.StageType == string(executor.STEP_TYPE_PRE) {
+		stage = helper.PRE_CD
+	} else if ciCdRequest.StageType == string(executor.STEP_TYPE_POST) {
+		stage = helper.POST_CD
+	}
+	event.PipelineType = stage
 	return event
 }
