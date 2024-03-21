@@ -358,13 +358,12 @@ const (
 )
 
 type ImageScanningEvent struct {
-	CiPipelineId     int                `json:"ciPipelineId"`
-	CdPipelineId     int                `json:"cdPipelineId"`
-	TriggerBy        int                `json:"triggeredBy"`
-	Image            string             `json:"image"`
-	Digest           string             `json:"digest"`
-	DockerRegistryId string             `json:"dockerRegistryId"`
-	PipelineType     NotifyPipelineType `json:"PipelineType"`
+	CiPipelineId int                `json:"ciPipelineId"`
+	CdPipelineId int                `json:"cdPipelineId"`
+	TriggerBy    int                `json:"triggeredBy"`
+	Image        string             `json:"image"`
+	Digest       string             `json:"digest"`
+	PipelineType NotifyPipelineType `json:"PipelineType"`
 }
 
 type CdStageCompleteEvent struct {

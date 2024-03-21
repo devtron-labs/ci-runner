@@ -16,12 +16,11 @@ func GetExternalEnvRequest(ciCdRequest helper.CommonWorkflowRequest) helper.ExtE
 
 func GetImageScanningEvent(ciCdRequest helper.CommonWorkflowRequest) helper.ImageScanningEvent {
 	event := helper.ImageScanningEvent{
-		CiPipelineId:     ciCdRequest.PipelineId,
-		CdPipelineId:     ciCdRequest.CdPipelineId,
-		TriggerBy:        ciCdRequest.TriggeredBy,
-		DockerRegistryId: ciCdRequest.DockerRegistryId,
-		Image:            ciCdRequest.CiArtifactDTO.Image,
-		Digest:           ciCdRequest.CiArtifactDTO.ImageDigest,
+		CiPipelineId: ciCdRequest.PipelineId,
+		CdPipelineId: ciCdRequest.CdPipelineId,
+		TriggerBy:    ciCdRequest.TriggeredBy,
+		Image:        ciCdRequest.CiArtifactDTO.Image,
+		Digest:       ciCdRequest.CiArtifactDTO.ImageDigest,
 	}
 	var stage helper.NotifyPipelineType
 	if ciCdRequest.StageType == string(executor.STEP_TYPE_PRE) {
