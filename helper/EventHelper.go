@@ -350,13 +350,21 @@ type CiCompleteEvent struct {
 	IsScanEnabled                 bool                `json:"isScanEnabled"`
 }
 
+type NotifyPipelineType string
+
+const (
+	PRE_CD  NotifyPipelineType = "PRE-CD"
+	POST_CD NotifyPipelineType = "POST-CD"
+)
+
 type ImageScanningEvent struct {
-	CiPipelineId     int    `json:"ciPipelineId"`
-	CdPipelineId     int    `json:"cdPipelineId"`
-	TriggerBy        int    `json:"triggeredBy"`
-	Image            string `json:"image"`
-	Digest           string `json:"digest"`
-	DockerRegistryId string `json:"dockerRegistryId"`
+	CiPipelineId     int                `json:"ciPipelineId"`
+	CdPipelineId     int                `json:"cdPipelineId"`
+	TriggerBy        int                `json:"triggeredBy"`
+	Image            string             `json:"image"`
+	Digest           string             `json:"digest"`
+	DockerRegistryId string             `json:"dockerRegistryId"`
+	PipelineType     NotifyPipelineType `json:"PipelineType"`
 }
 
 type CdStageCompleteEvent struct {
