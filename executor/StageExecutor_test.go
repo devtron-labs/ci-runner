@@ -114,7 +114,7 @@ func TestRunCiSteps(t *testing.T) {
 	for _, tt := range tests {
 		stageExecutor := NewStageExecutorImpl()
 		t.Run(tt.name, func(t *testing.T) {
-			gotPreeCiStageVariableOut, gotPostCiStageVariable, err := stageExecutor.RunCiCdSteps(tt.args.stageType, tt.args.req.PreCiSteps, nil, tt.args.globalEnvironmentVariables, tt.args.preeCiStageVariable)
+			gotPreeCiStageVariableOut, gotPostCiStageVariable, err := stageExecutor.RunCiCdSteps(tt.args.stageType, nil, tt.args.req.PreCiSteps, nil, tt.args.globalEnvironmentVariables, tt.args.preeCiStageVariable)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RunCiCdSteps() error = %v, wantErr %v", err, tt.wantErr)
 				return
