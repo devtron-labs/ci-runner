@@ -11,7 +11,8 @@ type RefPluginObject struct {
 }
 
 const STEP_TYPE_INLINE = "INLINE"
-const STEP_TYPE_REF_PLUGIN = "REF_PLUGIN"
+
+//const STEP_TYPE_REF_PLUGIN = "REF_PLUGIN"
 
 /*script string,
 envInputVars map[string]string,

@@ -97,7 +97,7 @@ func Test_deduceVariables(t *testing.T) {
 
 func TestRunCiSteps(t *testing.T) {
 	type args struct {
-		stageType                  StepType
+		stageType                  helper.StepType
 		req                        *helper.CommonWorkflowRequest
 		globalEnvironmentVariables map[string]string
 		preeCiStageVariable        map[int]map[string]*helper.VariableObject

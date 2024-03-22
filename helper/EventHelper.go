@@ -21,7 +21,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/devtron-labs/ci-runner/helper/adapter"
 	"log"
 	"net/http"
 	"strings"
@@ -485,7 +484,7 @@ func SendCiCompleteEvent(ciRequest *CommonWorkflowRequest, event CiCompleteEvent
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	extEnvRequest := adapter.GetExternalEnvRequest(*ciRequest)
+	extEnvRequest := GetExternalEnvRequest(*ciRequest)
 	err = PublishEvent(jsonBody, pubsub1.CI_COMPLETE_TOPIC, &extEnvRequest)
 	log.Println(util.DEVTRON, "ci complete event notification done")
 	return err
@@ -497,7 +496,7 @@ func SendCdCompleteEvent(cdRequest *CommonWorkflowRequest, event CdStageComplete
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	extEnvRequest := adapter.GetExternalEnvRequest(*cdRequest)
+	extEnvRequest := GetExternalEnvRequest(*cdRequest)
 	err = PublishCDEvent(jsonBody, pubsub1.CD_STAGE_COMPLETE_TOPIC, &extEnvRequest)
 	log.Println(util.DEVTRON, "cd stage complete event notification done")
 	return err
@@ -688,3 +687,38 @@ func (prj *CiProjectDetails) GetCheckoutBranchName() string {
 	}
 	return checkoutBranch
 }
+
+func GetExternalEnvRequest(ciCdRequest CommonWorkflowRequest) ExtEnvRequest {
+	extEnvRequest := ExtEnvRequest{
+		OrchestratorHost:  ciCdRequest.OrchestratorHost,
+		OrchestratorToken: ciCdRequest.OrchestratorToken,
+		IsExtRun:          ciCdRequest.IsExtRun,
+	}
+	return extEnvRequest
+}
+
+func GetImageScanningEvent(ciCdRequest CommonWorkflowRequest) ImageScanningEvent {
+	event := ImageScanningEvent{
+		CiPipelineId: ciCdRequest.PipelineId,
+		CdPipelineId: ciCdRequest.CdPipelineId,
+		TriggerBy:    ciCdRequest.TriggeredBy,
+		Image:        ciCdRequest.CiArtifactDTO.Image,
+		Digest:       ciCdRequest.CiArtifactDTO.ImageDigest,
+	}
+	var stage NotifyPipelineType
+	if ciCdRequest.StageType == string(STEP_TYPE_PRE) {
+		stage = PRE_CD
+	} else if ciCdRequest.StageType == string(STEP_TYPE_POST) {
+		stage = POST_CD
+	}
+	event.PipelineType = stage
+	return event
+}
+
+type StepType string
+
+const (
+	STEP_TYPE_PRE        StepType = "PRE"
+	STEP_TYPE_POST       StepType = "POST"
+	STEP_TYPE_REF_PLUGIN StepType = "REF_PLUGIN"
+)
