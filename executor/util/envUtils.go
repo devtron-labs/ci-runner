@@ -37,7 +37,7 @@ func GetGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 	if err != nil {
 		return nil, err
 	}
-	if cicdRequest.Type == util.CIEVENT {
+	if helper.IsCIOrJobTypeEvent(cicdRequest.Type) {
 		image, err := helper.BuildDockerImagePath(cicdRequest.CommonWorkflowRequest)
 		if err != nil {
 			return nil, err
