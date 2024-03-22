@@ -30,6 +30,7 @@ const (
 	LOCAL_BUILDX_LOCATION        = "/var/lib/devtron/buildx"
 	LOCAL_BUILDX_CACHE_LOCATION  = LOCAL_BUILDX_LOCATION + "/cache"
 	CIEVENT                      = "CI"
+	JOBEVENT                     = "JOB"
 	CDSTAGE                      = "CD"
 	DRY_RUN                      = "DryRun"
 	ENV_VARIABLE_BUILD_SUCCESS   = "BUILD_SUCCESS"

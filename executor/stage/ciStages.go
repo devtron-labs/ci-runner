@@ -220,7 +220,8 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 	log.Println(util.DEVTRON, " /artifact-upload")
 
 	// scan only if ci scan enabled
-	if ciCdRequest.CommonWorkflowRequest.ScanEnabled {
+	if helper.IsEventTypeEligibleToScanImage(ciCdRequest.Type) &&
+		ciCdRequest.CommonWorkflowRequest.ScanEnabled {
 		err = runImageScanning(dest, digest, ciCdRequest, metrics, artifactUploaded)
 		if err != nil {
 			return artifactUploaded, err
