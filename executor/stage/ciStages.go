@@ -31,12 +31,14 @@ import (
  */
 
 type CiStage struct {
-	gitManager helper.GitManager
+	gitManager   helper.GitManager
+	dockerHelper helper.DockerHelper
 }
 
-func NewCiStage(gitManager helper.GitManager) *CiStage {
+func NewCiStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper) *CiStage {
 	return &CiStage{
-		gitManager: gitManager,
+		gitManager:   gitManager,
+		dockerHelper: dockerHelper,
 	}
 }
 
@@ -147,9 +149,7 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-build")
-
-	helper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest.DockerConnection, ciCdRequest.CommonWorkflowRequest.DockerRegistryURL, ciCdRequest.CommonWorkflowRequest.DockerCert, ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr, ciCdRequest.CommonWorkflowRequest.DefaultAddressPoolSize, ciCdRequest.CommonWorkflowRequest.CiBuildDockerMtuValue)
-
+	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest)
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {
 		return artifactUploaded, err
@@ -187,7 +187,7 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 	var dest string
 	var digest string
 	if !buildSkipEnabled {
-		dest, digest, err = getImageDestAndDigest(ciCdRequest, metrics, scriptEnvs, refStageMap, preCiStageOutVariable, artifactUploaded)
+		dest, digest, err = impl.getImageDestAndDigest(ciCdRequest, metrics, scriptEnvs, refStageMap, preCiStageOutVariable, artifactUploaded)
 		if err != nil {
 			return artifactUploaded, err
 		}
@@ -217,6 +217,10 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 	//}
 	log.Println(util.DEVTRON, " /artifact-upload")
 
+	dest, err = impl.dockerHelper.GetDestForNatsEvent(ciCdRequest.CommonWorkflowRequest, dest)
+	if err != nil {
+		return artifactUploaded, err
+	}
 	// scan only if ci scan enabled
 	if helper.IsEventTypeEligibleToScanImage(ciCdRequest.Type) &&
 		ciCdRequest.CommonWorkflowRequest.ScanEnabled {
@@ -236,7 +240,7 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 	}
 	log.Println(util.DEVTRON, " /event")
 
-	err = helper.StopDocker()
+	err = impl.dockerHelper.StopDocker()
 	if err != nil {
 		log.Println("err", err)
 		return artifactUploaded, err
@@ -271,14 +275,14 @@ func runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetri
 	return resultsFromPlugin, preCiStageOutVariable, nil
 }
 
-func runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics,
+func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics,
 	refStageMap map[int][]*helper.StepObject, scriptEnvs map[string]string, artifactUploaded bool,
 	preCiStageOutVariable map[int]map[string]*helper.VariableObject) (string, error) {
 	util.LogStage("Build")
 	// build
 	start := time.Now()
 	metrics.BuildStartTime = start
-	dest, err := helper.BuildArtifact(ciCdRequest.CommonWorkflowRequest) //TODO make it skipable
+	dest, err := impl.dockerHelper.BuildArtifact(ciCdRequest.CommonWorkflowRequest) //TODO make it skipable
 	metrics.BuildDuration = time.Since(start).Seconds()
 	if err != nil {
 		log.Println("Error in building artifact", "err", err)
@@ -298,19 +302,19 @@ func runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMe
 	return dest, err
 }
 
-func extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest string, metrics *helper.CIMetrics, artifactUploaded bool) (string, error) {
+func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest string, metrics *helper.CIMetrics, artifactUploaded bool) (string, error) {
 	ciBuildConfigBean := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
 	isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && ciBuildConfigBean.DockerBuildConfig.CheckForBuildX()
 	var digest string
 	var err error
 	if isBuildX {
-		digest, err = helper.ExtractDigestForBuildx(dest)
+		digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
 	} else {
 		util.LogStage("docker push")
 		// push to dest
 		log.Println(util.DEVTRON, "Docker push Artifact", "dest", dest)
-		pushArtifact(ciCdRequest, dest, digest, metrics, artifactUploaded)
-		digest, err = helper.ExtractDigestUsingPull(dest)
+		impl.pushArtifact(ciCdRequest, dest, digest, metrics, artifactUploaded)
+		digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
 	}
 	return digest, err
 }
@@ -347,12 +351,12 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 	return nil
 }
 
-func getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, artifactUploaded bool) (string, string, error) {
-	dest, err := runBuildArtifact(ciCdRequest, metrics, refStageMap, scriptEnvs, artifactUploaded, preCiStageOutVariable)
+func (impl *CiStage) getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, artifactUploaded bool) (string, string, error) {
+	dest, err := impl.runBuildArtifact(ciCdRequest, metrics, refStageMap, scriptEnvs, artifactUploaded, preCiStageOutVariable)
 	if err != nil {
 		return "", "", err
 	}
-	digest, err := extractDigest(ciCdRequest, dest, metrics, artifactUploaded)
+	digest, err := impl.extractDigest(ciCdRequest, dest, metrics, artifactUploaded)
 	if err != nil {
 		log.Println("Error in extracting digest", "err", err)
 		return "", "", err
@@ -417,7 +421,7 @@ func sendFailureNotification(failureMessage string, ciRequest *helper.CommonWork
 	return &helper.CiStageError{Err: err}
 }
 
-func pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest string, digest string, metrics *helper.CIMetrics, artifactUploaded bool) error {
+func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest string, digest string, metrics *helper.CIMetrics, artifactUploaded bool) error {
 	imageRetryCountValue := ciCdRequest.CommonWorkflowRequest.ImageRetryCount
 	imageRetryIntervalValue := ciCdRequest.CommonWorkflowRequest.ImageRetryInterval
 	var err error
@@ -425,7 +429,7 @@ func pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest string, digest stri
 		if i != 0 {
 			time.Sleep(time.Duration(imageRetryIntervalValue) * time.Second)
 		}
-		err = helper.PushArtifact(dest)
+		err = impl.dockerHelper.PushArtifact(dest)
 		if err == nil {
 			break
 		}

@@ -27,12 +27,14 @@ import (
 )
 
 type CdStage struct {
-	gitManager helper.GitManager
+	gitManager   helper.GitManager
+	dockerHelper helper.DockerHelper
 }
 
-func NewCdStage(gitManager helper.GitManager) *CdStage {
+func NewCdStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper) *CdStage {
 	return &CdStage{
-		gitManager: gitManager,
+		gitManager:   gitManager,
+		dockerHelper: dockerHelper,
 	}
 }
 
@@ -103,15 +105,14 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	log.Println(util.DEVTRON, " /git")
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
-	helper.StartDockerDaemon(cicdRequest.CommonWorkflowRequest.DockerConnection, cicdRequest.CommonWorkflowRequest.DockerRegistryURL, cicdRequest.CommonWorkflowRequest.DockerCert, cicdRequest.CommonWorkflowRequest.DefaultAddressPoolBaseCidr, cicdRequest.CommonWorkflowRequest.DefaultAddressPoolSize, -1)
-
-	err = helper.DockerLogin(&helper.DockerCredentials{
+	impl.dockerHelper.StartDockerDaemon(cicdRequest.CommonWorkflowRequest)
+	err = impl.dockerHelper.DockerLogin(&helper.DockerCredentials{
 		DockerUsername:     cicdRequest.CommonWorkflowRequest.DockerUsername,
 		DockerPassword:     cicdRequest.CommonWorkflowRequest.DockerPassword,
 		AwsRegion:          cicdRequest.CommonWorkflowRequest.AwsRegion,
 		AccessKey:          cicdRequest.CommonWorkflowRequest.AccessKey,
 		SecretKey:          cicdRequest.CommonWorkflowRequest.SecretKey,
-		DockerRegistryURL:  cicdRequest.CommonWorkflowRequest.DockerRegistryURL,
+		DockerRegistryURL:  cicdRequest.CommonWorkflowRequest.InternalDockerRegistryUrl,
 		DockerRegistryType: cicdRequest.CommonWorkflowRequest.DockerRegistryType,
 	})
 	if err != nil {
@@ -169,7 +170,7 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		}
 		log.Println(util.DEVTRON, " /event")
 	}
-	err = helper.StopDocker()
+	err = impl.dockerHelper.StopDocker()
 	if err != nil {
 		log.Println("error while stopping docker", err)
 		return err

@@ -16,14 +16,16 @@ import (
 )
 
 type AppHelper struct {
-	ciStage *stage.CiStage
-	cdStage *stage.CdStage
+	ciStage      *stage.CiStage
+	cdStage      *stage.CdStage
+	dockerHelper helper.DockerHelper
 }
 
-func NewAppHelper(ciStage *stage.CiStage, cdStage *stage.CdStage) *AppHelper {
+func NewAppHelper(ciStage *stage.CiStage, cdStage *stage.CdStage, dockerHelper helper.DockerHelper) *AppHelper {
 	return &AppHelper{
-		ciStage: ciStage,
-		cdStage: cdStage,
+		ciStage:      ciStage,
+		cdStage:      cdStage,
+		dockerHelper: dockerHelper,
 	}
 }
 
@@ -43,16 +45,26 @@ func (impl *AppHelper) HandleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCo
 }
 
 func (impl *AppHelper) ProcessEvent(args string) {
+	impl.ProcessCiCdEvent(impl.getCiCdRequestFromArg(args))
+	return
+}
 
-	exitCode := 0
+func (impl *AppHelper) getCiCdRequestFromArg(args string) (*helper.CiCdTriggerEvent, error) {
 	ciCdRequest := &helper.CiCdTriggerEvent{}
 	err := json.Unmarshal([]byte(args), ciCdRequest)
-	if err != nil {
-		log.Println(err)
+	if ciCdRequest != nil && ciCdRequest.CommonWorkflowRequest != nil {
+		ciCdRequest.CommonWorkflowRequest.InternalDockerRegistryUrl = ciCdRequest.CommonWorkflowRequest.DockerRegistryURL
+	}
+	return ciCdRequest, err
+}
+
+func (impl *AppHelper) ProcessCiCdEvent(ciCdRequest *helper.CiCdTriggerEvent, ciCdRequestErr error) {
+	exitCode := 0
+	if ciCdRequestErr != nil {
+		log.Println(ciCdRequestErr)
 		exitCode = util.DefaultErrorCode
 		return
 	}
-
 	// Create a channel to receive the SIGTERM signal
 	sigTerm := make(chan os.Signal, 1)
 	signal.Notify(sigTerm, syscall.SIGTERM)
@@ -67,7 +79,7 @@ func (impl *AppHelper) ProcessEvent(args string) {
 
 	logLevel := os.Getenv("LOG_LEVEL")
 	if logLevel == "" || logLevel == "DEBUG" {
-		log.Println(util.DEVTRON, " ci-cd request details -----> ", args)
+		log.Println(util.DEVTRON, " ci-cd request details -----> ", ciCdRequest)
 	}
 
 	defer impl.HandleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
@@ -83,7 +95,7 @@ func (impl *AppHelper) CleanUpBuildxK8sDriver(ciCdRequest helper.CiCdTriggerEven
 	defer wg.Done()
 	if valid, eligibleBuildxK8sDriverNodes := helper.ValidBuildxK8sDriverOptions(ciCdRequest.CommonWorkflowRequest); valid {
 		log.Println(util.DEVTRON, "starting buildx k8s driver clean up ,before terminating ci-runner")
-		err := helper.CleanBuildxK8sDriver(eligibleBuildxK8sDriverNodes)
+		err := impl.dockerHelper.CleanBuildxK8sDriver(eligibleBuildxK8sDriverNodes)
 		if err != nil {
 			log.Println(util.DEVTRON, "error in cleaning up buildx K8s driver, err : ", err)
 		}
