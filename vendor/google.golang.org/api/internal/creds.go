@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -47,7 +48,7 @@ func baseCreds(ctx context.Context, ds *DialSettings) (*google.Credentials, erro
 		return credentialsFromJSON(ctx, ds.CredentialsJSON, ds)
 	}
 	if ds.CredentialsFile != "" {
-		data, err := os.ReadFile(ds.CredentialsFile)
+		data, err := ioutil.ReadFile(ds.CredentialsFile)
 		if err != nil {
 			return nil, fmt.Errorf("cannot read credentials file: %v", err)
 		}
@@ -91,7 +92,7 @@ func credentialsFromJSON(ctx context.Context, data []byte, ds *DialSettings) (*g
 
 	// Determine configurations for the OAuth2 transport, which is separate from the API transport.
 	// The OAuth2 transport and endpoint will be configured for mTLS if applicable.
-	clientCertSource, oauth2Endpoint, err := getClientCertificateSourceAndEndpoint(oauth2DialSettings(ds))
+	clientCertSource, oauth2Endpoint, err := GetClientCertificateSourceAndEndpoint(oauth2DialSettings(ds))
 	if err != nil {
 		return nil, err
 	}

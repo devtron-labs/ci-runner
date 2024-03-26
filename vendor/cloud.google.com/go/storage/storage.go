@@ -129,10 +129,8 @@ type Client struct {
 //
 // Clients should be reused instead of created as needed. The methods of Client
 // are safe for concurrent use by multiple goroutines.
-//
-// You may configure the client by passing in options from the [google.golang.org/api/option]
-// package. You may also use options defined in this package, such as [WithJSONReads].
 func NewClient(ctx context.Context, opts ...option.ClientOption) (*Client, error) {
+
 	// Use the experimental gRPC client if the env var is set.
 	// This is an experimental API and not intended for public use.
 	if withGRPC := os.Getenv("STORAGE_USE_GRPC"); withGRPC != "" {
@@ -181,12 +179,10 @@ func NewClient(ctx context.Context, opts ...option.ClientOption) (*Client, error
 		endpoint := hostURL.String()
 
 		// Append the emulator host as default endpoint for the user
-		opts = append([]option.ClientOption{
-			option.WithoutAuthentication(),
-			internaloption.SkipDialSettingsValidation(),
-			internaloption.WithDefaultEndpoint(endpoint),
-			internaloption.WithDefaultMTLSEndpoint(endpoint),
-		}, opts...)
+		opts = append([]option.ClientOption{option.WithoutAuthentication()}, opts...)
+
+		opts = append(opts, internaloption.WithDefaultEndpoint(endpoint))
+		opts = append(opts, internaloption.WithDefaultMTLSEndpoint(endpoint))
 	}
 
 	// htransport selects the correct endpoint among WithEndpoint (user override), WithDefaultEndpoint, and WithDefaultMTLSEndpoint.
@@ -539,7 +535,7 @@ func v4SanitizeHeaders(hdrs []string) []string {
 		sanitizedHeader := strings.TrimSpace(hdr)
 
 		var key, value string
-		headerMatches := strings.SplitN(sanitizedHeader, ":", 2)
+		headerMatches := strings.Split(sanitizedHeader, ":")
 		if len(headerMatches) < 2 {
 			continue
 		}
@@ -653,7 +649,7 @@ var utcNow = func() time.Time {
 func extractHeaderNames(kvs []string) []string {
 	var res []string
 	for _, header := range kvs {
-		nameValue := strings.SplitN(header, ":", 2)
+		nameValue := strings.Split(header, ":")
 		res = append(res, nameValue[0])
 	}
 	return res
@@ -797,7 +793,7 @@ func sortHeadersByKey(hdrs []string) []string {
 	headersMap := map[string]string{}
 	var headersKeys []string
 	for _, h := range hdrs {
-		parts := strings.SplitN(h, ":", 2)
+		parts := strings.Split(h, ":")
 		k := parts[0]
 		v := parts[1]
 		headersMap[k] = v
@@ -1319,11 +1315,6 @@ type ObjectAttrs struct {
 	// later value but not to an earlier one. For more information see
 	// https://cloud.google.com/storage/docs/metadata#custom-time .
 	CustomTime time.Time
-
-	// ComponentCount is the number of objects contained within a composite object.
-	// For non-composite objects, the value will be zero.
-	// This field is read-only.
-	ComponentCount int64
 }
 
 // convertTime converts a time in RFC3339 format to time.Time.
@@ -1394,7 +1385,6 @@ func newObject(o *raw.Object) *ObjectAttrs {
 		Updated:                 convertTime(o.Updated),
 		Etag:                    o.Etag,
 		CustomTime:              convertTime(o.CustomTime),
-		ComponentCount:          o.ComponentCount,
 	}
 }
 
@@ -1429,7 +1419,6 @@ func newObjectFromProto(o *storagepb.Object) *ObjectAttrs {
 		Deleted:           convertProtoTime(o.GetDeleteTime()),
 		Updated:           convertProtoTime(o.GetUpdateTime()),
 		CustomTime:        convertProtoTime(o.GetCustomTime()),
-		ComponentCount:    int64(o.ComponentCount),
 	}
 }
 
@@ -1558,7 +1547,6 @@ var attrToFieldMap = map[string]string{
 	"Updated":                 "updated",
 	"Etag":                    "etag",
 	"CustomTime":              "customTime",
-	"ComponentCount":          "componentCount",
 }
 
 // attrToProtoFieldMap maps the field names of ObjectAttrs to the underlying field
@@ -1590,7 +1578,6 @@ var attrToProtoFieldMap = map[string]string{
 	"Owner":                   "owner",
 	"CustomerKeySHA256":       "customer_encryption",
 	"CustomTime":              "custom_time",
-	"ComponentCount":          "component_count",
 	// MediaLink was explicitly excluded from the proto as it is an HTTP-ism.
 	// "MediaLink":               "mediaLink",
 }
@@ -1717,8 +1704,6 @@ type Conditions struct {
 	// GenerationNotMatch specifies that the object must not have the given
 	// generation for the operation to occur.
 	// If GenerationNotMatch is zero, it has no effect.
-	// This condition only works for object reads if the WithJSONReads client
-	// option is set.
 	GenerationNotMatch int64
 
 	// DoesNotExist specifies that the object must not exist in the bucket for
@@ -1737,8 +1722,6 @@ type Conditions struct {
 	// MetagenerationNotMatch specifies that the object must not have the given
 	// metageneration for the operation to occur.
 	// If MetagenerationNotMatch is zero, it has no effect.
-	// This condition only works for object reads if the WithJSONReads client
-	// option is set.
 	MetagenerationNotMatch int64
 }
 
@@ -2094,25 +2077,6 @@ func toProtoCommonObjectRequestParams(key []byte) *storagepb.CommonObjectRequest
 		EncryptionKeyBytes:       key,
 		EncryptionKeySha256Bytes: keyHash[:],
 	}
-}
-
-func toProtoChecksums(sendCRC32C bool, attrs *ObjectAttrs) *storagepb.ObjectChecksums {
-	var checksums *storagepb.ObjectChecksums
-	if sendCRC32C {
-		checksums = &storagepb.ObjectChecksums{
-			Crc32C: proto.Uint32(attrs.CRC32C),
-		}
-	}
-	if len(attrs.MD5) != 0 {
-		if checksums == nil {
-			checksums = &storagepb.ObjectChecksums{
-				Md5Hash: attrs.MD5,
-			}
-		} else {
-			checksums.Md5Hash = attrs.MD5
-		}
-	}
-	return checksums
 }
 
 // ServiceAccount fetches the email address of the given project's Google Cloud Storage service account.
