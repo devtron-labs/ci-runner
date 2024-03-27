@@ -346,6 +346,23 @@ type CiCompleteEvent struct {
 	ImageDetailsFromCR            *ImageDetailsFromCR `json:"imageDetailsFromCR"`
 	PluginRegistryArtifactDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
 	PluginArtifactStage           string              `json:"pluginArtifactStage"`
+	IsScanEnabled                 bool                `json:"isScanEnabled"`
+}
+
+type NotifyPipelineType string
+
+const (
+	PRE_CD  NotifyPipelineType = "PRE-CD"
+	POST_CD NotifyPipelineType = "POST-CD"
+)
+
+type ImageScanningEvent struct {
+	CiPipelineId int                `json:"ciPipelineId"`
+	CdPipelineId int                `json:"cdPipelineId"`
+	TriggerBy    int                `json:"triggeredBy"`
+	Image        string             `json:"image"`
+	Digest       string             `json:"digest"`
+	PipelineType NotifyPipelineType `json:"PipelineType"`
 }
 
 type CdStageCompleteEvent struct {
@@ -449,6 +466,7 @@ func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, m
 		ImageDetailsFromCR:            imageDetailsFromCR,
 		PluginRegistryArtifactDetails: ciRequest.RegistryDestinationImageMap,
 		PluginArtifactStage:           ciRequest.PluginArtifactStage,
+		IsScanEnabled:                 ciRequest.ScanEnabled,
 	}
 
 	err := SendCiCompleteEvent(ciRequest, event)
@@ -466,11 +484,7 @@ func SendCiCompleteEvent(ciRequest *CommonWorkflowRequest, event CiCompleteEvent
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	extEnvRequest := ExtEnvRequest{
-		OrchestratorHost:  ciRequest.OrchestratorHost,
-		OrchestratorToken: ciRequest.OrchestratorToken,
-		IsExtRun:          ciRequest.IsExtRun,
-	}
+	extEnvRequest := GetExternalEnvRequest(*ciRequest)
 	err = PublishEvent(jsonBody, pubsub1.CI_COMPLETE_TOPIC, &extEnvRequest)
 	log.Println(util.DEVTRON, "ci complete event notification done")
 	return err
@@ -482,11 +496,7 @@ func SendCdCompleteEvent(cdRequest *CommonWorkflowRequest, event CdStageComplete
 		log.Println(util.DEVTRON, "err", err)
 		return err
 	}
-	extEnvRequest := ExtEnvRequest{
-		OrchestratorHost:  cdRequest.OrchestratorHost,
-		OrchestratorToken: cdRequest.OrchestratorToken,
-		IsExtRun:          cdRequest.IsExtRun,
-	}
+	extEnvRequest := GetExternalEnvRequest(*cdRequest)
 	err = PublishCDEvent(jsonBody, pubsub1.CD_STAGE_COMPLETE_TOPIC, &extEnvRequest)
 	log.Println(util.DEVTRON, "cd stage complete event notification done")
 	return err
@@ -677,3 +687,38 @@ func (prj *CiProjectDetails) GetCheckoutBranchName() string {
 	}
 	return checkoutBranch
 }
+
+func GetExternalEnvRequest(ciCdRequest CommonWorkflowRequest) ExtEnvRequest {
+	extEnvRequest := ExtEnvRequest{
+		OrchestratorHost:  ciCdRequest.OrchestratorHost,
+		OrchestratorToken: ciCdRequest.OrchestratorToken,
+		IsExtRun:          ciCdRequest.IsExtRun,
+	}
+	return extEnvRequest
+}
+
+func GetImageScanningEvent(ciCdRequest CommonWorkflowRequest) ImageScanningEvent {
+	event := ImageScanningEvent{
+		CiPipelineId: ciCdRequest.PipelineId,
+		CdPipelineId: ciCdRequest.CdPipelineId,
+		TriggerBy:    ciCdRequest.TriggeredBy,
+		Image:        ciCdRequest.CiArtifactDTO.Image,
+		Digest:       ciCdRequest.CiArtifactDTO.ImageDigest,
+	}
+	var stage NotifyPipelineType
+	if ciCdRequest.StageType == string(STEP_TYPE_PRE) {
+		stage = PRE_CD
+	} else if ciCdRequest.StageType == string(STEP_TYPE_POST) {
+		stage = POST_CD
+	}
+	event.PipelineType = stage
+	return event
+}
+
+type StepType string
+
+const (
+	STEP_TYPE_PRE        StepType = "PRE"
+	STEP_TYPE_POST       StepType = "POST"
+	STEP_TYPE_REF_PLUGIN StepType = "REF_PLUGIN"
+)
