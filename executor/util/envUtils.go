@@ -49,7 +49,7 @@ func GetGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["APP_NAME"] = cicdRequest.CommonWorkflowRequest.AppName
 		envs["TRIGGER_BY_AUTHOR"] = cicdRequest.CommonWorkflowRequest.TriggerByAuthor
 		envs["DOCKER_IMAGE"] = image
-
+		envs["JOB_NAME"] = cicdRequest.CommonWorkflowRequest.AppName
 		//adding GIT_MATERIAL_REQUEST in env for semgrep plugin
 		CiMaterialRequestArr := ""
 		if cicdRequest.CommonWorkflowRequest.CiProjectDetails != nil {
