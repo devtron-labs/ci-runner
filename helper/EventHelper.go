@@ -21,7 +21,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/devtron-labs/common-lib/utils/serverConnection/bean"
+	"github.com/devtron-labs/common-lib/utils/remoteConnection/bean"
 	"log"
 	"net/http"
 	"strings"

@@ -118,14 +118,14 @@ github.com/caarlos0/env
 # github.com/cespare/xxhash/v2 v2.2.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/devtron-labs/common-lib v0.0.16-0.20240304121720-165aedb633c1
+# github.com/devtron-labs/common-lib v0.0.16-0.20240401103308-c433c2c2a290
 ## explicit; go 1.20
 github.com/devtron-labs/common-lib/blob-storage
 github.com/devtron-labs/common-lib/pubsub-lib
 github.com/devtron-labs/common-lib/pubsub-lib/metrics
 github.com/devtron-labs/common-lib/pubsub-lib/model
 github.com/devtron-labs/common-lib/utils
-github.com/devtron-labs/common-lib/utils/serverConnection/bean
+github.com/devtron-labs/common-lib/utils/remoteConnection/bean
 # github.com/go-resty/resty/v2 v2.7.0
 ## explicit; go 1.11
 github.com/go-resty/resty/v2
