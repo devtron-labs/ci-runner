@@ -181,7 +181,7 @@ type CommonWorkflowRequest struct {
 	RegistryCredentialMap       map[string]RegistryCredentials `json:"registryCredentialMap"`
 	PluginArtifactStage         string                         `json:"pluginArtifactStage"`
 	PushImageBeforePostCI       bool                           `json:"pushImageBeforePostCI"`
-	InternalDockerRegistryUrl   string                         `json:"-"` // this URL will be used for all operations and can be mutated
+	FinalDockerRegistryUrl      string                         `json:"-"` // this URL will be used for all operations and can be mutated
 }
 
 func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {

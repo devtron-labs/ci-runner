@@ -53,7 +53,7 @@ func (impl *AppHelper) getCiCdRequestFromArg(args string) (*helper.CiCdTriggerEv
 	ciCdRequest := &helper.CiCdTriggerEvent{}
 	err := json.Unmarshal([]byte(args), ciCdRequest)
 	if ciCdRequest != nil && ciCdRequest.CommonWorkflowRequest != nil {
-		ciCdRequest.CommonWorkflowRequest.InternalDockerRegistryUrl = ciCdRequest.CommonWorkflowRequest.DockerRegistryURL
+		ciCdRequest.CommonWorkflowRequest.FinalDockerRegistryUrl = ciCdRequest.CommonWorkflowRequest.DockerRegistryURL
 	}
 	return ciCdRequest, err
 }
