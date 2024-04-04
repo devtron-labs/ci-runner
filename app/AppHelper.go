@@ -15,14 +15,14 @@ import (
 	"syscall"
 )
 
-type AppHelper struct {
+type CiCdProcessor struct {
 	ciStage      *stage.CiStage
 	cdStage      *stage.CdStage
 	dockerHelper helper.DockerHelper
 }
 
-func NewAppHelper(ciStage *stage.CiStage, cdStage *stage.CdStage, dockerHelper helper.DockerHelper) *AppHelper {
-	return &AppHelper{
+func NewCiCdProcessor(ciStage *stage.CiStage, cdStage *stage.CdStage, dockerHelper helper.DockerHelper) *CiCdProcessor {
+	return &CiCdProcessor{
 		ciStage:      ciStage,
 		cdStage:      cdStage,
 		dockerHelper: dockerHelper,
@@ -31,7 +31,7 @@ func NewAppHelper(ciStage *stage.CiStage, cdStage *stage.CdStage, dockerHelper h
 
 var handleOnce sync.Once
 
-func (impl *AppHelper) HandleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *int, source string) {
+func (impl *CiCdProcessor) HandleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *int, source string) {
 	handleOnce.Do(func() {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
@@ -44,12 +44,12 @@ func (impl *AppHelper) HandleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCo
 	})
 }
 
-func (impl *AppHelper) ProcessEvent(args string) {
+func (impl *CiCdProcessor) ProcessEvent(args string) {
 	impl.ProcessCiCdEvent(impl.getCiCdRequestFromArg(args))
 	return
 }
 
-func (impl *AppHelper) getCiCdRequestFromArg(args string) (*helper.CiCdTriggerEvent, error) {
+func (impl *CiCdProcessor) getCiCdRequestFromArg(args string) (*helper.CiCdTriggerEvent, error) {
 	ciCdRequest := &helper.CiCdTriggerEvent{}
 	err := json.Unmarshal([]byte(args), ciCdRequest)
 	if ciCdRequest != nil && ciCdRequest.CommonWorkflowRequest != nil {
@@ -58,7 +58,7 @@ func (impl *AppHelper) getCiCdRequestFromArg(args string) (*helper.CiCdTriggerEv
 	return ciCdRequest, err
 }
 
-func (impl *AppHelper) ProcessCiCdEvent(ciCdRequest *helper.CiCdTriggerEvent, ciCdRequestErr error) {
+func (impl *CiCdProcessor) ProcessCiCdEvent(ciCdRequest *helper.CiCdTriggerEvent, ciCdRequestErr error) {
 	exitCode := 0
 	if ciCdRequestErr != nil {
 		log.Println(ciCdRequestErr)
@@ -91,7 +91,7 @@ func (impl *AppHelper) ProcessCiCdEvent(ciCdRequest *helper.CiCdTriggerEvent, ci
 	return
 }
 
-func (impl *AppHelper) CleanUpBuildxK8sDriver(ciCdRequest helper.CiCdTriggerEvent, wg *sync.WaitGroup) {
+func (impl *CiCdProcessor) CleanUpBuildxK8sDriver(ciCdRequest helper.CiCdTriggerEvent, wg *sync.WaitGroup) {
 	defer wg.Done()
 	if valid, eligibleBuildxK8sDriverNodes := helper.ValidBuildxK8sDriverOptions(ciCdRequest.CommonWorkflowRequest); valid {
 		log.Println(util.DEVTRON, "starting buildx k8s driver clean up ,before terminating ci-runner")
@@ -102,7 +102,7 @@ func (impl *AppHelper) CleanUpBuildxK8sDriver(ciCdRequest helper.CiCdTriggerEven
 	}
 }
 
-func (impl *AppHelper) UploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
+func (impl *CiCdProcessor) UploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
 	var storageModuleConfigured bool
 	var blobStorageLogKey string
 	var cloudProvider blob_storage.BlobStorageType
