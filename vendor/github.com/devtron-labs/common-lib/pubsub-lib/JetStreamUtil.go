@@ -95,9 +95,6 @@ const (
 	CD_STAGE_SUCCESS_EVENT_TOPIC        string = "CD-STAGE-SUCCESS-EVENT"
 	CD_STAGE_SUCCESS_EVENT_GROUP        string = "CD-STAGE-SUCCESS-EVENT-GROUP"
 	CD_STAGE_SUCCESS_EVENT_DURABLE      string = "CD-STAGE-SUCCESS-EVENT-DURABLE"
-	CD_PIPELINE_DELETE_EVENT_TOPIC      string = "CD-PIPELINE-DELETE-EVENT"
-	CD_PIPELINE_DELETE_EVENT_GROUP      string = "CD-PIPELINE-DELETE-EVENT-GROUP"
-	CD_PIPELINE_DELETE_EVENT_DURABLE    string = "CD-PIPELINE-DELETE-EVENT-DURABLE"
 )
 
 type NatsTopic struct {
@@ -141,8 +138,6 @@ var natsTopicMapping = map[string]NatsTopic{
 	DEVTRON_CHART_INSTALL_TOPIC:       {topicName: DEVTRON_CHART_INSTALL_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: DEVTRON_CHART_INSTALL_GROUP, consumerName: DEVTRON_CHART_INSTALL_DURABLE},
 	PANIC_ON_PROCESSING_TOPIC:         {topicName: PANIC_ON_PROCESSING_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: PANIC_ON_PROCESSING_GROUP, consumerName: PANIC_ON_PROCESSING_DURABLE},
 	CD_STAGE_SUCCESS_EVENT_TOPIC:      {topicName: CD_STAGE_SUCCESS_EVENT_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: CD_STAGE_SUCCESS_EVENT_GROUP, consumerName: CD_STAGE_SUCCESS_EVENT_DURABLE},
-
-	CD_PIPELINE_DELETE_EVENT_TOPIC: {topicName: CD_PIPELINE_DELETE_EVENT_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: CD_PIPELINE_DELETE_EVENT_GROUP, consumerName: CD_PIPELINE_DELETE_EVENT_DURABLE},
 }
 
 var NatsStreamWiseConfigMapping = map[string]NatsStreamConfig{
@@ -175,8 +170,6 @@ var NatsConsumerWiseConfigMapping = map[string]NatsConsumerConfig{
 	DEVTRON_CHART_INSTALL_DURABLE:       {},
 	PANIC_ON_PROCESSING_DURABLE:         {},
 	DEVTRON_TEST_CONSUMER:               {},
-	CD_STAGE_SUCCESS_EVENT_DURABLE:      {},
-	CD_PIPELINE_DELETE_EVENT_DURABLE:    {},
 }
 
 // getConsumerConfigMap will fetch the consumer wise config from the json string
@@ -243,20 +236,6 @@ func ParseAndFillStreamWiseAndConsumerWiseConfigMaps() {
 	defaultConsumerConfigVal := defaultConfig.GetDefaultNatsConsumerConfig()
 
 	// initialise all the consumer wise config with default values or user defined values
-	updateNatsConsumerConfigMapping(defaultConsumerConfigVal, consumerConfigMap)
-
-	// initialise all the stream wise config with default values or user defined values
-	updateNatsStreamConfigMapping(defaultStreamConfigVal, streamConfigMap)
-}
-
-func updateNatsConsumerConfigMapping(defaultConsumerConfigVal NatsConsumerConfig, consumerConfigMap map[string]NatsConsumerConfig) {
-	//iterating through all nats topic mappings (assuming source of truth) to update any consumers if not present in consumer mapping
-	for _, natsTopic := range natsTopicMapping {
-		if _, ok := NatsConsumerWiseConfigMapping[natsTopic.consumerName]; !ok {
-			NatsConsumerWiseConfigMapping[natsTopic.consumerName] = NatsConsumerConfig{}
-		}
-	}
-	//initialise all the consumer wise config with default values or user defined values
 	for key, _ := range NatsConsumerWiseConfigMapping {
 		consumerConfig := defaultConsumerConfigVal
 		if _, ok := consumerConfigMap[key]; ok {
@@ -264,9 +243,8 @@ func updateNatsConsumerConfigMapping(defaultConsumerConfigVal NatsConsumerConfig
 		}
 		NatsConsumerWiseConfigMapping[key] = consumerConfig
 	}
-}
 
-func updateNatsStreamConfigMapping(defaultStreamConfigVal NatsStreamConfig, streamConfigMap map[string]NatsStreamConfig) {
+	// initialise all the consumer wise config with default values or user defined values
 	for key, _ := range NatsStreamWiseConfigMapping {
 		streamConfig := defaultStreamConfigVal
 		if _, ok := streamConfigMap[key]; ok {
@@ -274,6 +252,7 @@ func updateNatsStreamConfigMapping(defaultStreamConfigVal NatsStreamConfig, stre
 		}
 		NatsStreamWiseConfigMapping[key] = streamConfig
 	}
+
 }
 
 func GetNatsTopic(topicName string) NatsTopic {

@@ -83,7 +83,7 @@ func (impl *CiCdProcessor) ProcessCiCdEvent(ciCdRequest *helper.CiCdTriggerEvent
 	}
 
 	defer impl.HandleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
-	if ciCdRequest.Type == util.CIEVENT {
+	if helper.IsCIOrJobTypeEvent(ciCdRequest.Type) {
 		impl.ciStage.HandleCIEvent(ciCdRequest, &exitCode)
 	} else {
 		impl.cdStage.HandleCDEvent(ciCdRequest, &exitCode)
@@ -110,17 +110,8 @@ func (impl *CiCdProcessor) UploadLogs(event helper.CiCdTriggerEvent, exitCode *i
 	var azureBlobConfig *blob_storage.AzureBlobConfig
 	var gcpBlobConfig *blob_storage.GcpBlobConfig
 	var inAppLoggingEnabled bool
-
-	if event.Type == util.CIEVENT && event.CommonWorkflowRequest.BlobStorageConfigured {
-		storageModuleConfigured = true
-		blobStorageLogKey = event.CommonWorkflowRequest.BlobStorageLogsKey
-		cloudProvider = event.CommonWorkflowRequest.CloudProvider
-		blobStorageS3Config = event.CommonWorkflowRequest.BlobStorageS3Config
-		azureBlobConfig = event.CommonWorkflowRequest.AzureBlobConfig
-		gcpBlobConfig = event.CommonWorkflowRequest.GcpBlobConfig
-		inAppLoggingEnabled = event.CommonWorkflowRequest.InAppLoggingEnabled
-
-	} else if event.Type == util.CDSTAGE && event.CommonWorkflowRequest.BlobStorageConfigured {
+	if event.CommonWorkflowRequest.BlobStorageConfigured &&
+		helper.IsEventTypeEligibleToUploadLogs(event.Type) {
 		storageModuleConfigured = true
 		blobStorageLogKey = event.CommonWorkflowRequest.BlobStorageLogsKey
 		cloudProvider = event.CommonWorkflowRequest.CloudProvider
@@ -129,7 +120,6 @@ func (impl *CiCdProcessor) UploadLogs(event helper.CiCdTriggerEvent, exitCode *i
 		gcpBlobConfig = event.CommonWorkflowRequest.GcpBlobConfig
 		inAppLoggingEnabled = event.CommonWorkflowRequest.InAppLoggingEnabled
 	}
-
 	cloudHelperConfig := &util.CloudHelperBaseConfig{
 		StorageModuleConfigured: storageModuleConfigured,
 		BlobStorageLogKey:       blobStorageLogKey,
