@@ -112,7 +112,7 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		AwsRegion:          cicdRequest.CommonWorkflowRequest.AwsRegion,
 		AccessKey:          cicdRequest.CommonWorkflowRequest.AccessKey,
 		SecretKey:          cicdRequest.CommonWorkflowRequest.SecretKey,
-		DockerRegistryURL:  cicdRequest.CommonWorkflowRequest.FinalDockerRegistryUrl,
+		DockerRegistryURL:  cicdRequest.CommonWorkflowRequest.IntermediateDockerRegistryUrl,
 		DockerRegistryType: cicdRequest.CommonWorkflowRequest.DockerRegistryType,
 	})
 	if err != nil {

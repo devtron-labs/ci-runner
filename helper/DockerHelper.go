@@ -79,7 +79,7 @@ func (impl *DockerHelperImpl) GetDestForNatsEvent(commonWorkflowRequest *CommonW
 
 func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWorkflowRequest) {
 	connection := commonWorkflowRequest.DockerConnection
-	dockerRegistryUrl := commonWorkflowRequest.FinalDockerRegistryUrl
+	dockerRegistryUrl := commonWorkflowRequest.IntermediateDockerRegistryUrl
 	registryUrl, err := util.ParseUrl(dockerRegistryUrl)
 	if err != nil {
 		log.Fatal(err)
@@ -230,7 +230,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		AwsRegion:          ciRequest.AwsRegion,
 		AccessKey:          ciRequest.AccessKey,
 		SecretKey:          ciRequest.SecretKey,
-		DockerRegistryURL:  ciRequest.FinalDockerRegistryUrl,
+		DockerRegistryURL:  ciRequest.IntermediateDockerRegistryUrl,
 		DockerRegistryType: ciRequest.DockerRegistryType,
 	})
 	if err != nil {
@@ -588,7 +588,7 @@ func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
 	if DOCKER_REGISTRY_TYPE_DOCKERHUB == ciRequest.DockerRegistryType {
 		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
 	} else {
-		registryUrl := ciRequest.FinalDockerRegistryUrl
+		registryUrl := ciRequest.IntermediateDockerRegistryUrl
 		u, err := util.ParseUrl(registryUrl)
 		if err != nil {
 			log.Println("not a valid docker repository url")
