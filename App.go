@@ -20,6 +20,7 @@ package main
 import (
 	_ "github.com/aws/aws-sdk-go/aws"
 	"github.com/devtron-labs/ci-runner/app"
+	"github.com/devtron-labs/ci-runner/executor"
 	"github.com/devtron-labs/ci-runner/executor/stage"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
@@ -44,10 +45,11 @@ func main() {
 
 	args := os.Getenv(util.CiCdEventEnvKey)
 	gitCliManager := helper.NewGitCliManager()
+	stageExecutorImpl := executor.NewStageExecutorImpl()
 	gitManagerImpl := *helper.NewGitManagerImpl(gitCliManager)
 	dockerHelperImpl := helper.NewDockerHelperImpl()
-	ciStage := stage.NewCiStage(gitManagerImpl, dockerHelperImpl)
-	cdStage := stage.NewCdStage(gitManagerImpl, dockerHelperImpl)
+	ciStage := stage.NewCiStage(gitManagerImpl, dockerHelperImpl, stageExecutorImpl)
+	cdStage := stage.NewCdStage(gitManagerImpl, dockerHelperImpl, stageExecutorImpl)
 	ciCdProcessor := app.NewCiCdProcessor(ciStage, cdStage, dockerHelperImpl)
 	ciCdProcessor.ProcessEvent(args)
 }

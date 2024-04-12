@@ -29,12 +29,14 @@ import (
 type CdStage struct {
 	gitManager   helper.GitManager
 	dockerHelper helper.DockerHelper
+	stageExecutorManager executor.StageExecutor
 }
 
-func NewCdStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper) *CdStage {
+func NewCdStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, stageExecutor executor.StageExecutor) *CdStage {
 	return &CdStage{
 		gitManager:   gitManager,
 		dockerHelper: dockerHelper,
+		stageExecutorManager: stageExecutor,
 	}
 }
 
@@ -128,8 +130,8 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		}
 		scriptEnvs["DEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
 		scriptEnvs["DIGEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
-		var stage = executor.StepType(cicdRequest.CommonWorkflowRequest.StageType)
-		_, _, err = executor.RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
+		var stage = helper.StepType(cicdRequest.CommonWorkflowRequest.StageType)
+		_, _, err = impl.stageExecutorManager.RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
