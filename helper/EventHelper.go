@@ -347,6 +347,7 @@ type CiCompleteEvent struct {
 	PluginRegistryArtifactDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
 	PluginArtifactStage           string              `json:"pluginArtifactStage"`
 	IsScanEnabled                 bool                `json:"isScanEnabled"`
+	DockerRegistryId              string              `json:"dockerRegistryId"`
 }
 
 type NotifyPipelineType string
@@ -467,6 +468,7 @@ func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, m
 		PluginRegistryArtifactDetails: ciRequest.RegistryDestinationImageMap,
 		PluginArtifactStage:           ciRequest.PluginArtifactStage,
 		IsScanEnabled:                 ciRequest.ScanEnabled,
+		DockerRegistryId:              ciRequest.DockerRegistryId,
 	}
 
 	err := SendCiCompleteEvent(ciRequest, event)
