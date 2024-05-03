@@ -594,6 +594,8 @@ type ScanEvent struct {
 	Token               string `json:"token"`
 	AwsRegion           string `json:"awsRegion"`
 	DockerRegistryId    string `json:"dockerRegistryId"`
+	DockerConnection    string `json:"dockerConnection"`
+	DockerCert          string `json:"dockerCert"`
 	ImageScanMaxRetries int    `json:"imageScanMaxRetries,omitempty"`
 	ImageScanRetryDelay int    `json:"imageScanRetryDelay,omitempty"`
 }
