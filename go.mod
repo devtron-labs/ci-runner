@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.44.116
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.20.0
 	github.com/caarlos0/env v3.5.0+incompatible
-	github.com/devtron-labs/common-lib v0.0.16-0.20240412072404-71d8bae5ad58
+	github.com/devtron-labs/common-lib v0.0.16-0.20240507071833-5a793f5192e8
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/joho/godotenv v1.4.0
 	github.com/otiai10/copy v1.7.0
