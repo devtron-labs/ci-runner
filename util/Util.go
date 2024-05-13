@@ -33,7 +33,7 @@ const (
 	SSH_PRIVATE_KEY_DIR       = ".ssh"
 	SSH_PRIVATE_KEY_FILE_NAME = "id_rsa"
 	GIT_CREDENTIAL_FILE_NAME  = ".git-credentials"
-	CLONING_MODE_TREELESS     = "TREELESS"
+	CLONING_MODE_SHALLOW      = "SHALLOW"
 	CLONING_MODE_FULL         = "FULL"
 )
 
