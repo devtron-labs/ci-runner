@@ -15,21 +15,23 @@ import (
 	"syscall"
 )
 
-type AppHelper struct {
-	ciStage *stage.CiStage
-	cdStage *stage.CdStage
+type CiCdProcessor struct {
+	ciStage      *stage.CiStage
+	cdStage      *stage.CdStage
+	dockerHelper helper.DockerHelper
 }
 
-func NewAppHelper(ciStage *stage.CiStage, cdStage *stage.CdStage) *AppHelper {
-	return &AppHelper{
-		ciStage: ciStage,
-		cdStage: cdStage,
+func NewCiCdProcessor(ciStage *stage.CiStage, cdStage *stage.CdStage, dockerHelper helper.DockerHelper) *CiCdProcessor {
+	return &CiCdProcessor{
+		ciStage:      ciStage,
+		cdStage:      cdStage,
+		dockerHelper: dockerHelper,
 	}
 }
 
 var handleOnce sync.Once
 
-func (impl *AppHelper) HandleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *int, source string) {
+func (impl *CiCdProcessor) HandleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCode *int, source string) {
 	handleOnce.Do(func() {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
@@ -42,17 +44,27 @@ func (impl *AppHelper) HandleCleanup(ciCdRequest helper.CiCdTriggerEvent, exitCo
 	})
 }
 
-func (impl *AppHelper) ProcessEvent(args string) {
+func (impl *CiCdProcessor) ProcessEvent(args string) {
+	impl.ProcessCiCdEvent(impl.getCiCdRequestFromArg(args))
+	return
+}
 
-	exitCode := 0
+func (impl *CiCdProcessor) getCiCdRequestFromArg(args string) (*helper.CiCdTriggerEvent, error) {
 	ciCdRequest := &helper.CiCdTriggerEvent{}
 	err := json.Unmarshal([]byte(args), ciCdRequest)
-	if err != nil {
-		log.Println(err)
+	if ciCdRequest != nil && ciCdRequest.CommonWorkflowRequest != nil {
+		ciCdRequest.CommonWorkflowRequest.IntermediateDockerRegistryUrl = ciCdRequest.CommonWorkflowRequest.DockerRegistryURL
+	}
+	return ciCdRequest, err
+}
+
+func (impl *CiCdProcessor) ProcessCiCdEvent(ciCdRequest *helper.CiCdTriggerEvent, ciCdRequestErr error) {
+	exitCode := 0
+	if ciCdRequestErr != nil {
+		log.Println(ciCdRequestErr)
 		exitCode = util.DefaultErrorCode
 		return
 	}
-
 	// Create a channel to receive the SIGTERM signal
 	sigTerm := make(chan os.Signal, 1)
 	signal.Notify(sigTerm, syscall.SIGTERM)
@@ -67,7 +79,7 @@ func (impl *AppHelper) ProcessEvent(args string) {
 
 	logLevel := os.Getenv("LOG_LEVEL")
 	if logLevel == "" || logLevel == "DEBUG" {
-		log.Println(util.DEVTRON, " ci-cd request details -----> ", args)
+		log.Println(util.DEVTRON, " ci-cd request details -----> ", ciCdRequest)
 	}
 
 	defer impl.HandleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
@@ -79,18 +91,18 @@ func (impl *AppHelper) ProcessEvent(args string) {
 	return
 }
 
-func (impl *AppHelper) CleanUpBuildxK8sDriver(ciCdRequest helper.CiCdTriggerEvent, wg *sync.WaitGroup) {
+func (impl *CiCdProcessor) CleanUpBuildxK8sDriver(ciCdRequest helper.CiCdTriggerEvent, wg *sync.WaitGroup) {
 	defer wg.Done()
 	if valid, eligibleBuildxK8sDriverNodes := helper.ValidBuildxK8sDriverOptions(ciCdRequest.CommonWorkflowRequest); valid {
 		log.Println(util.DEVTRON, "starting buildx k8s driver clean up ,before terminating ci-runner")
-		err := helper.CleanBuildxK8sDriver(eligibleBuildxK8sDriverNodes)
+		err := impl.dockerHelper.CleanBuildxK8sDriver(eligibleBuildxK8sDriverNodes)
 		if err != nil {
 			log.Println(util.DEVTRON, "error in cleaning up buildx K8s driver, err : ", err)
 		}
 	}
 }
 
-func (impl *AppHelper) UploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
+func (impl *CiCdProcessor) UploadLogs(event helper.CiCdTriggerEvent, exitCode *int) {
 	var storageModuleConfigured bool
 	var blobStorageLogKey string
 	var cloudProvider blob_storage.BlobStorageType
