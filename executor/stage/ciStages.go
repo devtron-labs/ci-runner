@@ -339,10 +339,17 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, artifactUploaded bool) error {
 	util.LogStage("IMAGE SCAN")
 	log.Println(util.DEVTRON, " Image Scanning Started for digest", digest)
-	scanEvent := &helper.ScanEvent{Image: dest, ImageDigest: digest, PipelineId: ciCdRequest.CommonWorkflowRequest.PipelineId, UserId: ciCdRequest.CommonWorkflowRequest.TriggeredBy}
-	scanEvent.DockerRegistryId = ciCdRequest.CommonWorkflowRequest.DockerRegistryId
-	scanEvent.ImageScanMaxRetries = ciCdRequest.CommonWorkflowRequest.ImageScanMaxRetries
-	scanEvent.ImageScanRetryDelay = ciCdRequest.CommonWorkflowRequest.ImageScanRetryDelay
+	scanEvent := &helper.ScanEvent{
+		Image:               dest,
+		ImageDigest:         digest,
+		PipelineId:          ciCdRequest.CommonWorkflowRequest.PipelineId,
+		UserId:              ciCdRequest.CommonWorkflowRequest.TriggeredBy,
+		DockerRegistryId:    ciCdRequest.CommonWorkflowRequest.DockerRegistryId,
+		DockerConnection:    ciCdRequest.CommonWorkflowRequest.DockerConnection,
+		DockerCert:          ciCdRequest.CommonWorkflowRequest.DockerCert,
+		ImageScanMaxRetries: ciCdRequest.CommonWorkflowRequest.ImageScanMaxRetries,
+		ImageScanRetryDelay: ciCdRequest.CommonWorkflowRequest.ImageScanRetryDelay,
+	}
 	err := helper.SendEventToClairUtility(scanEvent)
 	if err != nil {
 		log.Println("error in running Image Scan", "err", err)
