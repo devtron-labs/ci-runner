@@ -33,10 +33,10 @@ func Test_getDockerBuildFlagsMap(t *testing.T) {
 		{
 			name: "test with special characters",
 			args: args{dockerBuildConfig: &DockerBuildConfig{
-				Args:               map[string]string{"key1": "value1=abcd", "key2": "value2=abcd"},
-				DockerBuildOptions: map[string]string{"key3": "value3=abcd", "key4": "value4=abcd"},
+				Args:               map[string]string{"key1": "value1=& abcd", "key2": "value2=&abcd"},
+				DockerBuildOptions: map[string]string{"key3": "value3=& abcd", "key4": "value4=& abcd"},
 			}},
-			want: map[string]string{"--build-arg key1": "=\"value1=abcd\"", "--build-arg key2": "=\"value2=abcd\"", "--key3": "=\"value3=abcd\"", "--key4": "=\"value4=abcd\""},
+			want: map[string]string{"--build-arg key1": "=\"value1=& abcd\"", "--build-arg key2": "=\"value2=&abcd\"", "--key3": "=\"value3=& abcd\"", "--key4": "=\"value4=& abcd\""},
 		},
 	}
 	for _, tt := range tests {
