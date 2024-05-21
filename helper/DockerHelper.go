@@ -223,6 +223,7 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 	log.Println("Docker login successful with username ", username, " on docker registry URL ", dockerCredentials.DockerRegistryURL)
 	return nil
 }
+
 func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 	err := impl.DockerLogin(&DockerCredentials{
 		DockerUsername:     ciRequest.DockerUsername,
@@ -273,27 +274,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				dockerBuild += "--platform " + dockerBuildConfig.TargetPlatform + " "
 			}
 		}
-		dockerBuildFlags := make(map[string]string)
-		dockerBuildArgsMap := dockerBuildConfig.Args
-		for k, v := range dockerBuildArgsMap {
-			flagKey := fmt.Sprintf("%s %s", BUILD_ARG_FLAG, k)
-			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
-				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=\"%s\"", valueFromEnv)
-			} else {
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=\"%s\"", v)
-			}
-		}
-		dockerBuildOptionsMap := dockerBuildConfig.DockerBuildOptions
-		for k, v := range dockerBuildOptionsMap {
-			flagKey := "--" + k
-			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
-				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", valueFromEnv)
-			} else {
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", v)
-			}
-		}
+		dockerBuildFlags := getDockerBuildFlagsMap(dockerBuildConfig)
 		for key, value := range dockerBuildFlags {
 			dockerBuild = dockerBuild + " " + key + value
 		}
@@ -397,6 +378,29 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 	}
 
 	return dest, nil
+}
+
+func getDockerBuildFlagsMap(dockerBuildConfig *DockerBuildConfig) map[string]string {
+	dockerBuildFlags := make(map[string]string)
+	dockerBuildArgsMap := dockerBuildConfig.Args
+	for k, v := range dockerBuildArgsMap {
+		flagKey := fmt.Sprintf("%s %s", BUILD_ARG_FLAG, k)
+		dockerBuildFlags[flagKey] = parseDockerFlagParam(v)
+	}
+	dockerBuildOptionsMap := dockerBuildConfig.DockerBuildOptions
+	for k, v := range dockerBuildOptionsMap {
+		flagKey := "--" + k
+		dockerBuildFlags[flagKey] = parseDockerFlagParam(v)
+	}
+	return dockerBuildFlags
+}
+
+func parseDockerFlagParam(param string) string {
+	value := param
+	if strings.HasPrefix(param, DEVTRON_ENV_VAR_PREFIX) {
+		value = os.Getenv(strings.TrimPrefix(param, DEVTRON_ENV_VAR_PREFIX))
+	}
+	return fmt.Sprintf("=%s", strconv.Quote(value))
 }
 
 func getDockerfilePath(CiBuildConfig *CiBuildConfigBean, checkoutPath string) string {
