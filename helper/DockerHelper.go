@@ -281,7 +281,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
 				dockerBuildFlags[flagKey] = fmt.Sprintf("=\"%s\"", valueFromEnv)
 			} else {
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", v)
+				dockerBuildFlags[flagKey] = fmt.Sprintf("=\"%s\"", v)
 			}
 		}
 		dockerBuildOptionsMap := dockerBuildConfig.DockerBuildOptions
