@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.44.116
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.20.0
 	github.com/caarlos0/env v3.5.0+incompatible
-	github.com/devtron-labs/common-lib v0.0.16-0.20240507071833-5a793f5192e8
+	github.com/devtron-labs/common-lib v0.0.18-0.20240527112958-dd74aea2ed4e
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/joho/godotenv v1.4.0
 	github.com/otiai10/copy v1.7.0
@@ -33,7 +33,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/s2a-go v0.1.4 // indirect
 	github.com/google/uuid v1.3.0 // indirect

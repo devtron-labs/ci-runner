@@ -118,14 +118,16 @@ github.com/caarlos0/env
 # github.com/cespare/xxhash/v2 v2.2.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/devtron-labs/common-lib v0.0.16-0.20240507071833-5a793f5192e8
+# github.com/devtron-labs/common-lib v0.0.18-0.20240527112958-dd74aea2ed4e
 ## explicit; go 1.20
 github.com/devtron-labs/common-lib/blob-storage
+github.com/devtron-labs/common-lib/constants
 github.com/devtron-labs/common-lib/pubsub-lib
 github.com/devtron-labs/common-lib/pubsub-lib/metrics
 github.com/devtron-labs/common-lib/pubsub-lib/model
 github.com/devtron-labs/common-lib/utils
 github.com/devtron-labs/common-lib/utils/remoteConnection/bean
+github.com/devtron-labs/common-lib/utils/secretScanner
 # github.com/go-resty/resty/v2 v2.7.0
 ## explicit; go 1.11
 github.com/go-resty/resty/v2
@@ -135,8 +137,8 @@ github.com/golang-jwt/jwt/v4
 # github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 ## explicit
 github.com/golang/groupcache/lru
-# github.com/golang/protobuf v1.5.3
-## explicit; go 1.9
+# github.com/golang/protobuf v1.5.4
+## explicit; go 1.17
 github.com/golang/protobuf/jsonpb
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes
