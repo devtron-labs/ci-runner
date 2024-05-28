@@ -42,6 +42,7 @@ func RunCommand(cmd *exec.Cmd) error {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Printf("Command execution failed: %v\n", err)
+		return err
 	}
 	outBuf := bytes.NewBuffer(output)
 	if maskSecrets {
