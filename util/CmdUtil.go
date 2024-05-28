@@ -26,7 +26,7 @@ import (
 	"os/exec"
 )
 
-var maskSecrets = true
+var maskSecrets = false
 
 func DeleteFile(path string) error {
 	var err = os.Remove(path)
@@ -38,20 +38,16 @@ func DeleteFile(path string) error {
 
 func RunCommand(cmd *exec.Cmd) error {
 
-	var outBuf bytes.Buffer
-	cmd.Stdout = &outBuf
-	cmd.Stderr = os.Stderr
-
 	// Run the command
-	if err := cmd.Run(); err != nil {
+	output, err := cmd.CombinedOutput()
+	if err != nil {
 		fmt.Printf("Command execution failed: %v\n", err)
-		return err
 	}
-
+	outBuf := bytes.NewBuffer(output)
 	if maskSecrets {
 		buf := new(bytes.Buffer)
 		// Call the function to mask secrets and print the masked output
-		maskedStream, err := secretScanner.MaskSecretsStream(&outBuf)
+		maskedStream, err := secretScanner.MaskSecretsStream(outBuf)
 		if err != nil {
 			fmt.Printf("Error masking secrets: %v\n", err)
 			return err
