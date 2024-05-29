@@ -27,7 +27,7 @@ import (
 
 func GetCache(ciRequest *CommonWorkflowRequest) error {
 	if !ciRequest.BlobStorageConfigured {
-		log.Println("ignoring cache as storage module not configured ... ") //TODO not needed
+		log.Println("ignoring cache as storage module not configured ... ") // TODO not needed
 		return nil
 	}
 	if ciRequest.IgnoreDockerCachePull || ciRequest.CacheInvalidate {
@@ -38,7 +38,7 @@ func GetCache(ciRequest *CommonWorkflowRequest) error {
 	}
 	log.Println("setting build cache ...............")
 
-	//----------download file
+	// ----------download file
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
 	cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeCache)
 	request := createBlobStorageRequest(cloudHelperBaseConfig, ciRequest.CiCacheFileName, ciRequest.CiCacheFileName)
@@ -63,6 +63,10 @@ func GetCache(ciRequest *CommonWorkflowRequest) error {
 }
 
 func SyncCache(ciRequest *CommonWorkflowRequest) error {
+	if ciRequest.CacheInvalidate {
+		log.Println("ignoring cache as ignore cache flag is enabled ")
+		return nil
+	}
 	if !ciRequest.BlobStorageConfigured {
 		log.Println("ignoring cache as storage module not configured... ")
 		return nil
@@ -98,8 +102,8 @@ func SyncCache(ciRequest *CommonWorkflowRequest) error {
 		log.Fatal("Could not compress cache", err)
 	}
 
-	//aws s3 cp cache.tar.gz s3://ci-caching/
-	//----------upload file
+	// aws s3 cp cache.tar.gz s3://ci-caching/
+	// ----------upload file
 
 	log.Println(util.DEVTRON, " -----> pushing new cache")
 	cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeCache)

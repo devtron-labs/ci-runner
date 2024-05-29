@@ -159,12 +159,12 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 	pwd := dockerCredentials.DockerPassword
 	if dockerCredentials.DockerRegistryType == DOCKER_REGISTRY_TYPE_ECR {
 		accessKey, secretKey := dockerCredentials.AccessKey, dockerCredentials.SecretKey
-		//fmt.Printf("accessKey %s, secretKey %s\n", accessKey, secretKey)
+		// fmt.Printf("accessKey %s, secretKey %s\n", accessKey, secretKey)
 
 		var creds *credentials.Credentials
 
 		if len(dockerCredentials.AccessKey) == 0 || len(dockerCredentials.SecretKey) == 0 {
-			//fmt.Println("empty accessKey or secretKey")
+			// fmt.Println("empty accessKey or secretKey")
 			sess, err := session.NewSession(&aws.Config{
 				Region: &dockerCredentials.AwsRegion,
 			})
@@ -324,7 +324,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 			}
 
-			cacheEnabled := (ciRequest.IsPvcMounted || ciRequest.BlobStorageConfigured)
+			cacheEnabled := (ciRequest.IsPvcMounted || ciRequest.BlobStorageConfigured) && !ciRequest.CacheInvalidate
 			oldCacheBuildxPath, localCachePath := "", ""
 
 			if cacheEnabled {
@@ -436,7 +436,7 @@ func (impl *DockerHelperImpl) handleLanguageVersion(projectPath string, buildpac
 		return
 	}
 	language := buildpackConfig.Language
-	//languageVersion := buildpackConfig.LanguageVersion
+	// languageVersion := buildpackConfig.LanguageVersion
 	buildpackEnvArgs := buildpackConfig.Args
 	languageVersion, present := buildpackEnvArgs["DEVTRON_LANG_VERSION"]
 	if !present {
@@ -602,7 +602,7 @@ func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
 }
 
 func (impl *DockerHelperImpl) PushArtifact(dest string) error {
-	//awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
+	// awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
 	dockerPush := "docker push " + dest
 	log.Println("-----> " + dockerPush)
 	dockerPushCMD := impl.GetCommandToExecute(dockerPush)
@@ -612,9 +612,9 @@ func (impl *DockerHelperImpl) PushArtifact(dest string) error {
 		return err
 	}
 
-	//digest := extractDigestUsingPull(dest)
-	//log.Println("Digest -----> ", digest)
-	//return digest, nil
+	// digest := extractDigestUsingPull(dest)
+	// log.Println("Digest -----> ", digest)
+	// return digest, nil
 	return nil
 }
 
@@ -711,7 +711,7 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(builderNodes []ma
 		return err
 	}
 
-	//appending other nodes to the builder,except default node ,since we already added it
+	// appending other nodes to the builder,except default node ,since we already added it
 	for i := 1; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
 		appendNode := getBuildxK8sDriverCmd(nodeOpts, ciPipelineId, ciWorkflowId)
@@ -777,7 +777,7 @@ func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflo
 	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
-		nodeName = BUILDX_NODE_NAME + fmt.Sprintf("%v-%v-", ciPipelineId, ciWorkflowId) + util.Generate(3) //need this to generate unique name for builder node in same builder.
+		nodeName = BUILDX_NODE_NAME + fmt.Sprintf("%v-%v-", ciPipelineId, ciWorkflowId) + util.Generate(3) // need this to generate unique name for builder node in same builder.
 	}
 	buildxCreate = fmt.Sprintf(buildxCreate, BUILDX_K8S_DRIVER_NAME, nodeName)
 	platforms := driverOpts["platform"]
@@ -841,8 +841,8 @@ func (impl *DockerHelperImpl) StopDocker() error {
 		return err
 	}
 	log.Println(util.DEVTRON, " -----> checking docker status")
-	impl.DockerdUpCheck() //FIXME: this call should be removed
-	//ensureDockerDaemonHasStopped(20)
+	impl.DockerdUpCheck() // FIXME: this call should be removed
+	// ensureDockerDaemonHasStopped(20)
 	return nil
 }
 
