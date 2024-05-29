@@ -2,12 +2,9 @@ package secretScanner
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
-	"fmt"
 	"io"
-	"os"
-	"os/exec"
+	"log"
 )
 
 // MaskSecretsOnString takes an input string and masks any secrets found based on the provided rules
@@ -21,37 +18,7 @@ func MaskSecretsOnString(input string, rules []Rule) string {
 	return maskedInput
 }
 
-func scan() {
-	// Create a new command to execute `cat` to read the file
-	cmd := exec.Command("cat", "synthetic_log_data.txt")
-
-	// Create a buffer to capture the command's stdout
-	var outBuf bytes.Buffer
-	cmd.Stdout = &outBuf
-	cmd.Stderr = os.Stderr
-
-	// Run the command
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("Command execution failed: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Call the function to mask secrets and print the masked output
-	buf := new(bytes.Buffer)
-	maskedStream, err := MaskSecretsStream(&outBuf)
-	if err != nil {
-		fmt.Printf("Error masking secrets: %v\n", err)
-		os.Exit(1)
-	}
-	_, er := buf.ReadFrom(maskedStream)
-	if er != nil {
-		fmt.Printf("Error reading from masked stream: %v\n", er)
-		os.Exit(1)
-	}
-	fmt.Println(buf.String())
-}
-
-func MaskSecretsStream(input *bytes.Buffer) (io.Reader, error) {
+func MaskSecretsOnStream(input io.Reader) (io.Reader, error) {
 	pr, pw := io.Pipe()
 
 	go func() {
@@ -67,13 +34,16 @@ func MaskSecretsStream(input *bytes.Buffer) (io.Reader, error) {
 				_, err := pw.Write([]byte("\n"))
 				if err != nil {
 					// handle error appropriately
+					log.Printf("Error writing masked string to pipe: %v", err)
+					pw.CloseWithError(err)
 					return
 				}
 			} else {
 				maskedString := MaskSecretsOnString(line, BuiltinRules)
 				_, err := pw.Write([]byte(maskedString + "\n"))
 				if err != nil {
-					// handle error appropriately
+					log.Printf("Error reading input buffer: %v", err)
+					pw.CloseWithError(err)
 					return
 				}
 			}
@@ -87,19 +57,22 @@ func MaskSecretsStream(input *bytes.Buffer) (io.Reader, error) {
 						if err == io.EOF {
 							break
 						}
-						// handle error appropriately
+						log.Printf("Error reading input buffer: %v", err)
+						pw.CloseWithError(err)
 						return
 					}
 					line := string(buf[:n])
 					maskedString := MaskSecretsOnString(line, BuiltinRules)
 					_, err = pw.Write([]byte(maskedString + "\n"))
 					if err != nil {
-						// handle error appropriately
+						log.Printf("Error writing masked string to pipe: %v", err)
+						pw.CloseWithError(err)
 						return
 					}
 				}
 			} else {
-				// handle other errors appropriately
+				log.Printf("Scanner error: %v", err)
+				pw.CloseWithError(err)
 				return
 			}
 		}
