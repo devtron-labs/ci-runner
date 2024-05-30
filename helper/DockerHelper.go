@@ -38,6 +38,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -354,14 +355,20 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		// run export cache cmd for buildx
 		if useBuildx && len(exportCacheCmds) > 0 {
 			log.Println("exporting build caches...")
-
+			wg := sync.WaitGroup{}
+			wg.Add(len(exportCacheCmds))
 			for platform, exportCacheCmd := range exportCacheCmds {
-				log.Println("exporting build cache, platform : ", platform)
-				err = impl.executeCmd(exportCacheCmd)
-				if err != nil {
-					log.Println("error in exporting ", "err : ", err)
-				}
+				go func(platform, exportCacheCmd string) {
+					defer wg.Done()
+					log.Println("exporting build cache, platform : ", platform)
+					err = impl.executeCmd(exportCacheCmd)
+					if err != nil {
+						log.Println("error in exporting ", "err : ", err)
+						return
+					}
+				}(platform, exportCacheCmd)
 			}
+			wg.Wait()
 		}
 
 		if useBuildK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver(); useBuildK8sDriver {
