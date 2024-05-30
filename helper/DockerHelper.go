@@ -362,6 +362,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 					go func(platform, exportCacheCmd string) {
 						defer wg.Done()
 						log.Println("exporting build cache, platform : ", platform)
+						log.Println(exportCacheCmd)
 						err = impl.executeCmd(exportCacheCmd)
 						if err != nil {
 							log.Println("error in exporting ", "err : ", err)
@@ -456,7 +457,7 @@ func getSourceCaches(targetPlatforms, oldCachePathLocation string) string {
 }
 
 func getBuildxBuildAndExportCacheCommand(cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, map[string]string) {
-	dockerBuild = fmt.Sprintf("%s -f %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerfilePath)
+	dockerBuild = fmt.Sprintf("%s %s -f %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.BuildContext, dockerfilePath)
 	exportCacheCmds := make(map[string]string)
 
 	provenanceFlag := dockerBuildConfig.GetProvenanceFlag()
@@ -477,7 +478,7 @@ func getBuildxBuildAndExportCacheCommand(cacheEnabled bool, dockerBuild, oldCach
 	}
 
 	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-	dockerBuild = fmt.Sprintf("%s -t %s --push %s --metadata-file %s", dockerBuild, dest, dockerBuildConfig.BuildContext, manifestLocation)
+	dockerBuild = fmt.Sprintf("%s -t %s --push --metadata-file %s", dockerBuild, dest, manifestLocation)
 
 	return dockerBuild, exportCacheCmds
 }
