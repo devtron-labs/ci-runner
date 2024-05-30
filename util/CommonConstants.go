@@ -45,6 +45,7 @@ const (
 	TeeCommand                   = "tee"
 	LogFileName                  = "main.log"
 	NewLineChar                  = "\n"
+	BuildxCacheModeMinLabelKey   = "BuildxCacheMin"
 )
 
 const (
