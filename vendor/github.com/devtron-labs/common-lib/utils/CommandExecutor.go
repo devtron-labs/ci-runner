@@ -18,8 +18,6 @@ func RunCommand(cmd *exec.Cmd) error {
 	}
 	cmd.Stderr = cmd.Stdout // Combine stderr and stdout
 
-	done := make(chan error, 1)
-
 	// Start the command
 	if err := cmd.Start(); err != nil {
 		fmt.Printf("Command execution failed: %v\n", err)
@@ -27,41 +25,31 @@ func RunCommand(cmd *exec.Cmd) error {
 	}
 
 	if maskSecrets {
-		// Create a goroutine to handle real-time output processing
-		go func() {
-			// Wrap the pipe reader to mask secrets
-			maskedStream, err := secretScanner.MaskSecretsOnStream(stdoutPipe)
-			if err != nil {
-				done <- fmt.Errorf("error masking secrets: %v", err)
-				return
-			}
+		// Wrap the pipe reader to mask secrets
+		maskedStream, err := secretScanner.MaskSecretsOnStream(stdoutPipe)
+		if err != nil {
+			fmt.Printf("error masking secrets: %v", err)
+			return err
+		}
 
-			// Copy the masked stream to stdout
-			if _, err := io.Copy(os.Stdout, maskedStream); err != nil {
-				done <- fmt.Errorf("error reading masked stream: %v", err)
-				return
-			}
-			done <- nil
-		}()
+		// Copy the masked stream to stdout
+		if _, err := io.Copy(os.Stdout, maskedStream); err != nil {
+			fmt.Printf("error reading masked stream: %v", err)
+			return err
+		}
+
 	} else {
-		// Create a goroutine to copy the output directly to stdout
-		go func() {
-			if _, err := io.Copy(os.Stdout, stdoutPipe); err != nil {
-				done <- fmt.Errorf("error reading stream: %v", err)
-				return
-			}
-			done <- nil
-		}()
-	}
+		if _, err := io.Copy(os.Stdout, stdoutPipe); err != nil {
+			fmt.Printf("error reading stream: %v", err)
+			return err
+		}
 
-	// Wait for the goroutine to finish
-	if err := <-done; err != nil {
-		fmt.Printf("Processing error: %v\n", err)
 	}
 
 	// Wait for the command to complete
 	if err := cmd.Wait(); err != nil {
 		fmt.Printf("Command execution failed: %v\n", err)
 	}
+
 	return nil
 }
