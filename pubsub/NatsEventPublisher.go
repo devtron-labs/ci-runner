@@ -34,7 +34,7 @@ func PublishEventsOnNats(jsonBody []byte, topic string) error {
 		log.Print(util.DEVTRON, "err", err)
 		return err
 	}
-	client := pubsub1.NewPubSubClientServiceImpl(logger)
+	client, err := pubsub1.NewPubSubClientServiceImpl(logger)
 	if client == nil {
 		log.Print(util.DEVTRON, "err", err)
 		return err
