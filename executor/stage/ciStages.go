@@ -31,15 +31,15 @@ import (
  */
 
 type CiStage struct {
-	gitManager   helper.GitManager
-	dockerHelper helper.DockerHelper
+	gitManager           helper.GitManager
+	dockerHelper         helper.DockerHelper
 	stageExecutorManager executor.StageExecutor
 }
 
 func NewCiStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, stageExecutor executor.StageExecutor) *CiStage {
 	return &CiStage{
-		gitManager:   gitManager,
-		dockerHelper: dockerHelper,
+		gitManager:           gitManager,
+		dockerHelper:         dockerHelper,
 		stageExecutorManager: stageExecutor,
 	}
 }

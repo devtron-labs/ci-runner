@@ -19,6 +19,7 @@ package executor
 
 import (
 	"fmt"
+	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"log"
 	"os"
 	"path/filepath"
@@ -119,6 +120,13 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	stepOutputVarsFinal := make(map[string]string)
 	//---------------------------------------------------------------------------------------------------
 	if step.StepType == helper.STEP_TYPE_INLINE {
+		//add sysytem env variable
+		for k, v := range util2.GetSystemEnvVariables() {
+			//add only when not overriden by user
+			if _, ok := scriptEnvs[k]; !ok {
+				scriptEnvs[k] = v
+			}
+		}
 		if step.ExecutorType == helper.SHELL {
 			stageOutputVars, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", index), step.Script, scriptEnvs, outVars)
 			if err != nil {

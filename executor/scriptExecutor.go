@@ -102,13 +102,6 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 		log.Println(util.DEVTRON, err)
 		return nil, err
 	}
-	//add sysytem env variable
-	for k, v := range util2.GetSystemEnvVariables() {
-		//add only when not overriden by user
-		if _, ok := envInputVars[k]; !ok {
-			envInputVars[k] = v
-		}
-	}
 	var inputEnvironmentVariable []string
 	for k, v := range envInputVars {
 		inputEnvironmentVariable = append(inputEnvironmentVariable, fmt.Sprintf("%s=%s", k, v))
