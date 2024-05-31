@@ -213,7 +213,6 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 	}
 	host := dockerCredentials.DockerRegistryURL
 	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, host)
-	log.Println("Docker login command ", dockerLogin)
 	awsLoginCmd := impl.GetCommandToExecute(dockerLogin)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
