@@ -65,11 +65,13 @@ type DockerHelper interface {
 
 type DockerHelperImpl struct {
 	DockerCommandEnv []string
+	cmdExecutor      CommandExecutor
 }
 
-func NewDockerHelperImpl() *DockerHelperImpl {
+func NewDockerHelperImpl(cmdExecutor CommandExecutor) *DockerHelperImpl {
 	return &DockerHelperImpl{
 		DockerCommandEnv: os.Environ(),
+		cmdExecutor:      cmdExecutor,
 	}
 }
 
@@ -213,7 +215,8 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 	}
 	host := dockerCredentials.DockerRegistryURL
 	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, host)
-	log.Println("Docker login command ", dockerLogin)
+	//log.Println("Docker login command ", dockerLogin)
+	log.Println("Executing Docker Login Command")
 	awsLoginCmd := impl.GetCommandToExecute(dockerLogin)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
@@ -502,7 +505,7 @@ func (impl *DockerHelperImpl) handleLanguageVersion(projectPath string, buildpac
 
 func (impl *DockerHelperImpl) executeCmd(dockerBuild string) error {
 	dockerBuildCMD := impl.GetCommandToExecute(dockerBuild)
-	err := util.RunCommand(dockerBuildCMD)
+	err := impl.cmdExecutor.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
 	}
@@ -552,7 +555,7 @@ func (impl *DockerHelperImpl) createBuildxBuilder() error {
 	multiPlatformCmd := "docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'"
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := impl.GetCommandToExecute(multiPlatformCmd)
-	err := util.RunCommand(dockerBuildCMD)
+	err := impl.cmdExecutor.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -564,7 +567,7 @@ func (impl *DockerHelperImpl) installAllSupportedPlatforms() error {
 	multiPlatformCmd := "docker run --privileged --rm quay.io/devtron/binfmt:stable --install all"
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := impl.GetCommandToExecute(multiPlatformCmd)
-	err := util.RunCommand(dockerBuildCMD)
+	err := impl.cmdExecutor.RunCommand(dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
 		return err

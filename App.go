@@ -47,7 +47,10 @@ func main() {
 	gitCliManager := helper.NewGitCliManager()
 	stageExecutorImpl := executor.NewStageExecutorImpl()
 	gitManagerImpl := *helper.NewGitManagerImpl(gitCliManager)
-	dockerHelperImpl := helper.NewDockerHelperImpl()
+
+	commandExecutorImpl := helper.NewCommandExecutorImpl()
+	dockerHelperImpl := helper.NewDockerHelperImpl(commandExecutorImpl)
+
 	ciStage := stage.NewCiStage(gitManagerImpl, dockerHelperImpl, stageExecutorImpl)
 	cdStage := stage.NewCdStage(gitManagerImpl, dockerHelperImpl, stageExecutorImpl)
 	ciCdProcessor := app.NewCiCdProcessor(ciStage, cdStage, dockerHelperImpl)
