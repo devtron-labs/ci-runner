@@ -139,6 +139,8 @@ const DOCKER_REGISTRY_TYPE_OTHER = "other"
 const REGISTRY_TYPE_ARTIFACT_REGISTRY = "artifact-registry"
 const REGISTRY_TYPE_GCR = "gcr"
 const JSON_KEY_USERNAME = "_json_key"
+const CacheModeMax = "max"
+const CacheModeMin = "min"
 
 type DockerCredentials struct {
 	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType string
@@ -213,7 +215,6 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 	}
 	host := dockerCredentials.DockerRegistryURL
 	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, host)
-	log.Println("Docker login command ", dockerLogin)
 	awsLoginCmd := impl.GetCommandToExecute(dockerLogin)
 	err := util.RunCommand(awsLoginCmd)
 	if err != nil {
@@ -318,8 +319,12 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 				oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
 			}
+			cacheMinMode := false
 
-			dockerBuild = getBuildxBuildCommand(cacheEnabled, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
+			if _, ok := ciRequest.AppLabels[util.BuildxCacheModeMinLabelKey]; ok {
+				cacheMinMode = true
+			}
+			dockerBuild = getBuildxBuildCommand(cacheEnabled, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath, cacheMinMode)
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
@@ -417,10 +422,15 @@ func getDockerfilePath(CiBuildConfig *CiBuildConfigBean, checkoutPath string) st
 	return dockerFilePath
 }
 
-func getBuildxBuildCommand(cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) string {
+func getBuildxBuildCommand(cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string, useCacheMin bool) string {
+
+	cacheMode := CacheModeMax
+	if useCacheMin {
+		cacheMode = CacheModeMin
+	}
 	dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerfilePath, dest, dockerBuildConfig.BuildContext)
 	if cacheEnabled {
-		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s", dockerBuild, localCachePath, oldCacheBuildxPath)
+		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=%s --cache-from=type=local,src=%s", dockerBuild, localCachePath, cacheMode, oldCacheBuildxPath)
 	}
 
 	provenanceFlag := dockerBuildConfig.GetProvenanceFlag()
