@@ -27,15 +27,15 @@ import (
 )
 
 type CdStage struct {
-	gitManager   helper.GitManager
-	dockerHelper helper.DockerHelper
+	gitManager           helper.GitManager
+	dockerHelper         helper.DockerHelper
 	stageExecutorManager executor.StageExecutor
 }
 
 func NewCdStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, stageExecutor executor.StageExecutor) *CdStage {
 	return &CdStage{
-		gitManager:   gitManager,
-		dockerHelper: dockerHelper,
+		gitManager:           gitManager,
+		dockerHelper:         dockerHelper,
 		stageExecutorManager: stageExecutor,
 	}
 }

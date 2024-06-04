@@ -77,7 +77,7 @@ export {{ $key }}='{{ $value }}' ;
 	return nil
 }
 
-func RunScripts(workDirectory string, scriptFileName string, script string, envInputVars map[string]string, outputVars []string) (map[string]string, error) {
+func RunScripts(impl *StageExecutorImpl, workDirectory string, scriptFileName string, script string, envInputVars map[string]string, outputVars []string) (map[string]string, error) {
 	log.Println("running script commands")
 	envOutFileName := filepath.Join(workDirectory, fmt.Sprintf("%s_out.env", scriptFileName))
 
@@ -115,7 +115,7 @@ func RunScripts(workDirectory string, scriptFileName string, script string, envI
 	}
 	runScriptCMD := exec.Command("/bin/sh", scriptPath)
 	runScriptCMD.Env = inputEnvironmentVariable
-	err = util.RunCommand(runScriptCMD)
+	err = impl.cmdExecutor.RunCommand(runScriptCMD)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -169,7 +169,7 @@ type executionConf struct {
 	RunCommandFileName  string // system generated
 }
 
-func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error) {
+func RunScriptsInDocker(impl *StageExecutorImpl, executionConf *executionConf) (map[string]string, error) {
 	envInputFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_in.env", executionConf.scriptFileName))
 	entryScriptFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_entry.sh", executionConf.scriptFileName))
 	envOutFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_out.env", executionConf.scriptFileName))
@@ -227,7 +227,7 @@ func RunScriptsInDocker(executionConf *executionConf) (map[string]string, error)
 	// docker run -it -v   -environment file  -p
 	runScriptCMD := exec.Command("/bin/sh", executionConf.RunCommandFileName)
 	//runScriptCMD.Env = inputEnvironmentVariable
-	err = util.RunCommand(runScriptCMD)
+	err = impl.cmdExecutor.RunCommand(runScriptCMD)
 	if err != nil {
 		log.Println(err)
 		return nil, err
