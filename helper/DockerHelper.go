@@ -218,7 +218,7 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 	//log.Println("Docker login command ", dockerLogin)
 	log.Println("Executing Docker Login Command")
 	awsLoginCmd := impl.GetCommandToExecute(dockerLogin)
-	err := util.RunCommand(awsLoginCmd)
+	err := impl.cmdExecutor.RunCommand(awsLoginCmd)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -308,7 +308,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		dockerfilePath := getDockerfilePath(ciBuildConfig, ciRequest.CheckoutPath)
 
 		if useBuildx {
-			err := checkAndCreateDirectory(util.LOCAL_BUILDX_LOCATION)
+			err := impl.checkAndCreateDirectory(util.LOCAL_BUILDX_LOCATION)
 			if err != nil {
 				log.Println(util.DEVTRON, " error in creating LOCAL_BUILDX_LOCATION ", util.LOCAL_BUILDX_LOCATION)
 				return "", err
@@ -334,7 +334,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				log.Println(" -----> Setting up cache directory for Buildx")
 				oldCacheBuildxPath = util.LOCAL_BUILDX_LOCATION + "/old"
 				localCachePath = util.LOCAL_BUILDX_CACHE_LOCATION
-				err = setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
+				err = impl.setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
 				if err != nil {
 					return "", err
 				}
@@ -516,7 +516,7 @@ func (impl *DockerHelperImpl) tagDockerBuild(dockerRepository string, dest strin
 	dockerTag := "docker tag " + dockerRepository + ":latest" + " " + dest
 	log.Println(" -----> " + dockerTag)
 	dockerTagCMD := impl.GetCommandToExecute(dockerTag)
-	err := util.RunCommand(dockerTagCMD)
+	err := impl.cmdExecutor.RunCommand(dockerTagCMD)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -524,18 +524,19 @@ func (impl *DockerHelperImpl) tagDockerBuild(dockerRepository string, dest strin
 	return nil
 }
 
-func setupCacheForBuildx(localCachePath string, oldCacheBuildxPath string) error {
-	err := checkAndCreateDirectory(localCachePath)
+func (impl *DockerHelperImpl) setupCacheForBuildx(localCachePath string, oldCacheBuildxPath string) error {
+	err := impl.checkAndCreateDirectory(localCachePath)
 	if err != nil {
 		return err
 	}
-	err = checkAndCreateDirectory(oldCacheBuildxPath)
+	err = impl.checkAndCreateDirectory(oldCacheBuildxPath)
 	if err != nil {
 		return err
 	}
 	copyContent := "cp -R " + localCachePath + " " + oldCacheBuildxPath
 	copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
-	err = util.RunCommand(copyContentCmd)
+	err = impl.cmdExecutor.RunCommand(copyContentCmd)
+
 	if err != nil {
 		log.Println(err)
 		return err
@@ -543,7 +544,7 @@ func setupCacheForBuildx(localCachePath string, oldCacheBuildxPath string) error
 
 	cleanContent := "rm -rf " + localCachePath + "/*"
 	cleanContentCmd := exec.Command("/bin/sh", "-c", cleanContent)
-	err = util.RunCommand(cleanContentCmd)
+	err = impl.cmdExecutor.RunCommand(cleanContentCmd)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -575,10 +576,10 @@ func (impl *DockerHelperImpl) installAllSupportedPlatforms() error {
 	return nil
 }
 
-func checkAndCreateDirectory(localCachePath string) error {
+func (impl *DockerHelperImpl) checkAndCreateDirectory(localCachePath string) error {
 	makeDirCmd := "mkdir -p " + localCachePath
 	pathCreateCommand := exec.Command("/bin/sh", "-c", makeDirCmd)
-	err := util.RunCommand(pathCreateCommand)
+	err := impl.cmdExecutor.RunCommand(pathCreateCommand)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -609,7 +610,7 @@ func (impl *DockerHelperImpl) PushArtifact(dest string) error {
 	dockerPush := "docker push " + dest
 	log.Println("-----> " + dockerPush)
 	dockerPushCMD := impl.GetCommandToExecute(dockerPush)
-	err := util.RunCommand(dockerPushCMD)
+	err := impl.cmdExecutor.RunCommand(dockerPushCMD)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -805,7 +806,7 @@ func (impl *DockerHelperImpl) StopDocker() error {
 		stopCmdS := "docker stop -t 5 $(docker ps -a -q)"
 		log.Println(util.DEVTRON, " -----> stopping docker container")
 		stopCmd := impl.GetCommandToExecute(stopCmdS)
-		err := util.RunCommand(stopCmd)
+		err := impl.cmdExecutor.RunCommand(stopCmd)
 		log.Println(util.DEVTRON, " -----> stopped docker container")
 		if err != nil {
 			log.Fatal(err)
@@ -814,7 +815,7 @@ func (impl *DockerHelperImpl) StopDocker() error {
 		removeContainerCmds := "docker rm -v -f $(docker ps -a -q)"
 		log.Println(util.DEVTRON, " -----> removing docker container")
 		removeContainerCmd := impl.GetCommandToExecute(removeContainerCmds)
-		err = util.RunCommand(removeContainerCmd)
+		err = impl.cmdExecutor.RunCommand(removeContainerCmd)
 		log.Println(util.DEVTRON, " -----> removed docker container")
 		if err != nil {
 			log.Fatal(err)
