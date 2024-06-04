@@ -29,14 +29,17 @@ import (
 )
 
 type StageExecutorImpl struct {
+	cmdExecutor helper.CommandExecutor
 }
 
 type StageExecutor interface {
 	RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error)
 }
 
-func NewStageExecutorImpl() *StageExecutorImpl {
-	return &StageExecutorImpl{}
+func NewStageExecutorImpl(cmdExecutor helper.CommandExecutor) *StageExecutorImpl {
+	return &StageExecutorImpl{
+		cmdExecutor: cmdExecutor,
+	}
 }
 
 func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error) {
@@ -120,7 +123,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	//---------------------------------------------------------------------------------------------------
 	if step.StepType == helper.STEP_TYPE_INLINE {
 		if step.ExecutorType == helper.SHELL {
-			stageOutputVars, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", index), step.Script, scriptEnvs, outVars)
+			stageOutputVars, err := RunScripts(impl, util.Output_path, fmt.Sprintf("stage-%d", index), step.Script, scriptEnvs, outVars)
 			if err != nil {
 				return step, err
 			}
@@ -170,7 +173,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 			if executionConf.SourceCodeMount != nil {
 				executionConf.SourceCodeMount.SrcPath = util.WORKINGDIR
 			}
-			stageOutputVars, err := RunScriptsInDocker(executionConf)
+			stageOutputVars, err := RunScriptsInDocker(impl, executionConf)
 			if err != nil {
 				return step, err
 			}
