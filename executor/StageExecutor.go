@@ -25,7 +25,7 @@ import (
 
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
-	"github.com/otiai10/copy"
+	copylib "github.com/otiai10/copy"
 )
 
 type StageExecutorImpl struct {
@@ -127,7 +127,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 			stepOutputVarsFinal = stageOutputVars
 			if len(step.ArtifactPaths) > 0 {
 				for _, path := range step.ArtifactPaths {
-					err = copy.Copy(path, filepath.Join(util.TmpArtifactLocation, step.Name, path))
+					err = copylib.Copy(path, filepath.Join(util.TmpArtifactLocation, step.Name, path))
 					if err != nil {
 						if _, ok := err.(*os.PathError); ok {
 							log.Println(util.DEVTRON, "dir not exists", path)
@@ -179,7 +179,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 				// Ignore if no file/folder
 				log.Println(util.DEVTRON, "artifact not found ", err)
 			} else {
-				err = copy.Copy(stepArtifact, filepath.Join(util.TmpArtifactLocation, step.Name))
+				err = copylib.Copy(stepArtifact, filepath.Join(util.TmpArtifactLocation, step.Name))
 				if err != nil {
 					return step, err
 				}
