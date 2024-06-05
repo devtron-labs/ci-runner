@@ -31,7 +31,22 @@ import (
 	"strings"
 )
 
-func RunScriptsV1(outputPath string, bashScript string, script string, envVars map[string]string) error {
+type ScriptExecutorImpl struct {
+	cmdExecutor helper.CommandExecutor
+}
+
+type ScriptExecutor interface {
+	RunScriptsV1(outputPath string, bashScript string, script string, envVars map[string]string) error
+	RunScripts(workDirectory string, scriptFileName string, script string, envInputVars map[string]string, outputVars []string) (map[string]string, error)
+}
+
+func NewScriptExecutorImpl(cmdExecutor helper.CommandExecutor) *ScriptExecutorImpl {
+	return &ScriptExecutorImpl{
+		cmdExecutor: cmdExecutor,
+	}
+}
+
+func (impl *ScriptExecutorImpl) RunScriptsV1(outputPath string, bashScript string, script string, envVars map[string]string) error {
 	log.Println("running script commands")
 	scriptTemplate := `#!/bin/sh
 {{ range $key, $value := .envVr }}
@@ -69,7 +84,7 @@ export {{ $key }}='{{ $value }}' ;
 	}
 
 	runScriptCMD := exec.Command("/bin/sh", scriptPath)
-	err = util.RunCommand(runScriptCMD)
+	err = impl.cmdExecutor.RunCommand(runScriptCMD)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -77,7 +92,7 @@ export {{ $key }}='{{ $value }}' ;
 	return nil
 }
 
-func RunScripts(impl *StageExecutorImpl, workDirectory string, scriptFileName string, script string, envInputVars map[string]string, outputVars []string) (map[string]string, error) {
+func (impl *ScriptExecutorImpl) RunScripts(workDirectory string, scriptFileName string, script string, envInputVars map[string]string, outputVars []string) (map[string]string, error) {
 	log.Println("running script commands")
 	envOutFileName := filepath.Join(workDirectory, fmt.Sprintf("%s_out.env", scriptFileName))
 

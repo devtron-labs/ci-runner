@@ -156,7 +156,7 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		if err != nil {
 			return err
 		}
-		err = executor.RunCdStageTasks(tasks, scriptEnvs)
+		err = impl.stageExecutorManager.RunCdStageTasks(tasks, scriptEnvs)
 		if err != nil {
 			return err
 		}

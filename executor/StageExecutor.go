@@ -29,16 +29,19 @@ import (
 )
 
 type StageExecutorImpl struct {
-	cmdExecutor helper.CommandExecutor
+	cmdExecutor    helper.CommandExecutor
+	scriptExecutor ScriptExecutor
 }
 
 type StageExecutor interface {
 	RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error)
+	RunCdStageTasks(tasks []*helper.Task, scriptEnvs map[string]string) error
 }
 
-func NewStageExecutorImpl(cmdExecutor helper.CommandExecutor) *StageExecutorImpl {
+func NewStageExecutorImpl(cmdExecutor helper.CommandExecutor, scriptExecutor ScriptExecutor) *StageExecutorImpl {
 	return &StageExecutorImpl{
-		cmdExecutor: cmdExecutor,
+		cmdExecutor:    cmdExecutor,
+		scriptExecutor: scriptExecutor,
 	}
 }
 
@@ -123,7 +126,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	//---------------------------------------------------------------------------------------------------
 	if step.StepType == helper.STEP_TYPE_INLINE {
 		if step.ExecutorType == helper.SHELL {
-			stageOutputVars, err := RunScripts(impl, util.Output_path, fmt.Sprintf("stage-%d", index), step.Script, scriptEnvs, outVars)
+			stageOutputVars, err := impl.scriptExecutor.RunScripts(util.Output_path, fmt.Sprintf("stage-%d", index), step.Script, scriptEnvs, outVars)
 			if err != nil {
 				return step, err
 			}
@@ -336,7 +339,7 @@ func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string
 
 }
 
-func RunCdStageTasks(tasks []*helper.Task, scriptEnvs map[string]string) error {
+func (impl *StageExecutorImpl) RunCdStageTasks(tasks []*helper.Task, scriptEnvs map[string]string) error {
 	log.Println(util.DEVTRON, " cd-stage-processing")
 	//cleaning the directory
 	err := os.RemoveAll(util.Output_path)
@@ -359,7 +362,7 @@ func RunCdStageTasks(tasks []*helper.Task, scriptEnvs map[string]string) error {
 		taskMap[task.Name] = task
 		log.Println(util.DEVTRON, "stage", task)
 		util.LogStage(task.Name)
-		err := RunScriptsV1(util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
+		err := impl.scriptExecutor.RunScriptsV1(util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return err
 		}
