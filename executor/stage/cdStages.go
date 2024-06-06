@@ -111,7 +111,7 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
 	impl.dockerHelper.StartDockerDaemon(cicdRequest.CommonWorkflowRequest)
-	ciContext := cictx.BuildCiContext(context.Background(), cicdRequest.CommonWorkflowRequest)
+	ciContext := cictx.BuildCiContext(context.Background(), cicdRequest.CommonWorkflowRequest.EnableSecretMasking)
 	err = impl.dockerHelper.DockerLogin(ciContext, &helper.DockerCredentials{
 		DockerUsername:     cicdRequest.CommonWorkflowRequest.DockerUsername,
 		DockerPassword:     cicdRequest.CommonWorkflowRequest.DockerPassword,

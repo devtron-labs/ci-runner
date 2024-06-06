@@ -123,7 +123,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 		return step, err
 	}
 
-	ciContext := cictx.BuildCiContext(context.Background(), &ciCdRequest)
+	ciContext := cictx.BuildCiContext(context.Background(), ciCdRequest.EnableSecretMasking)
 
 	stepOutputVarsFinal := make(map[string]string)
 	//---------------------------------------------------------------------------------------------------

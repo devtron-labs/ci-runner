@@ -227,7 +227,7 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 	return nil
 }
 func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
-	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest)
+	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
 	err := impl.DockerLogin(ciContext, &DockerCredentials{
 		DockerUsername:     ciRequest.DockerUsername,
 		DockerPassword:     ciRequest.DockerPassword,

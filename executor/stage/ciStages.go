@@ -48,7 +48,7 @@ func NewCiStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, 
 
 func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	ciRequest := ciCdRequest.CommonWorkflowRequest
-	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest)
+	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
 	artifactUploaded, err := impl.runCIStages(ciContext, ciCdRequest)
 	log.Println(util.DEVTRON, artifactUploaded, err)
 	var artifactUploadErr error
@@ -441,7 +441,7 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 		if i != 0 {
 			time.Sleep(time.Duration(imageRetryIntervalValue) * time.Second)
 		}
-		ciContext := cicxt.BuildCiContext(context.Background(), ciCdRequest.CommonWorkflowRequest)
+		ciContext := cicxt.BuildCiContext(context.Background(), ciCdRequest.CommonWorkflowRequest.EnableSecretMasking)
 		err = impl.dockerHelper.PushArtifact(ciContext, dest)
 		if err == nil {
 			break

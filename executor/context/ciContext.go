@@ -5,13 +5,13 @@ import (
 )
 
 type CiContext struct {
-	context.Context // Embedding original Go context
-	ciRequest       CommonWorkflowRequest
+	context.Context     // Embedding original Go context
+	enableSecretMasking bool
 }
 
-func BuildCiContext(ctx context.Context, ciRequest *CommonWorkflowRequest) CiContext {
+func BuildCiContext(ctx context.Context, enableSecretMasking bool) CiContext {
 	return CiContext{
-		Context:   ctx,
-		ciRequest: *ciRequest,
+		Context:             ctx,
+		enableSecretMasking: enableSecretMasking,
 	}
 }
