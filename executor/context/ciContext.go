@@ -6,12 +6,12 @@ import (
 
 type CiContext struct {
 	context.Context     // Embedding original Go context
-	enableSecretMasking bool
+	EnableSecretMasking bool
 }
 
 func BuildCiContext(ctx context.Context, enableSecretMasking bool) CiContext {
 	return CiContext{
 		Context:             ctx,
-		enableSecretMasking: enableSecretMasking,
+		EnableSecretMasking: enableSecretMasking,
 	}
 }
