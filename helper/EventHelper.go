@@ -259,6 +259,7 @@ type CiRequest struct {
 	OrchestratorToken           string                            `json:"orchestratorToken"`
 	ImageRetryCount             int                               `json:"imageRetryCount"`
 	ImageRetryInterval          int                               `json:"imageRetryInterval"`
+	EnableSecretMasking         bool                              `json:"enableSecretMasking"`
 }
 
 type CdRequest struct {
