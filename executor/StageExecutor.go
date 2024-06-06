@@ -18,14 +18,15 @@
 package executor
 
 import (
+	"context"
 	"fmt"
-	"log"
-	"os"
-	"path/filepath"
-
+	cictx "github.com/devtron-labs/ci-runner/executor/context"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	copylib "github.com/otiai10/copy"
+	"log"
+	"os"
+	"path/filepath"
 )
 
 type StageExecutorImpl struct {
@@ -35,7 +36,7 @@ type StageExecutorImpl struct {
 
 type StageExecutor interface {
 	RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error)
-	RunCdStageTasks(tasks []*helper.Task, scriptEnvs map[string]string) error
+	RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvs map[string]string) error
 }
 
 func NewStageExecutorImpl(cmdExecutor helper.CommandExecutor, scriptExecutor ScriptExecutor) *StageExecutorImpl {
@@ -122,11 +123,13 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 		return step, err
 	}
 
+	ciContext := cictx.BuildCiContext(context.Background(), &ciCdRequest)
+
 	stepOutputVarsFinal := make(map[string]string)
 	//---------------------------------------------------------------------------------------------------
 	if step.StepType == helper.STEP_TYPE_INLINE {
 		if step.ExecutorType == helper.SHELL {
-			stageOutputVars, err := impl.scriptExecutor.RunScripts(util.Output_path, fmt.Sprintf("stage-%d", index), step.Script, scriptEnvs, outVars)
+			stageOutputVars, err := impl.scriptExecutor.RunScripts(ciContext, util.Output_path, fmt.Sprintf("stage-%d", index), step.Script, scriptEnvs, outVars)
 			if err != nil {
 				return step, err
 			}
@@ -176,7 +179,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 			if executionConf.SourceCodeMount != nil {
 				executionConf.SourceCodeMount.SrcPath = util.WORKINGDIR
 			}
-			stageOutputVars, err := RunScriptsInDocker(impl, executionConf)
+			stageOutputVars, err := RunScriptsInDocker(ciContext, impl, executionConf)
 			if err != nil {
 				return step, err
 			}
@@ -339,7 +342,7 @@ func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string
 
 }
 
-func (impl *StageExecutorImpl) RunCdStageTasks(tasks []*helper.Task, scriptEnvs map[string]string) error {
+func (impl *StageExecutorImpl) RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvs map[string]string) error {
 	log.Println(util.DEVTRON, " cd-stage-processing")
 	//cleaning the directory
 	err := os.RemoveAll(util.Output_path)
@@ -362,7 +365,7 @@ func (impl *StageExecutorImpl) RunCdStageTasks(tasks []*helper.Task, scriptEnvs 
 		taskMap[task.Name] = task
 		log.Println(util.DEVTRON, "stage", task)
 		util.LogStage(task.Name)
-		err := impl.scriptExecutor.RunScriptsV1(util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
+		err := impl.scriptExecutor.RunScriptsV1(ciContext, util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return err
 		}

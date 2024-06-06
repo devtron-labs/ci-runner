@@ -19,6 +19,7 @@ package executor
 
 import (
 	"fmt"
+	cictx "github.com/devtron-labs/ci-runner/executor/context"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
@@ -36,8 +37,8 @@ type ScriptExecutorImpl struct {
 }
 
 type ScriptExecutor interface {
-	RunScriptsV1(outputPath string, bashScript string, script string, envVars map[string]string) error
-	RunScripts(workDirectory string, scriptFileName string, script string, envInputVars map[string]string, outputVars []string) (map[string]string, error)
+	RunScriptsV1(ciContext cictx.CiContext, outputPath string, bashScript string, script string, envVars map[string]string) error
+	RunScripts(ciContext cictx.CiContext, string, scriptFileName string, script string, envInputVars map[string]string, outputVars []string) (map[string]string, error)
 }
 
 func NewScriptExecutorImpl(cmdExecutor helper.CommandExecutor) *ScriptExecutorImpl {
@@ -46,7 +47,7 @@ func NewScriptExecutorImpl(cmdExecutor helper.CommandExecutor) *ScriptExecutorIm
 	}
 }
 
-func (impl *ScriptExecutorImpl) RunScriptsV1(outputPath string, bashScript string, script string, envVars map[string]string) error {
+func (impl *ScriptExecutorImpl) RunScriptsV1(ciContext cictx.CiContext, outputPath string, bashScript string, script string, envVars map[string]string) error {
 	log.Println("running script commands")
 	scriptTemplate := `#!/bin/sh
 {{ range $key, $value := .envVr }}
@@ -84,7 +85,7 @@ export {{ $key }}='{{ $value }}' ;
 	}
 
 	runScriptCMD := exec.Command("/bin/sh", scriptPath)
-	err = impl.cmdExecutor.RunCommand(runScriptCMD)
+	err = impl.cmdExecutor.RunCommand(ciContext, runScriptCMD)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -92,7 +93,7 @@ export {{ $key }}='{{ $value }}' ;
 	return nil
 }
 
-func (impl *ScriptExecutorImpl) RunScripts(workDirectory string, scriptFileName string, script string, envInputVars map[string]string, outputVars []string) (map[string]string, error) {
+func (impl *ScriptExecutorImpl) RunScripts(ciContext cictx.CiContext, workDirectory string, scriptFileName string, script string, envInputVars map[string]string, outputVars []string) (map[string]string, error) {
 	log.Println("running script commands")
 	envOutFileName := filepath.Join(workDirectory, fmt.Sprintf("%s_out.env", scriptFileName))
 
@@ -130,7 +131,7 @@ func (impl *ScriptExecutorImpl) RunScripts(workDirectory string, scriptFileName 
 	}
 	runScriptCMD := exec.Command("/bin/sh", scriptPath)
 	runScriptCMD.Env = inputEnvironmentVariable
-	err = impl.cmdExecutor.RunCommand(runScriptCMD)
+	err = impl.cmdExecutor.RunCommand(ciContext, runScriptCMD)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -184,7 +185,7 @@ type executionConf struct {
 	RunCommandFileName  string // system generated
 }
 
-func RunScriptsInDocker(impl *StageExecutorImpl, executionConf *executionConf) (map[string]string, error) {
+func RunScriptsInDocker(ciContext cictx.CiContext, impl *StageExecutorImpl, executionConf *executionConf) (map[string]string, error) {
 	envInputFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_in.env", executionConf.scriptFileName))
 	entryScriptFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_entry.sh", executionConf.scriptFileName))
 	envOutFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_out.env", executionConf.scriptFileName))
@@ -242,7 +243,7 @@ func RunScriptsInDocker(impl *StageExecutorImpl, executionConf *executionConf) (
 	// docker run -it -v   -environment file  -p
 	runScriptCMD := exec.Command("/bin/sh", executionConf.RunCommandFileName)
 	//runScriptCMD.Env = inputEnvironmentVariable
-	err = impl.cmdExecutor.RunCommand(runScriptCMD)
+	err = impl.cmdExecutor.RunCommand(ciContext, runScriptCMD)
 	if err != nil {
 		log.Println(err)
 		return nil, err

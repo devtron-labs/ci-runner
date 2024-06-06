@@ -1,9 +1,11 @@
 package stage
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/devtron-labs/ci-runner/executor"
+	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
@@ -31,22 +33,23 @@ import (
  */
 
 type CiStage struct {
-	gitManager   helper.GitManager
-	dockerHelper helper.DockerHelper
+	gitManager           helper.GitManager
+	dockerHelper         helper.DockerHelper
 	stageExecutorManager executor.StageExecutor
 }
 
 func NewCiStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, stageExecutor executor.StageExecutor) *CiStage {
 	return &CiStage{
-		gitManager:   gitManager,
-		dockerHelper: dockerHelper,
+		gitManager:           gitManager,
+		dockerHelper:         dockerHelper,
 		stageExecutorManager: stageExecutor,
 	}
 }
 
 func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	ciRequest := ciCdRequest.CommonWorkflowRequest
-	artifactUploaded, err := impl.runCIStages(ciCdRequest)
+	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest)
+	artifactUploaded, err := impl.runCIStages(ciContext, ciCdRequest)
 	log.Println(util.DEVTRON, artifactUploaded, err)
 	var artifactUploadErr error
 	if !artifactUploaded {
@@ -100,7 +103,7 @@ const (
 	Scan   CiFailReason = "Image scan failed"
 )
 
-func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
+func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
 
 	metrics := &helper.CIMetrics{}
 	start := time.Now()
@@ -137,9 +140,9 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 	}
 	// git handling
 	log.Println(util.DEVTRON, " git")
-	ciBuildConfigBean := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
-	buildSkipEnabled := ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
-	skipCheckout := ciBuildConfigBean != nil && ciBuildConfigBean.PipelineType == helper.CI_JOB
+	ciBuildConfi := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
+	buildSkipEnabled := ciBuildConfi != nil && ciBuildConfi.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
+	skipCheckout := ciBuildConfi != nil && ciBuildConfi.PipelineType == helper.CI_JOB
 	if !skipCheckout {
 		err = impl.gitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
 	}
@@ -164,8 +167,8 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 		return artifactUploaded, err
 	}
 	ciCdRequest.CommonWorkflowRequest.TaskYaml = taskYaml
-	if ciBuildConfigBean != nil && ciBuildConfigBean.CiBuildType == helper.MANAGED_DOCKERFILE_BUILD_TYPE {
-		err = makeDockerfile(ciBuildConfigBean.DockerBuildConfig, ciCdRequest.CommonWorkflowRequest.CheckoutPath)
+	if ciBuildConfi != nil && ciBuildConfi.CiBuildType == helper.MANAGED_DOCKERFILE_BUILD_TYPE {
+		err = makeDockerfile(ciBuildConfi.DockerBuildConfig, ciCdRequest.CommonWorkflowRequest.CheckoutPath)
 		if err != nil {
 			return artifactUploaded, err
 		}
@@ -242,7 +245,7 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 	}
 	log.Println(util.DEVTRON, " /event")
 
-	err = impl.dockerHelper.StopDocker()
+	err = impl.dockerHelper.StopDocker(ciContext)
 	if err != nil {
 		log.Println("err", err)
 		return artifactUploaded, err
@@ -305,8 +308,8 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 }
 
 func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest string, metrics *helper.CIMetrics, artifactUploaded bool) (string, error) {
-	ciBuildConfigBean := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
-	isBuildX := ciBuildConfigBean != nil && ciBuildConfigBean.DockerBuildConfig != nil && ciBuildConfigBean.DockerBuildConfig.CheckForBuildX()
+	ciBuildConfi := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
+	isBuildX := ciBuildConfi != nil && ciBuildConfi.DockerBuildConfig != nil && ciBuildConfi.DockerBuildConfig.CheckForBuildX()
 	var digest string
 	var err error
 	if isBuildX {
@@ -385,7 +388,7 @@ func getPostCiStepToRunOnCiFail(postCiSteps []*helper.StepObject) []*helper.Step
 	return postCiStepsToTriggerOnCiFail
 }
 
-// extractOutResultsIfExists will unmarshall the results from file(json) (if file exist) into ImageDetailsFromCR
+// extractOutResultsIfExists will unmarshall the results from file(json) (if file exist) into.ImageDetailsFromCR
 func extractOutResultsIfExists() (*helper.ImageDetailsFromCR, error) {
 	exists, err := util.CheckFileExists(util.ResultsDirInCIRunnerPath)
 	if err != nil || !exists {
@@ -438,7 +441,8 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 		if i != 0 {
 			time.Sleep(time.Duration(imageRetryIntervalValue) * time.Second)
 		}
-		err = impl.dockerHelper.PushArtifact(dest)
+		ciContext := cicxt.BuildCiContext(context.Background(), ciCdRequest.CommonWorkflowRequest)
+		err = impl.dockerHelper.PushArtifact(ciContext, dest)
 		if err == nil {
 			break
 		}
