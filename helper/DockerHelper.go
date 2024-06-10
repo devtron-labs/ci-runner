@@ -60,7 +60,7 @@ type DockerHelper interface {
 	StopDocker(ciContext cicxt.CiContext) error
 	PushArtifact(ciContext cicxt.CiContext, dest string) error
 	ExtractDigestForBuildx(dest string) (string, error)
-	CleanBuildxK8sDriver(nodes []map[string]string) error
+	CleanBuildxK8sDriver(ciContext cicxt.CiContext, nodes []map[string]string) error
 	GetDestForNatsEvent(commonWorkflowRequest *CommonWorkflowRequest, dest string) (string, error)
 }
 
@@ -316,7 +316,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			}
 			useBuildxK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver()
 			if useBuildxK8sDriver {
-				err = impl.createBuildxBuilderWithK8sDriver(eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
+				err = impl.createBuildxBuilderWithK8sDriver(ciContext, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
 				if err != nil {
 					log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 					return "", err
@@ -357,7 +357,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		}
 
 		if useBuildK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver(); useBuildK8sDriver {
-			err = impl.CleanBuildxK8sDriver(eligibleK8sDriverNodes)
+			err = impl.CleanBuildxK8sDriver(ciContext, eligibleK8sDriverNodes)
 			if err != nil {
 				log.Println(util.DEVTRON, " error in cleaning buildx K8s driver ", " err: ", err)
 			}
@@ -700,7 +700,7 @@ func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cic
 	return nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
+func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
 
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
@@ -709,10 +709,11 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(builderNodes []ma
 
 	buildxCreate := getBuildxK8sDriverCmd(defaultNodeOpts, ciPipelineId, ciWorkflowId)
 	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--use")
-
-	err, errBuf := impl.runCmd(buildxCreate)
+	fmt.Println(util.DEVTRON, " cmd : ", buildxCreate)
+	builderCreateCmd := impl.GetCommandToExecute(buildxCreate)
+	err := impl.cmdExecutor.RunCommand(ciContext, builderCreateCmd)
 	if err != nil {
-		fmt.Println(util.DEVTRON, "buildxCreate : ", buildxCreate, " err : ", err, " error : ", errBuf.String(), "\n ")
+		fmt.Println(util.DEVTRON, "buildxCreate : ", buildxCreate, " err : ", err, " error : ")
 		return err
 	}
 
@@ -721,10 +722,11 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(builderNodes []ma
 		nodeOpts := builderNodes[i]
 		appendNode := getBuildxK8sDriverCmd(nodeOpts, ciPipelineId, ciWorkflowId)
 		appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
-
-		err, errBuf = impl.runCmd(appendNode)
+		fmt.Println(util.DEVTRON, " cmd : ", appendNode)
+		appendNodeCmd := impl.GetCommandToExecute(appendNode)
+		err = impl.cmdExecutor.RunCommand(ciContext, appendNodeCmd)
 		if err != nil {
-			fmt.Println(util.DEVTRON, " appendNode : ", appendNode, " err : ", err, " error : ", errBuf.String(), "\n ")
+			fmt.Println(util.DEVTRON, " appendNode : ", appendNode, " err : ", err, " error : ")
 			return err
 		}
 	}
@@ -732,43 +734,46 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(builderNodes []ma
 	return nil
 }
 
-func (impl *DockerHelperImpl) CleanBuildxK8sDriver(nodes []map[string]string) error {
+func (impl *DockerHelperImpl) CleanBuildxK8sDriver(ciContext cicxt.CiContext, nodes []map[string]string) error {
 	nodeNames := make([]string, 0)
 	for _, nOptsMp := range nodes {
 		if nodeName, ok := nOptsMp["node"]; ok && nodeName != "" {
 			nodeNames = append(nodeNames, nodeName)
 		}
 	}
-	err, errBuf := impl.leaveNodesFromBuildxK8sDriver(nodeNames)
+	err := impl.leaveNodesFromBuildxK8sDriver(ciContext, nodeNames)
 	if err != nil {
-		log.Println(util.DEVTRON, " error in deleting nodes created by ci-runner , err : ", errBuf.String())
+		log.Println(util.DEVTRON, " error in deleting nodes created by ci-runner , err : ", err)
 		return err
 	}
 	log.Println(util.DEVTRON, "successfully cleaned up buildx k8s driver")
 	return nil
 }
 
-func (impl *DockerHelperImpl) leaveNodesFromBuildxK8sDriver(nodeNames []string) (error, *bytes.Buffer) {
+func (impl *DockerHelperImpl) leaveNodesFromBuildxK8sDriver(ciContext cicxt.CiContext, nodeNames []string) error {
 	var err error
-	var errBuf *bytes.Buffer
 	defer func() {
 		removeCmd := fmt.Sprintf("docker buildx rm %s", BUILDX_K8S_DRIVER_NAME)
-		err, errBuf = impl.runCmd(removeCmd)
-		if err != nil {
-			log.Println(util.DEVTRON, "error in removing docker buildx err : ", errBuf.String())
-		}
+		fmt.Println(util.DEVTRON, " cmd : ", removeCmd)
+		execRemoveCmd := impl.GetCommandToExecute(removeCmd)
+		_ = impl.cmdExecutor.RunCommand(ciContext, execRemoveCmd)
+
 	}()
+
 	for _, node := range nodeNames {
-		cmds := fmt.Sprintf("docker buildx create --name=%s --node=%s --leave", BUILDX_K8S_DRIVER_NAME, node)
-		err, errBuf = impl.runCmd(cmds)
+		createCmd := fmt.Sprintf("docker buildx create --name=%s --node=%s --leave", BUILDX_K8S_DRIVER_NAME, node)
+		fmt.Println(util.DEVTRON, " cmd : ", createCmd)
+		execCreateCmd := impl.GetCommandToExecute(createCmd)
+		err = impl.cmdExecutor.RunCommand(ciContext, execCreateCmd)
 		if err != nil {
-			log.Println(util.DEVTRON, "error in leaving node : ", errBuf.String())
-			return err, errBuf
+			log.Println(util.DEVTRON, "error in leaving node : ", err)
+			return err
 		}
 	}
-	return err, errBuf
+	return err
 }
 
+// this function is deprecated, use cmdExecutor.RunCommand instead
 func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	fmt.Println(util.DEVTRON, " cmd : ", cmd)
 	builderCreateCmd := impl.GetCommandToExecute(cmd)
