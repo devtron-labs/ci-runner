@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020 Devtron Labs
+ * Copyright (c) 2024. Devtron Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package helper
@@ -183,6 +182,7 @@ type CommonWorkflowRequest struct {
 	PluginArtifactStage           string                         `json:"pluginArtifactStage"`
 	PushImageBeforePostCI         bool                           `json:"pushImageBeforePostCI"`
 	IntermediateDockerRegistryUrl string                         `json:"-"` // this URL will be used for all operations and can be mutated
+	AppLabels                     map[string]string              `json:"AppLabels"`
 }
 
 func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {

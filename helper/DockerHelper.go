@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020 Devtron Labs
+ * Copyright (c) 2024. Devtron Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package helper
@@ -142,6 +141,8 @@ const DOCKER_REGISTRY_TYPE_OTHER = "other"
 const REGISTRY_TYPE_ARTIFACT_REGISTRY = "artifact-registry"
 const REGISTRY_TYPE_GCR = "gcr"
 const JSON_KEY_USERNAME = "_json_key"
+const CacheModeMax = "max"
+const CacheModeMin = "min"
 
 type DockerCredentials struct {
 	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType string
@@ -226,6 +227,7 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 	log.Println("Docker login successful with username ", username, " on docker registry URL ", dockerCredentials.DockerRegistryURL)
 	return nil
 }
+
 func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
 	err := impl.DockerLogin(ciContext, &DockerCredentials{
@@ -277,27 +279,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				dockerBuild += "--platform " + dockerBuildConfig.TargetPlatform + " "
 			}
 		}
-		dockerBuildFlags := make(map[string]string)
-		dockerBuildArgsMap := dockerBuildConfig.Args
-		for k, v := range dockerBuildArgsMap {
-			flagKey := fmt.Sprintf("%s %s", BUILD_ARG_FLAG, k)
-			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
-				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=\"%s\"", valueFromEnv)
-			} else {
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", v)
-			}
-		}
-		dockerBuildOptionsMap := dockerBuildConfig.DockerBuildOptions
-		for k, v := range dockerBuildOptionsMap {
-			flagKey := "--" + k
-			if strings.HasPrefix(v, DEVTRON_ENV_VAR_PREFIX) {
-				valueFromEnv := os.Getenv(strings.TrimPrefix(v, DEVTRON_ENV_VAR_PREFIX))
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", valueFromEnv)
-			} else {
-				dockerBuildFlags[flagKey] = fmt.Sprintf("=%s", v)
-			}
-		}
+		dockerBuildFlags := getDockerBuildFlagsMap(dockerBuildConfig)
 		for key, value := range dockerBuildFlags {
 			dockerBuild = dockerBuild + " " + key + value
 		}
@@ -341,8 +323,12 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 				oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
 			}
+			cacheMinMode := false
 
-			dockerBuild = getBuildxBuildCommand(cacheEnabled, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
+			if _, ok := ciRequest.AppLabels[util.BuildxCacheModeMinLabelKey]; ok {
+				cacheMinMode = true
+			}
+			dockerBuild = getBuildxBuildCommand(cacheEnabled, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath, cacheMinMode)
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
@@ -403,6 +389,31 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 	return dest, nil
 }
 
+func getDockerBuildFlagsMap(dockerBuildConfig *DockerBuildConfig) map[string]string {
+	dockerBuildFlags := make(map[string]string)
+	dockerBuildArgsMap := dockerBuildConfig.Args
+	for k, v := range dockerBuildArgsMap {
+		flagKey := fmt.Sprintf("%s %s", BUILD_ARG_FLAG, k)
+		dockerBuildFlags[flagKey] = parseDockerFlagParam(v)
+	}
+	dockerBuildOptionsMap := dockerBuildConfig.DockerBuildOptions
+	for k, v := range dockerBuildOptionsMap {
+		flagKey := "--" + k
+		dockerBuildFlags[flagKey] = parseDockerFlagParam(v)
+	}
+	return dockerBuildFlags
+}
+
+func parseDockerFlagParam(param string) string {
+	value := param
+	if strings.HasPrefix(param, DEVTRON_ENV_VAR_PREFIX) {
+		value = os.Getenv(strings.TrimPrefix(param, DEVTRON_ENV_VAR_PREFIX))
+	}
+	unquotedString := strings.Trim(value, `"`)
+
+	return fmt.Sprintf(`="%s"`, unquotedString)
+}
+
 func getDockerfilePath(CiBuildConfig *CiBuildConfigBean, checkoutPath string) string {
 	var dockerFilePath string
 	if CiBuildConfig.CiBuildType == MANAGED_DOCKERFILE_BUILD_TYPE {
@@ -413,10 +424,15 @@ func getDockerfilePath(CiBuildConfig *CiBuildConfigBean, checkoutPath string) st
 	return dockerFilePath
 }
 
-func getBuildxBuildCommand(cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) string {
+func getBuildxBuildCommand(cacheEnabled bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string, useCacheMin bool) string {
+
+	cacheMode := CacheModeMax
+	if useCacheMin {
+		cacheMode = CacheModeMin
+	}
 	dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerfilePath, dest, dockerBuildConfig.BuildContext)
 	if cacheEnabled {
-		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=max --cache-from=type=local,src=%s", dockerBuild, localCachePath, oldCacheBuildxPath)
+		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=%s --cache-from=type=local,src=%s", dockerBuild, localCachePath, cacheMode, oldCacheBuildxPath)
 	}
 
 	provenanceFlag := dockerBuildConfig.GetProvenanceFlag()
