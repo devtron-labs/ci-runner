@@ -404,9 +404,9 @@ func parseDockerFlagParam(param string) string {
 	if strings.HasPrefix(param, DEVTRON_ENV_VAR_PREFIX) {
 		value = os.Getenv(strings.TrimPrefix(param, DEVTRON_ENV_VAR_PREFIX))
 	}
-	unquotedString := strings.Trim(value, "\"")
+	unquotedString := strings.Trim(value, `"`)
 
-	return fmt.Sprintf("=%s", strconv.Quote(unquotedString))
+	return fmt.Sprintf(`="%s"`, unquotedString)
 }
 
 func getDockerfilePath(CiBuildConfig *CiBuildConfigBean, checkoutPath string) string {
