@@ -406,7 +406,7 @@ func parseDockerFlagParam(param string) string {
 	}
 	unquotedString := strings.Trim(value, "\"")
 
-	return fmt.Sprintf("=%s", strconv.Quote(unquotedString))
+	return fmt.Sprintf("=\"%s\"", unquotedString)
 }
 
 func getDockerfilePath(CiBuildConfig *CiBuildConfigBean, checkoutPath string) string {
