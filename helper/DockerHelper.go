@@ -55,7 +55,7 @@ const (
 type DockerHelper interface {
 	StartDockerDaemon(commonWorkflowRequest *CommonWorkflowRequest)
 	DockerLogin(dockerCredentials *DockerCredentials) error
-	BuildArtifact(ciRequest *CommonWorkflowRequest) (string, func(), error)
+	BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error)
 	StopDocker() error
 	PushArtifact(dest string) error
 	ExtractDigestForBuildx(dest string) (string, error)
@@ -225,7 +225,7 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 	return nil
 }
 
-func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, func(), error) {
+func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 	err := impl.DockerLogin(&DockerCredentials{
 		DockerUsername:     ciRequest.DockerUsername,
 		DockerPassword:     ciRequest.DockerPassword,
@@ -236,7 +236,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		DockerRegistryType: ciRequest.DockerRegistryType,
 	})
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 	envVars := &EnvironmentVariables{}
 	err = env.Parse(envVars)
@@ -253,7 +253,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 
 	dest, err := BuildDockerImagePath(ciRequest)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 	if ciBuildConfig.CiBuildType == SELF_DOCKERFILE_BUILD_TYPE || ciBuildConfig.CiBuildType == MANAGED_DOCKERFILE_BUILD_TYPE {
 		dockerBuild := "docker build "
@@ -287,19 +287,19 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			err := checkAndCreateDirectory(util.LOCAL_BUILDX_LOCATION)
 			if err != nil {
 				log.Println(util.DEVTRON, " error in creating LOCAL_BUILDX_LOCATION ", util.LOCAL_BUILDX_LOCATION)
-				return "", nil, err
+				return "", err
 			}
 			useBuildxK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver()
 			if useBuildxK8sDriver {
 				err = impl.createBuildxBuilderWithK8sDriver(eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
 				if err != nil {
 					log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
-					return "", nil, err
+					return "", err
 				}
 			} else {
 				err = impl.createBuildxBuilderForMultiArchBuild()
 				if err != nil {
-					return "", nil, err
+					return "", err
 				}
 			}
 
@@ -312,7 +312,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				localCachePath = util.LOCAL_BUILDX_CACHE_LOCATION
 				err = setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
 				if err != nil {
-					return "", nil, err
+					return "", err
 				}
 				oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
 			}
@@ -324,8 +324,8 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			// so we will export the cache after build for all the platforms independently at different locations.
 			// refer buildxExportCacheFunc
 
-			multiPlatformK8sDriver := useBuildxK8sDriver && len(eligibleK8sDriverNodes) > 1
-			exportBuildxCacheAfterBuild := ciRequest.AsyncBuildxCacheExport || multiPlatformK8sDriver
+			multiNodeK8sDriver := useBuildxK8sDriver && len(eligibleK8sDriverNodes) > 1
+			exportBuildxCacheAfterBuild := ciRequest.AsyncBuildxCacheExport || multiNodeK8sDriver
 			dockerBuild, buildxExportCacheFunc = impl.getBuildxBuildCommand(exportBuildxCacheAfterBuild, cacheEnabled, ciRequest.BuildxCacheModeMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
@@ -339,7 +339,11 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		// run build cmd
 		err = impl.executeCmd(dockerBuild)
 		if err != nil {
-			return "", nil, err
+			return "", err
+		}
+
+		if buildxExportCacheFunc != nil {
+			buildxExportCacheFunc()
 		}
 
 		if useBuildK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver(); useBuildK8sDriver {
@@ -352,10 +356,10 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		if !useBuildx {
 			err = impl.tagDockerBuild(ciRequest.DockerRepository, dest)
 			if err != nil {
-				return "", nil, err
+				return "", err
 			}
 		} else {
-			return dest, buildxExportCacheFunc, nil
+			return dest, nil
 		}
 	} else if ciBuildConfig.CiBuildType == BUILDPACK_BUILD_TYPE {
 		buildPackParams := ciRequest.CiBuildConfig.BuildPackConfig
@@ -378,17 +382,17 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		log.Println(" -----> " + buildPackCmd)
 		err = impl.executeCmd(buildPackCmd)
 		if err != nil {
-			return "", nil, err
+			return "", err
 		}
 		builderRmCmdString := "docker image rm " + buildPackParams.BuilderId
 		builderRmCmd := impl.GetCommandToExecute(builderRmCmdString)
 		err := builderRmCmd.Run()
 		if err != nil {
-			return "", nil, err
+			return "", err
 		}
 	}
 
-	return dest, nil, nil
+	return dest, nil
 }
 
 func getDockerBuildFlagsMap(dockerBuildConfig *DockerBuildConfig) map[string]string {

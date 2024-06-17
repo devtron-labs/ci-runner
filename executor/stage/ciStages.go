@@ -204,9 +204,8 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 	}
 	var dest string
 	var digest string
-	var buildxExportCacheFunc func()
 	if !buildSkipEnabled {
-		dest, digest, buildxExportCacheFunc, err = impl.getImageDestAndDigest(ciCdRequest, metrics, scriptEnvs, refStageMap, preCiStageOutVariable, artifactUploaded)
+		dest, digest, err = impl.getImageDestAndDigest(ciCdRequest, metrics, scriptEnvs, refStageMap, preCiStageOutVariable, artifactUploaded)
 		if err != nil {
 			return artifactUploaded, err
 		}
@@ -259,11 +258,6 @@ func (impl *CiStage) runCIStages(ciCdRequest *helper.CiCdTriggerEvent) (artifact
 	}
 	log.Println(util.DEVTRON, " /event")
 
-	// export buildx cache right after sending nats event
-	if buildxExportCacheFunc != nil {
-		buildxExportCacheFunc()
-	}
-
 	err = impl.dockerHelper.StopDocker()
 	if err != nil {
 		log.Println("err", err)
@@ -301,12 +295,12 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 
 func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics,
 	refStageMap map[int][]*helper.StepObject, scriptEnvs map[string]string, artifactUploaded bool,
-	preCiStageOutVariable map[int]map[string]*helper.VariableObject) (string, func(), error) {
+	preCiStageOutVariable map[int]map[string]*helper.VariableObject) (string, error) {
 	util.LogStage("Build")
 	// build
 	start := time.Now()
 	metrics.BuildStartTime = start
-	dest, buildxExportCacheFunc, err := impl.dockerHelper.BuildArtifact(ciCdRequest.CommonWorkflowRequest) // TODO make it skipable
+	dest, err := impl.dockerHelper.BuildArtifact(ciCdRequest.CommonWorkflowRequest) // TODO make it skipable
 	metrics.BuildDuration = time.Since(start).Seconds()
 	if err != nil {
 		log.Println("Error in building artifact", "err", err)
@@ -323,7 +317,7 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 		err = sendFailureNotification(string(Build), ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
 	}
 	log.Println(util.DEVTRON, " Build artifact completed", "dest", dest, "err", err)
-	return dest, buildxExportCacheFunc, err
+	return dest, err
 }
 
 func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest string, metrics *helper.CIMetrics, artifactUploaded bool) (string, error) {
@@ -382,17 +376,17 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 	return nil
 }
 
-func (impl *CiStage) getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, artifactUploaded bool) (string, string, func(), error) {
-	dest, buildxExportCacheFunc, err := impl.runBuildArtifact(ciCdRequest, metrics, refStageMap, scriptEnvs, artifactUploaded, preCiStageOutVariable)
+func (impl *CiStage) getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, artifactUploaded bool) (string, string, error) {
+	dest, err := impl.runBuildArtifact(ciCdRequest, metrics, refStageMap, scriptEnvs, artifactUploaded, preCiStageOutVariable)
 	if err != nil {
-		return "", "", buildxExportCacheFunc, err
+		return "", "", err
 	}
 	digest, err := impl.extractDigest(ciCdRequest, dest, metrics, artifactUploaded)
 	if err != nil {
 		log.Println("Error in extracting digest", "err", err)
-		return "", "", buildxExportCacheFunc, err
+		return "", "", err
 	}
-	return dest, digest, buildxExportCacheFunc, nil
+	return dest, digest, nil
 }
 
 func getPostCiStepToRunOnCiFail(postCiSteps []*helper.StepObject) []*helper.StepObject {
