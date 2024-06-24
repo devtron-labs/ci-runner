@@ -64,8 +64,8 @@ github.com/cncf/xds/go v0.0.0-20211011173535-cb28da3451f1/go.mod h1:eXthEFrGJvWH
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/devtron-labs/common-lib v0.0.20-0.20240624084400-555b0938dee8 h1:tuHQyfrYD5eM+p3kcGYsvDvf+EqAJiN5V2zoq53pW1k=
-github.com/devtron-labs/common-lib v0.0.20-0.20240624084400-555b0938dee8/go.mod h1:UZGPt1ep9Tnd9Ak2sibGSiLr7p3ijO2/JLT+h+pqBuU=
+github.com/devtron-labs/common-lib v0.0.20-0.20240624105554-349c152dcbe7 h1:scN/c7Jriml2YXwrFJRjOkGfcCeAzH9oad8H2HC4XzI=
+github.com/devtron-labs/common-lib v0.0.20-0.20240624105554-349c152dcbe7/go.mod h1:UZGPt1ep9Tnd9Ak2sibGSiLr7p3ijO2/JLT+h+pqBuU=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
