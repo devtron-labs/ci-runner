@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020 Devtron Labs
+ * Copyright (c) 2024. Devtron Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package main
@@ -45,9 +44,11 @@ func main() {
 
 	args := os.Getenv(util.CiCdEventEnvKey)
 	gitCliManager := helper.NewGitCliManager()
-	stageExecutorImpl := executor.NewStageExecutorImpl()
 	gitManagerImpl := *helper.NewGitManagerImpl(gitCliManager)
-	dockerHelperImpl := helper.NewDockerHelperImpl()
+	commandExecutorImpl := helper.NewCommandExecutorImpl()
+	scriptExecutorImpl := executor.NewScriptExecutorImpl(commandExecutorImpl)
+	stageExecutorImpl := executor.NewStageExecutorImpl(commandExecutorImpl, scriptExecutorImpl)
+	dockerHelperImpl := helper.NewDockerHelperImpl(commandExecutorImpl)
 	ciStage := stage.NewCiStage(gitManagerImpl, dockerHelperImpl, stageExecutorImpl)
 	cdStage := stage.NewCdStage(gitManagerImpl, dockerHelperImpl, stageExecutorImpl)
 	ciCdProcessor := app.NewCiCdProcessor(ciStage, cdStage, dockerHelperImpl)

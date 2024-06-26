@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020 Devtron Labs
+ * Copyright (c) 2024. Devtron Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,32 +12,38 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package executor
 
 import (
+	"context"
 	"fmt"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
+	cictx "github.com/devtron-labs/ci-runner/executor/context"
+	"github.com/devtron-labs/ci-runner/helper"
+	"github.com/devtron-labs/ci-runner/util"
+	copylib "github.com/otiai10/copy"
 	"log"
 	"os"
 	"path/filepath"
-
-	"github.com/devtron-labs/ci-runner/helper"
-	"github.com/devtron-labs/ci-runner/util"
-	"github.com/otiai10/copy"
 )
 
 type StageExecutorImpl struct {
+	cmdExecutor    helper.CommandExecutor
+	scriptExecutor ScriptExecutor
 }
 
 type StageExecutor interface {
 	RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error)
+	RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvs map[string]string) error
 }
 
-func NewStageExecutorImpl() *StageExecutorImpl {
-	return &StageExecutorImpl{}
+func NewStageExecutorImpl(cmdExecutor helper.CommandExecutor, scriptExecutor ScriptExecutor) *StageExecutorImpl {
+	return &StageExecutorImpl{
+		cmdExecutor:    cmdExecutor,
+		scriptExecutor: scriptExecutor,
+	}
 }
 
 func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error) {
@@ -117,6 +123,8 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 		return step, err
 	}
 
+	ciContext := cictx.BuildCiContext(context.Background(), ciCdRequest.EnableSecretMasking)
+
 	stepOutputVarsFinal := make(map[string]string)
 	//---------------------------------------------------------------------------------------------------
 	if step.StepType == helper.STEP_TYPE_INLINE {
@@ -128,14 +136,14 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 			}
 		}
 		if step.ExecutorType == helper.SHELL {
-			stageOutputVars, err := RunScripts(util.Output_path, fmt.Sprintf("stage-%d", index), step.Script, scriptEnvs, outVars)
+			stageOutputVars, err := impl.scriptExecutor.RunScripts(ciContext, util.Output_path, fmt.Sprintf("stage-%d", index), step.Script, scriptEnvs, outVars)
 			if err != nil {
 				return step, err
 			}
 			stepOutputVarsFinal = stageOutputVars
 			if len(step.ArtifactPaths) > 0 {
 				for _, path := range step.ArtifactPaths {
-					err = copy.Copy(path, filepath.Join(util.TmpArtifactLocation, step.Name, path))
+					err = copylib.Copy(path, filepath.Join(util.TmpArtifactLocation, step.Name, path))
 					if err != nil {
 						if _, ok := err.(*os.PathError); ok {
 							log.Println(util.DEVTRON, "dir not exists", path)
@@ -178,7 +186,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 			if executionConf.SourceCodeMount != nil {
 				executionConf.SourceCodeMount.SrcPath = util.WORKINGDIR
 			}
-			stageOutputVars, err := RunScriptsInDocker(executionConf)
+			stageOutputVars, err := RunScriptsInDocker(ciContext, impl, executionConf)
 			if err != nil {
 				return step, err
 			}
@@ -187,7 +195,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 				// Ignore if no file/folder
 				log.Println(util.DEVTRON, "artifact not found ", err)
 			} else {
-				err = copy.Copy(stepArtifact, filepath.Join(util.TmpArtifactLocation, step.Name))
+				err = copylib.Copy(stepArtifact, filepath.Join(util.TmpArtifactLocation, step.Name))
 				if err != nil {
 					return step, err
 				}
@@ -341,7 +349,7 @@ func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string
 
 }
 
-func RunCdStageTasks(tasks []*helper.Task, scriptEnvs map[string]string) error {
+func (impl *StageExecutorImpl) RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvs map[string]string) error {
 	log.Println(util.DEVTRON, " cd-stage-processing")
 	//cleaning the directory
 	err := os.RemoveAll(util.Output_path)
@@ -364,7 +372,7 @@ func RunCdStageTasks(tasks []*helper.Task, scriptEnvs map[string]string) error {
 		taskMap[task.Name] = task
 		log.Println(util.DEVTRON, "stage", task)
 		util.LogStage(task.Name)
-		err := RunScriptsV1(util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
+		err := impl.scriptExecutor.RunScriptsV1(ciContext, util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return err
 		}
