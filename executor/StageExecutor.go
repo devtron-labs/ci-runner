@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	cictx "github.com/devtron-labs/ci-runner/executor/context"
+	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	copylib "github.com/otiai10/copy"
@@ -127,6 +128,13 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	stepOutputVarsFinal := make(map[string]string)
 	//---------------------------------------------------------------------------------------------------
 	if step.StepType == helper.STEP_TYPE_INLINE {
+		//add system env variable
+		for k, v := range util2.GetSystemEnvVariables() {
+			//add only when not overridden by user
+			if _, ok := scriptEnvs[k]; !ok {
+				scriptEnvs[k] = v
+			}
+		}
 		if step.ExecutorType == helper.SHELL {
 			stageOutputVars, err := impl.scriptExecutor.RunScripts(ciContext, util.Output_path, fmt.Sprintf("stage-%d", index), step.Script, scriptEnvs, outVars)
 			if err != nil {
