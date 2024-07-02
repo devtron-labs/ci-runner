@@ -18,6 +18,7 @@ package helper
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -28,6 +29,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/caarlos0/env"
+	cicxt "github.com/devtron-labs/ci-runner/executor/context"
+	"github.com/devtron-labs/ci-runner/util"
 	"io"
 	"io/ioutil"
 	"log"
@@ -40,8 +43,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
-	"github.com/devtron-labs/ci-runner/util"
 )
 
 const (
@@ -54,22 +55,24 @@ const (
 
 type DockerHelper interface {
 	StartDockerDaemon(commonWorkflowRequest *CommonWorkflowRequest)
-	DockerLogin(dockerCredentials *DockerCredentials) error
+	DockerLogin(ciContext cicxt.CiContext, dockerCredentials *DockerCredentials) error
 	BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error)
-	StopDocker() error
-	PushArtifact(dest string) error
+	StopDocker(ciContext cicxt.CiContext) error
+	PushArtifact(ciContext cicxt.CiContext, dest string) error
 	ExtractDigestForBuildx(dest string) (string, error)
-	CleanBuildxK8sDriver(nodes []map[string]string) error
+	CleanBuildxK8sDriver(ciContext cicxt.CiContext, nodes []map[string]string) error
 	GetDestForNatsEvent(commonWorkflowRequest *CommonWorkflowRequest, dest string) (string, error)
 }
 
 type DockerHelperImpl struct {
 	DockerCommandEnv []string
+	cmdExecutor      CommandExecutor
 }
 
-func NewDockerHelperImpl() *DockerHelperImpl {
+func NewDockerHelperImpl(cmdExecutor CommandExecutor) *DockerHelperImpl {
 	return &DockerHelperImpl{
 		DockerCommandEnv: os.Environ(),
+		cmdExecutor:      cmdExecutor,
 	}
 }
 
@@ -156,7 +159,7 @@ func (impl *DockerHelperImpl) GetCommandToExecute(cmd string) *exec.Cmd {
 	return execCmd
 }
 
-func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) error {
+func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCredentials *DockerCredentials) error {
 	username := dockerCredentials.DockerUsername
 	pwd := dockerCredentials.DockerPassword
 	if dockerCredentials.DockerRegistryType == DOCKER_REGISTRY_TYPE_ECR {
@@ -215,8 +218,9 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 	}
 	host := dockerCredentials.DockerRegistryURL
 	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, host)
+
 	awsLoginCmd := impl.GetCommandToExecute(dockerLogin)
-	err := util.RunCommand(awsLoginCmd)
+	err := impl.cmdExecutor.RunCommand(ciContext, awsLoginCmd)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -226,7 +230,8 @@ func (impl *DockerHelperImpl) DockerLogin(dockerCredentials *DockerCredentials) 
 }
 
 func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
-	err := impl.DockerLogin(&DockerCredentials{
+	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
+	err := impl.DockerLogin(ciContext, &DockerCredentials{
 		DockerUsername:     ciRequest.DockerUsername,
 		DockerPassword:     ciRequest.DockerPassword,
 		AwsRegion:          ciRequest.AwsRegion,
@@ -284,20 +289,20 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		dockerfilePath := getDockerfilePath(ciBuildConfig, ciRequest.CheckoutPath)
 		var buildxExportCacheFunc func() = nil
 		if useBuildx {
-			err := checkAndCreateDirectory(util.LOCAL_BUILDX_LOCATION)
+			err := impl.checkAndCreateDirectory(ciContext, util.LOCAL_BUILDX_LOCATION)
 			if err != nil {
 				log.Println(util.DEVTRON, " error in creating LOCAL_BUILDX_LOCATION ", util.LOCAL_BUILDX_LOCATION)
 				return "", err
 			}
 			useBuildxK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver()
 			if useBuildxK8sDriver {
-				err = impl.createBuildxBuilderWithK8sDriver(eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
+				err = impl.createBuildxBuilderWithK8sDriver(ciContext, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
 				if err != nil {
 					log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 					return "", err
 				}
 			} else {
-				err = impl.createBuildxBuilderForMultiArchBuild()
+				err = impl.createBuildxBuilderForMultiArchBuild(ciContext)
 				if err != nil {
 					return "", err
 				}
@@ -310,7 +315,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				log.Println(" -----> Setting up cache directory for Buildx")
 				oldCacheBuildxPath = util.LOCAL_BUILDX_LOCATION + "/old"
 				localCachePath = util.LOCAL_BUILDX_CACHE_LOCATION
-				err = setupCacheForBuildx(localCachePath, oldCacheBuildxPath)
+				err = impl.setupCacheForBuildx(ciContext, localCachePath, oldCacheBuildxPath)
 				if err != nil {
 					return "", err
 				}
@@ -326,7 +331,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 
 			multiNodeK8sDriver := useBuildxK8sDriver && len(eligibleK8sDriverNodes) > 1
 			exportBuildxCacheAfterBuild := ciRequest.AsyncBuildxCacheExport || multiNodeK8sDriver
-			dockerBuild, buildxExportCacheFunc = impl.getBuildxBuildCommand(exportBuildxCacheAfterBuild, cacheEnabled, ciRequest.BuildxCacheModeMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
+			dockerBuild, buildxExportCacheFunc = impl.getBuildxBuildCommand(ciContext, exportBuildxCacheAfterBuild, cacheEnabled, ciRequest.BuildxCacheModeMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
@@ -335,9 +340,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		} else {
 			log.Println("Docker build started..")
 		}
-
-		// run build cmd
-		err = impl.executeCmd(dockerBuild)
+		err = impl.executeCmd(ciContext, dockerBuild)
 		if err != nil {
 			return "", err
 		}
@@ -347,14 +350,14 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		}
 
 		if useBuildK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver(); useBuildK8sDriver {
-			err = impl.CleanBuildxK8sDriver(eligibleK8sDriverNodes)
+			err = impl.CleanBuildxK8sDriver(ciContext, eligibleK8sDriverNodes)
 			if err != nil {
 				log.Println(util.DEVTRON, " error in cleaning buildx K8s driver ", " err: ", err)
 			}
 		}
 
 		if !useBuildx {
-			err = impl.tagDockerBuild(ciRequest.DockerRepository, dest)
+			err = impl.tagDockerBuild(ciContext, ciRequest.DockerRepository, dest)
 			if err != nil {
 				return "", err
 			}
@@ -367,7 +370,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		if projectPath == "" || !strings.HasPrefix(projectPath, "./") {
 			projectPath = "./" + projectPath
 		}
-		impl.handleLanguageVersion(projectPath, buildPackParams)
+		impl.handleLanguageVersion(ciContext, projectPath, buildPackParams)
 		buildPackCmd := fmt.Sprintf("pack build %s --path %s --builder %s", dest, projectPath, buildPackParams.BuilderId)
 		BuildPackArgsMap := buildPackParams.Args
 		for k, v := range BuildPackArgsMap {
@@ -380,7 +383,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			}
 		}
 		log.Println(" -----> " + buildPackCmd)
-		err = impl.executeCmd(buildPackCmd)
+		err = impl.executeCmd(ciContext, buildPackCmd)
 		if err != nil {
 			return "", err
 		}
@@ -431,7 +434,7 @@ func getDockerfilePath(CiBuildConfig *CiBuildConfigBean, checkoutPath string) st
 }
 
 // getBuildxExportCacheFunc  will concurrently execute the given export cache commands
-func (impl *DockerHelperImpl) getBuildxExportCacheFunc(exportCacheCmds map[string]string) func() {
+func (impl *DockerHelperImpl) getBuildxExportCacheFunc(ciContext cicxt.CiContext, exportCacheCmds map[string]string) func() {
 	exportCacheFunc := func() {
 		// run export cache cmd for buildx
 		if len(exportCacheCmds) > 0 {
@@ -443,7 +446,7 @@ func (impl *DockerHelperImpl) getBuildxExportCacheFunc(exportCacheCmds map[strin
 					defer wg.Done()
 					log.Println("exporting build cache, platform : ", platform)
 					log.Println(exportCacheCmd)
-					err := impl.executeCmd(exportCacheCmd)
+					err := impl.executeCmd(ciContext, exportCacheCmd)
 					if err != nil {
 						log.Println("error in exporting ", "err : ", err)
 						return
@@ -486,7 +489,7 @@ func getSourceCaches(targetPlatforms, oldCachePathLocation string) string {
 	return strings.Join(allCachePaths, " ")
 }
 
-func (impl *DockerHelperImpl) getBuildxBuildCommandV2(cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func()) {
+func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func()) {
 	dockerBuild = fmt.Sprintf("%s %s -f %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.BuildContext, dockerfilePath)
 	exportCacheCmds := make(map[string]string)
 
@@ -510,7 +513,7 @@ func (impl *DockerHelperImpl) getBuildxBuildCommandV2(cacheEnabled bool, useCach
 	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
 	dockerBuild = fmt.Sprintf("%s -t %s --push --metadata-file %s", dockerBuild, dest, manifestLocation)
 
-	return dockerBuild, impl.getBuildxExportCacheFunc(exportCacheCmds)
+	return dockerBuild, impl.getBuildxExportCacheFunc(ciContext, exportCacheCmds)
 }
 
 func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func()) {
@@ -532,14 +535,14 @@ func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCach
 	return dockerBuild, nil
 }
 
-func (impl *DockerHelperImpl) getBuildxBuildCommand(exportBuildxCacheAfterBuild bool, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func()) {
+func (impl *DockerHelperImpl) getBuildxBuildCommand(ciContext cicxt.CiContext, exportBuildxCacheAfterBuild bool, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func()) {
 	if exportBuildxCacheAfterBuild {
-		return impl.getBuildxBuildCommandV2(cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
+		return impl.getBuildxBuildCommandV2(ciContext, cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
 	}
 	return impl.getBuildxBuildCommandV1(cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
 }
 
-func (impl *DockerHelperImpl) handleLanguageVersion(projectPath string, buildpackConfig *BuildPackConfig) {
+func (impl *DockerHelperImpl) handleLanguageVersion(ciContext cicxt.CiContext, projectPath string, buildpackConfig *BuildPackConfig) {
 	fileData, err := os.ReadFile("/buildpack.json")
 	if err != nil {
 		log.Println("error occurred while reading buildpack json", err)
@@ -596,13 +599,13 @@ func (impl *DockerHelperImpl) handleLanguageVersion(projectPath string, buildpac
 				if strings.TrimSpace(string(outputBytes)) == "null" {
 					tmpJsonFile := "./tmp.json"
 					versionUpdateCmd := fmt.Sprintf("jq '.engines.node = \"%s\"' %s >%s", languageVersion, finalPath, tmpJsonFile)
-					err := impl.executeCmd(versionUpdateCmd)
+					err := impl.executeCmd(ciContext, versionUpdateCmd)
 					if err != nil {
 						log.Println("error occurred while inserting node version", "err", err)
 						return
 					}
 					fileReplaceCmd := fmt.Sprintf("mv %s %s", tmpJsonFile, finalPath)
-					err = impl.executeCmd(fileReplaceCmd)
+					err = impl.executeCmd(ciContext, fileReplaceCmd)
 					if err != nil {
 						log.Println("error occurred while executing cmd ", fileReplaceCmd, "err", err)
 						return
@@ -616,20 +619,20 @@ func (impl *DockerHelperImpl) handleLanguageVersion(projectPath string, buildpac
 
 }
 
-func (impl *DockerHelperImpl) executeCmd(dockerBuild string) error {
+func (impl *DockerHelperImpl) executeCmd(ciContext cicxt.CiContext, dockerBuild string) error {
 	dockerBuildCMD := impl.GetCommandToExecute(dockerBuild)
-	err := util.RunCommand(dockerBuildCMD)
+	err := impl.cmdExecutor.RunCommand(ciContext, dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
 	}
 	return err
 }
 
-func (impl *DockerHelperImpl) tagDockerBuild(dockerRepository string, dest string) error {
+func (impl *DockerHelperImpl) tagDockerBuild(ciContext cicxt.CiContext, dockerRepository string, dest string) error {
 	dockerTag := "docker tag " + dockerRepository + ":latest" + " " + dest
 	log.Println(" -----> " + dockerTag)
 	dockerTagCMD := impl.GetCommandToExecute(dockerTag)
-	err := util.RunCommand(dockerTagCMD)
+	err := impl.cmdExecutor.RunCommand(ciContext, dockerTagCMD)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -637,18 +640,19 @@ func (impl *DockerHelperImpl) tagDockerBuild(dockerRepository string, dest strin
 	return nil
 }
 
-func setupCacheForBuildx(localCachePath string, oldCacheBuildxPath string) error {
-	err := checkAndCreateDirectory(localCachePath)
+func (impl *DockerHelperImpl) setupCacheForBuildx(ciContext cicxt.CiContext, localCachePath string, oldCacheBuildxPath string) error {
+	err := impl.checkAndCreateDirectory(ciContext, localCachePath)
 	if err != nil {
 		return err
 	}
-	err = checkAndCreateDirectory(oldCacheBuildxPath)
+	err = impl.checkAndCreateDirectory(ciContext, oldCacheBuildxPath)
 	if err != nil {
 		return err
 	}
 	copyContent := "cp -R " + localCachePath + " " + oldCacheBuildxPath
 	copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
-	err = util.RunCommand(copyContentCmd)
+	err = impl.cmdExecutor.RunCommand(ciContext, copyContentCmd)
+
 	if err != nil {
 		log.Println(err)
 		return err
@@ -656,7 +660,7 @@ func setupCacheForBuildx(localCachePath string, oldCacheBuildxPath string) error
 
 	cleanContent := "rm -rf " + localCachePath + "/*"
 	cleanContentCmd := exec.Command("/bin/sh", "-c", cleanContent)
-	err = util.RunCommand(cleanContentCmd)
+	err = impl.cmdExecutor.RunCommand(ciContext, cleanContentCmd)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -664,11 +668,11 @@ func setupCacheForBuildx(localCachePath string, oldCacheBuildxPath string) error
 	return nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilder() error {
+func (impl *DockerHelperImpl) createBuildxBuilder(ciContext cicxt.CiContext) error {
 	multiPlatformCmd := "docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'"
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := impl.GetCommandToExecute(multiPlatformCmd)
-	err := util.RunCommand(dockerBuildCMD)
+	err := impl.cmdExecutor.RunCommand(ciContext, dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -676,11 +680,11 @@ func (impl *DockerHelperImpl) createBuildxBuilder() error {
 	return nil
 }
 
-func (impl *DockerHelperImpl) installAllSupportedPlatforms() error {
+func (impl *DockerHelperImpl) installAllSupportedPlatforms(ciContext cicxt.CiContext) error {
 	multiPlatformCmd := "docker run --privileged --rm quay.io/devtron/binfmt:stable --install all"
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := impl.GetCommandToExecute(multiPlatformCmd)
-	err := util.RunCommand(dockerBuildCMD)
+	err := impl.cmdExecutor.RunCommand(ciContext, dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -688,10 +692,10 @@ func (impl *DockerHelperImpl) installAllSupportedPlatforms() error {
 	return nil
 }
 
-func checkAndCreateDirectory(localCachePath string) error {
+func (impl *DockerHelperImpl) checkAndCreateDirectory(ciContext cicxt.CiContext, localCachePath string) error {
 	makeDirCmd := "mkdir -p " + localCachePath
 	pathCreateCommand := exec.Command("/bin/sh", "-c", makeDirCmd)
-	err := util.RunCommand(pathCreateCommand)
+	err := impl.cmdExecutor.RunCommand(ciContext, pathCreateCommand)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -717,12 +721,12 @@ func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
 	return dest, nil
 }
 
-func (impl *DockerHelperImpl) PushArtifact(dest string) error {
-	// awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
+func (impl *DockerHelperImpl) PushArtifact(ciContext cicxt.CiContext, dest string) error {
+	//awsLogin := "$(aws ecr get-login --no-include-email --region " + ciRequest.AwsRegion + ")"
 	dockerPush := "docker push " + dest
 	log.Println("-----> " + dockerPush)
 	dockerPushCMD := impl.GetCommandToExecute(dockerPush)
-	err := util.RunCommand(dockerPushCMD)
+	err := impl.cmdExecutor.RunCommand(ciContext, dockerPushCMD)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -799,19 +803,19 @@ func readImageDigestFromManifest(manifestFilePath string) (string, error) {
 	return imageDigest.(string), nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild() error {
-	err := impl.installAllSupportedPlatforms()
+func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cicxt.CiContext) error {
+	err := impl.installAllSupportedPlatforms(ciContext)
 	if err != nil {
 		return err
 	}
-	err = impl.createBuildxBuilder()
+	err = impl.createBuildxBuilder(ciContext)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
+func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
 
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
@@ -820,10 +824,11 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(builderNodes []ma
 
 	buildxCreate := getBuildxK8sDriverCmd(defaultNodeOpts, ciPipelineId, ciWorkflowId)
 	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--use")
-
-	err, errBuf := impl.runCmd(buildxCreate)
+	fmt.Println(util.DEVTRON, " cmd : ", buildxCreate)
+	builderCreateCmd := impl.GetCommandToExecute(buildxCreate)
+	err := impl.cmdExecutor.RunCommand(ciContext, builderCreateCmd)
 	if err != nil {
-		fmt.Println(util.DEVTRON, "buildxCreate : ", buildxCreate, " err : ", err, " error : ", errBuf.String(), "\n ")
+		fmt.Println(util.DEVTRON, "buildxCreate : ", buildxCreate, " err : ", err, " error : ")
 		return err
 	}
 
@@ -832,10 +837,11 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(builderNodes []ma
 		nodeOpts := builderNodes[i]
 		appendNode := getBuildxK8sDriverCmd(nodeOpts, ciPipelineId, ciWorkflowId)
 		appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
-
-		err, errBuf = impl.runCmd(appendNode)
+		fmt.Println(util.DEVTRON, " cmd : ", appendNode)
+		appendNodeCmd := impl.GetCommandToExecute(appendNode)
+		err = impl.cmdExecutor.RunCommand(ciContext, appendNodeCmd)
 		if err != nil {
-			fmt.Println(util.DEVTRON, " appendNode : ", appendNode, " err : ", err, " error : ", errBuf.String(), "\n ")
+			fmt.Println(util.DEVTRON, " appendNode : ", appendNode, " err : ", err, " error : ")
 			return err
 		}
 	}
@@ -843,43 +849,46 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(builderNodes []ma
 	return nil
 }
 
-func (impl *DockerHelperImpl) CleanBuildxK8sDriver(nodes []map[string]string) error {
+func (impl *DockerHelperImpl) CleanBuildxK8sDriver(ciContext cicxt.CiContext, nodes []map[string]string) error {
 	nodeNames := make([]string, 0)
 	for _, nOptsMp := range nodes {
 		if nodeName, ok := nOptsMp["node"]; ok && nodeName != "" {
 			nodeNames = append(nodeNames, nodeName)
 		}
 	}
-	err, errBuf := impl.leaveNodesFromBuildxK8sDriver(nodeNames)
+	err := impl.leaveNodesFromBuildxK8sDriver(ciContext, nodeNames)
 	if err != nil {
-		log.Println(util.DEVTRON, " error in deleting nodes created by ci-runner , err : ", errBuf.String())
+		log.Println(util.DEVTRON, " error in deleting nodes created by ci-runner , err : ", err)
 		return err
 	}
 	log.Println(util.DEVTRON, "successfully cleaned up buildx k8s driver")
 	return nil
 }
 
-func (impl *DockerHelperImpl) leaveNodesFromBuildxK8sDriver(nodeNames []string) (error, *bytes.Buffer) {
+func (impl *DockerHelperImpl) leaveNodesFromBuildxK8sDriver(ciContext cicxt.CiContext, nodeNames []string) error {
 	var err error
-	var errBuf *bytes.Buffer
 	defer func() {
 		removeCmd := fmt.Sprintf("docker buildx rm %s", BUILDX_K8S_DRIVER_NAME)
-		err, errBuf = impl.runCmd(removeCmd)
-		if err != nil {
-			log.Println(util.DEVTRON, "error in removing docker buildx err : ", errBuf.String())
-		}
+		fmt.Println(util.DEVTRON, " cmd : ", removeCmd)
+		execRemoveCmd := impl.GetCommandToExecute(removeCmd)
+		_ = impl.cmdExecutor.RunCommand(ciContext, execRemoveCmd)
+
 	}()
+
 	for _, node := range nodeNames {
-		cmds := fmt.Sprintf("docker buildx create --name=%s --node=%s --leave", BUILDX_K8S_DRIVER_NAME, node)
-		err, errBuf = impl.runCmd(cmds)
+		createCmd := fmt.Sprintf("docker buildx create --name=%s --node=%s --leave", BUILDX_K8S_DRIVER_NAME, node)
+		fmt.Println(util.DEVTRON, " cmd : ", createCmd)
+		execCreateCmd := impl.GetCommandToExecute(createCmd)
+		err = impl.cmdExecutor.RunCommand(ciContext, execCreateCmd)
 		if err != nil {
-			log.Println(util.DEVTRON, "error in leaving node : ", errBuf.String())
-			return err, errBuf
+			log.Println(util.DEVTRON, "error in leaving node : ", err)
+			return err
 		}
 	}
-	return err, errBuf
+	return err
 }
 
+// this function is deprecated, use cmdExecutor.RunCommand instead
 func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	fmt.Println(util.DEVTRON, " cmd : ", cmd)
 	builderCreateCmd := impl.GetCommandToExecute(cmd)
@@ -908,7 +917,7 @@ func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflo
 	return buildxCreate
 }
 
-func (impl *DockerHelperImpl) StopDocker() error {
+func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
 	cmd := exec.Command("docker", "ps", "-a", "-q")
 	out, err := cmd.Output()
 	if err != nil {
@@ -918,7 +927,7 @@ func (impl *DockerHelperImpl) StopDocker() error {
 		stopCmdS := "docker stop -t 5 $(docker ps -a -q)"
 		log.Println(util.DEVTRON, " -----> stopping docker container")
 		stopCmd := impl.GetCommandToExecute(stopCmdS)
-		err := util.RunCommand(stopCmd)
+		err := impl.cmdExecutor.RunCommand(ciContext, stopCmd)
 		log.Println(util.DEVTRON, " -----> stopped docker container")
 		if err != nil {
 			log.Fatal(err)
@@ -927,7 +936,7 @@ func (impl *DockerHelperImpl) StopDocker() error {
 		removeContainerCmds := "docker rm -v -f $(docker ps -a -q)"
 		log.Println(util.DEVTRON, " -----> removing docker container")
 		removeContainerCmd := impl.GetCommandToExecute(removeContainerCmds)
-		err = util.RunCommand(removeContainerCmd)
+		err = impl.cmdExecutor.RunCommand(ciContext, removeContainerCmd)
 		log.Println(util.DEVTRON, " -----> removed docker container")
 		if err != nil {
 			log.Fatal(err)

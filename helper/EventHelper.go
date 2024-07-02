@@ -157,6 +157,7 @@ type CommonWorkflowRequest struct {
 	UseExternalClusterBlob         bool                              `json:"useExternalClusterBlob"`
 	ImageScanMaxRetries            int                               `json:"imageScanMaxRetries,omitempty"`
 	ImageScanRetryDelay            int                               `json:"imageScanRetryDelay,omitempty"`
+	EnableSecretMasking            bool                              `json:"enableSecretMasking"`
 	// Data from CD Workflow service
 	WorkflowRunnerId              int                            `json:"workflowRunnerId"`
 	CdPipelineId                  int                            `json:"cdPipelineId"`
@@ -259,6 +260,7 @@ type CiRequest struct {
 	OrchestratorToken           string                            `json:"orchestratorToken"`
 	ImageRetryCount             int                               `json:"imageRetryCount"`
 	ImageRetryInterval          int                               `json:"imageRetryInterval"`
+	EnableSecretMasking         bool                              `json:"enableSecretMasking"`
 }
 
 type CdRequest struct {
