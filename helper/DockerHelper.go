@@ -405,6 +405,10 @@ func parseDockerFlagParam(param string) string {
 		value = os.Getenv(strings.TrimPrefix(param, DEVTRON_ENV_VAR_PREFIX))
 	}
 
+	return wrapSingleOrDoubleQuotedValue(value)
+}
+
+func wrapSingleOrDoubleQuotedValue(value string) string {
 	if strings.HasPrefix(value, `'`) && strings.HasSuffix(value, `'`) {
 		unquotedString := strings.Trim(value, `'`)
 		return fmt.Sprintf(`='%s'`, unquotedString)
