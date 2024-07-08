@@ -27,6 +27,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type StageExecutorImpl struct {
@@ -372,10 +373,17 @@ func (impl *StageExecutorImpl) RunCdStageTasks(ciContext cictx.CiContext, tasks 
 		taskMap[task.Name] = task
 		log.Println(util.DEVTRON, "stage", task)
 		util.LogStage(task.Name)
+		stageInfo := util.NewStageInfo(task.Name, "", time.Now(), time.Time{})
+		stageInfo.Log()
 		err := impl.scriptExecutor.RunScriptsV1(ciContext, util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
+		stageInfo.EndTime = time.Now()
 		if err != nil {
+			stageInfo.Status = "Failed"
+			stageInfo.Log()
 			return err
 		}
+		stageInfo.Status = "Success"
+		stageInfo.Log()
 	}
 	return nil
 }

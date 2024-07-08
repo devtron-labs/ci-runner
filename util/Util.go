@@ -17,6 +17,7 @@
 package util
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -148,4 +149,31 @@ func GetProjectName(url string) string {
 	projName := strings.Split(url, ".")[1]
 	projectName := projName[strings.LastIndex(projName, "/")+1:]
 	return projectName
+}
+
+func NewStageInfo(name, status string, startTime, endTime time.Time) *StageLogData {
+	return &StageLogData{
+		Status:    status,
+		Stage:     name,
+		StartTime: startTime,
+		EndTime:   endTime,
+	}
+}
+
+type StageLogData struct {
+	//eg : 'STAGE_INFO|{"stage":"Resource availability","startTime":"2021-01-01T00:00:00Z"}'
+	Stage     string    `json:"stage,omitempty"`
+	StartTime time.Time `json:"startTime,omitempty"`
+	EndTime   time.Time `json:"endTime,omitempty"`
+	Status    string    `json:"status,omitempty"`
+}
+
+func (stageLogData *StageLogData) Log() {
+	infoLog := fmt.Sprintf("STAGE_INFO|%s\n", stageLogData.String())
+	fmt.Println(infoLog)
+}
+
+func (stageLogData *StageLogData) String() string {
+	bytes, _ := json.Marshal(stageLogData)
+	return string(bytes)
 }
