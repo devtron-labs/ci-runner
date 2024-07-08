@@ -275,14 +275,19 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 	start := time.Now()
 	metrics.PreCiStartTime = start
 	var resultsFromPlugin *helper.ImageDetailsFromCR
+	stageLogInfo := util.NewStageInfo("Running Pre-CI steps", "", start, time.Time{})
 	if !buildSkipEnabled {
 		util.LogStage("running PRE-CI steps")
+		stageLogInfo.Log()
 	}
 	// run pre artifact processing
 	preCiStageOutVariable, step, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_PRE, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
 	preCiDuration := time.Since(start).Seconds()
 	if err != nil {
 		log.Println("error in running pre Ci Steps", "err", err)
+		stageLogInfo.EndTime = time.Now()
+		stageLogInfo.Status = "Failure"
+		stageLogInfo.Log()
 		err = sendFailureNotification(string(PreCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
 		return nil, nil, err
 	}
@@ -293,6 +298,9 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 		log.Println("error in getting results", "err", err.Error())
 	}
 	metrics.PreCiDuration = preCiDuration
+	stageLogInfo.EndTime = time.Now()
+	stageLogInfo.Status = "Success"
+	stageLogInfo.Log()
 	return resultsFromPlugin, preCiStageOutVariable, nil
 }
 
