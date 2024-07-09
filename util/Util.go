@@ -151,7 +151,7 @@ func GetProjectName(url string) string {
 	return projectName
 }
 
-func NewStageInfo(name, status string, startTime, endTime time.Time) *StageLogData {
+func NewStageInfo(name, status string, startTime, endTime *time.Time) *StageLogData {
 	return &StageLogData{
 		Status:    status,
 		Stage:     name,
@@ -160,12 +160,42 @@ func NewStageInfo(name, status string, startTime, endTime time.Time) *StageLogDa
 	}
 }
 
+func NewStageInfoWithStartLog(name, status string, startTime, endTime *time.Time) *StageLogData {
+	stageInfo := &StageLogData{
+		Status:    status,
+		Stage:     name,
+		StartTime: startTime,
+		EndTime:   endTime,
+	}
+	if startTime == nil {
+		stageInfo.SetStartTimeNow()
+	}
+	stageInfo.Log()
+	return stageInfo
+}
+
 type StageLogData struct {
 	//eg : 'STAGE_INFO|{"stage":"Resource availability","startTime":"2021-01-01T00:00:00Z"}'
-	Stage     string    `json:"stage,omitempty"`
-	StartTime time.Time `json:"startTime,omitempty"`
-	EndTime   time.Time `json:"endTime,omitempty"`
-	Status    string    `json:"status,omitempty"`
+	Stage     string     `json:"stage,omitempty"`
+	StartTime *time.Time `json:"startTime,omitempty"`
+	EndTime   *time.Time `json:"endTime,omitempty"`
+	Status    string     `json:"status,omitempty"`
+}
+
+func (stageLogData *StageLogData) SetStartTimeNow() {
+	currentTime := time.Now()
+	stageLogData.StartTime = &currentTime
+}
+
+func (stageLogData *StageLogData) SetEndTimeNow() {
+	currentTime := time.Now()
+	stageLogData.EndTime = &currentTime
+}
+
+func (stageLogData *StageLogData) SetEndTimeNowAndLog() {
+	currentTime := time.Now()
+	stageLogData.EndTime = &currentTime
+	stageLogData.Log()
 }
 
 func (stageLogData *StageLogData) Log() {
