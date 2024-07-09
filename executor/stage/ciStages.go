@@ -371,10 +371,16 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 	scriptEnvs["DEST"] = dest
 	scriptEnvs["DIGEST"] = digest
 	// run post artifact processing
+	stageLogInfo := util.NewStageInfoWithStartLog("Running POST-CI Steps", "", nil, nil)
 	_, step, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PostCiSteps, refStageMap, scriptEnvs, preCiStageOutVariable)
 	if err != nil {
+		stageLogInfo.Status = "Failure"
+		stageLogInfo.Log()
 		log.Println("error in running Post Ci Steps", "err", err)
 		return sendFailureNotification(string(PostCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
+	} else {
+		stageLogInfo.Status = "Success"
+		stageLogInfo.Log()
 	}
 	return nil
 }
