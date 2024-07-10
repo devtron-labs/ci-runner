@@ -372,18 +372,10 @@ func (impl *StageExecutorImpl) RunCdStageTasks(ciContext cictx.CiContext, tasks 
 		taskMap[task.Name] = task
 		log.Println(util.DEVTRON, "stage", task)
 		util.LogStage(task.Name)
-		stageInfo := util.NewStageInfo(task.Name, "", nil, nil)
-		stageInfo.SetStartTimeNow()
-		stageInfo.Log()
 		err := impl.scriptExecutor.RunScriptsV1(ciContext, util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
-		stageInfo.SetEndTimeNow()
 		if err != nil {
-			stageInfo.Status = "Failure"
-			stageInfo.Log()
 			return err
 		}
-		stageInfo.Status = "Success"
-		stageInfo.Log()
 	}
 	return nil
 }

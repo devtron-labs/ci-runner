@@ -275,19 +275,17 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 	start := time.Now()
 	metrics.PreCiStartTime = start
 	var resultsFromPlugin *helper.ImageDetailsFromCR
-	stageLogInfo := util.NewStageInfo("Running Pre-CI steps", "", &start, nil)
 	if !buildSkipEnabled {
 		util.LogStage("running PRE-CI steps")
-		stageLogInfo.Log()
 	}
+	stageLogInfo := util.NewStageInfoWithStartLog("Running Pre-CI steps", "", &start, nil)
 	// run pre artifact processing
 	preCiStageOutVariable, step, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_PRE, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
 	preCiDuration := time.Since(start).Seconds()
 	if err != nil {
 		log.Println("error in running pre Ci Steps", "err", err)
-		stageLogInfo.SetEndTimeNow()
-		stageLogInfo.Status = "Failure"
-		stageLogInfo.Log()
+		stageLogInfo.SetStatus("Failure")
+		stageLogInfo.SetEndTimeNowAndLog()
 		err = sendFailureNotification(string(PreCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
 		return nil, nil, err
 	}
@@ -298,9 +296,8 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 		log.Println("error in getting results", "err", err.Error())
 	}
 	metrics.PreCiDuration = preCiDuration
-	stageLogInfo.SetEndTimeNow()
-	stageLogInfo.Status = "Success"
-	stageLogInfo.Log()
+	stageLogInfo.SetStatus("Success")
+	stageLogInfo.SetEndTimeNowAndLog()
 	return resultsFromPlugin, preCiStageOutVariable, nil
 }
 
@@ -315,7 +312,7 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 	dest, err := impl.dockerHelper.BuildArtifact(ciCdRequest.CommonWorkflowRequest) //TODO make it skipable
 	metrics.BuildDuration = time.Since(start).Seconds()
 	if err != nil {
-		buildArtifactStageLogInfo.Status = "Failure"
+		buildArtifactStageLogInfo.SetStatus("Failure")
 		log.Println("Error in building artifact", "err", err)
 		// code-block starts : run post-ci which are enabled to run on ci fail
 		postCiStepsToTriggerOnCiFail := getPostCiStepToRunOnCiFail(ciCdRequest.CommonWorkflowRequest.PostCiSteps)
@@ -331,7 +328,7 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 		// code-block ends
 		err = sendFailureNotification(string(Build), ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
 	} else {
-		buildArtifactStageLogInfo.Status = "Success"
+		buildArtifactStageLogInfo.SetStatus("Success")
 	}
 	buildArtifactStageLogInfo.SetEndTimeNowAndLog()
 	log.Println(util.DEVTRON, " Build artifact completed", "dest", dest, "err", err)
@@ -356,9 +353,9 @@ func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest st
 		digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
 	}
 	if err != nil {
-		stageLogInfo.Stage = "Failure"
+		stageLogInfo.SetStatus("Failure")
 	} else {
-		stageLogInfo.Stage = "Success"
+		stageLogInfo.SetStatus("Success")
 	}
 	stageLogInfo.SetEndTimeNowAndLog()
 	return digest, err
@@ -387,6 +384,7 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 
 func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, artifactUploaded bool) error {
 	util.LogStage("IMAGE SCAN")
+	imageScanLogInfo := util.NewStageInfoWithStartLog("IMAGE SCAN", "", nil, nil)
 	log.Println(util.DEVTRON, " Image Scanning Started for digest", digest)
 	scanEvent := &helper.ScanEvent{
 		Image:               dest,
@@ -401,10 +399,14 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 	}
 	err := helper.SendEventToClairUtility(scanEvent)
 	if err != nil {
+		imageScanLogInfo.SetStatus("Failure")
+		imageScanLogInfo.SetEndTimeNowAndLog()
 		log.Println("error in running Image Scan", "err", err)
 		err = sendFailureNotification(string(Scan), ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, err)
 		return err
 	}
+	imageScanLogInfo.SetStatus("Success")
+	imageScanLogInfo.SetEndTimeNowAndLog()
 	log.Println(util.DEVTRON, "Image scanning completed with scanEvent", scanEvent)
 	return nil
 }

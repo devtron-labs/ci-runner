@@ -192,6 +192,10 @@ func (stageLogData *StageLogData) SetEndTimeNow() {
 	stageLogData.EndTime = &currentTime
 }
 
+func (stageLogData *StageLogData) SetStatus(status string) {
+	stageLogData.Status = status
+}
+
 func (stageLogData *StageLogData) SetEndTimeNowAndLog() {
 	currentTime := time.Now()
 	stageLogData.EndTime = &currentTime
