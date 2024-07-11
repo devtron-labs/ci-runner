@@ -38,6 +38,16 @@ const (
 	CLONING_MODE_FULL         = "FULL"
 )
 
+const (
+	CACHE_PULL         = "Pulling Cache"
+	GIT_CLONE_CHECKOUT = "Git Clone & Checkout"
+	DOCKER_DAEMON      = "Starting Docker Daemon"
+	DOCKER_LOGIN_STAGE = "Docker Login"
+	DOCKER_PUSH        = "Docker Push"
+	DOCKER_STOP        = "Docker Stop"
+	BUILD_ARTIFACT     = "Build Artifact"
+)
+
 func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) error {
 
 	userHomeDirectory, err := os.UserHomeDir()

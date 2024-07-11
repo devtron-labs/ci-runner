@@ -80,10 +80,12 @@ func (impl *DockerHelperImpl) GetDestForNatsEvent(commonWorkflowRequest *CommonW
 }
 
 func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWorkflowRequest) {
+	startDockerStageInfo := util.NewStageInfoWithStartLog(util.DOCKER_DAEMON, "", nil, nil)
 	connection := commonWorkflowRequest.DockerConnection
 	dockerRegistryUrl := commonWorkflowRequest.IntermediateDockerRegistryUrl
 	registryUrl, err := util.ParseUrl(dockerRegistryUrl)
 	if err != nil {
+		startDockerStageInfo.SetStatusEndTimeAndLog("Failure")
 		log.Fatal(err)
 	}
 	host := registryUrl.Host
@@ -108,6 +110,7 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 			f, err := os.Create(fmt.Sprintf("/etc/docker/certs.d/%s/ca.crt", host))
 
 			if err != nil {
+				startDockerStageInfo.SetStatusEndTimeAndLog("Failure")
 				log.Fatal(err)
 			}
 
@@ -116,6 +119,7 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 			_, err2 := f.WriteString(commonWorkflowRequest.DockerCert)
 
 			if err2 != nil {
+				startDockerStageInfo.SetStatusEndTimeAndLog("Failure")
 				log.Fatal(err2)
 			}
 			util.LogStage("Secure with Cert")
@@ -126,13 +130,16 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Println("failed to start docker daemon")
+		startDockerStageInfo.SetStatusEndTimeAndLog("Failure")
 		log.Fatal(err)
 	}
 	log.Println("docker daemon started ", string(out))
 	err = impl.waitForDockerDaemon(util.DOCKER_PS_START_WAIT_SECONDS)
 	if err != nil {
+		startDockerStageInfo.SetStatusEndTimeAndLog("Failure")
 		log.Fatal("failed to start docker demon", err)
 	}
+	startDockerStageInfo.SetStatusEndTimeAndLog("Success")
 }
 
 const DOCKER_REGISTRY_TYPE_ECR = "ecr"
@@ -159,6 +166,7 @@ func (impl *DockerHelperImpl) GetCommandToExecute(cmd string) *exec.Cmd {
 }
 
 func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCredentials *DockerCredentials) error {
+	dockerLoginStageInfo := util.NewStageInfoWithStartLog(util.DOCKER_LOGIN_STAGE, "", nil, nil)
 	username := dockerCredentials.DockerUsername
 	pwd := dockerCredentials.DockerPassword
 	if dockerCredentials.DockerRegistryType == DOCKER_REGISTRY_TYPE_ECR {
@@ -174,6 +182,7 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 			})
 			if err != nil {
 				log.Println(err)
+				dockerLoginStageInfo.SetStatusEndTimeAndLog("Failure")
 				return err
 			}
 			creds = ec2rolecreds.NewCredentials(sess)
@@ -186,6 +195,7 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 		})
 		if err != nil {
 			log.Println(err)
+			dockerLoginStageInfo.SetStatusEndTimeAndLog("Failure")
 			return err
 		}
 		svc := ecr.New(sess)
@@ -193,6 +203,7 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 		authData, err := svc.GetAuthorizationToken(input)
 		if err != nil {
 			log.Println(err)
+			dockerLoginStageInfo.SetStatusEndTimeAndLog("Failure")
 			return err
 		}
 		// decode token
@@ -200,6 +211,7 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 		decodedToken, err := base64.StdEncoding.DecodeString(*token)
 		if err != nil {
 			log.Println(err)
+			dockerLoginStageInfo.SetStatusEndTimeAndLog("Failure")
 			return err
 		}
 		credsSlice := strings.Split(string(decodedToken), ":")
@@ -222,9 +234,11 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 	err := impl.cmdExecutor.RunCommand(ciContext, awsLoginCmd)
 	if err != nil {
 		log.Println(err)
+		dockerLoginStageInfo.SetStatusEndTimeAndLog("Failure")
 		return err
 	}
 	log.Println("Docker login successful with username ", username, " on docker registry URL ", dockerCredentials.DockerRegistryURL)
+	dockerLoginStageInfo.SetStatusEndTimeAndLog("Success")
 	return nil
 }
 
@@ -819,9 +833,11 @@ func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflo
 }
 
 func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
+	dockerStopStageInfo := util.NewStageInfoWithStartLog(util.DOCKER_STOP, "", nil, nil)
 	cmd := exec.Command("docker", "ps", "-a", "-q")
 	out, err := cmd.Output()
 	if err != nil {
+		dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
 		return err
 	}
 	if len(out) > 0 {
@@ -831,6 +847,7 @@ func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
 		err := impl.cmdExecutor.RunCommand(ciContext, stopCmd)
 		log.Println(util.DEVTRON, " -----> stopped docker container")
 		if err != nil {
+			dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
 			log.Fatal(err)
 			return err
 		}
@@ -840,6 +857,7 @@ func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
 		err = impl.cmdExecutor.RunCommand(ciContext, removeContainerCmd)
 		log.Println(util.DEVTRON, " -----> removed docker container")
 		if err != nil {
+			dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
 			log.Fatal(err)
 			return err
 		}
@@ -847,6 +865,7 @@ func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
 	file := "/var/run/docker.pid"
 	content, err := ioutil.ReadFile(file)
 	if err != nil {
+		dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
 		log.Fatal(err)
 		return err
 	}
@@ -857,18 +876,21 @@ func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
 	}
 	proc, err := os.FindProcess(pid)
 	if err != nil {
+		dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
 		log.Println(err)
 		return err
 	}
 	// Kill the process
 	err = proc.Signal(syscall.SIGTERM)
 	if err != nil {
+		dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
 		log.Println(err)
 		return err
 	}
 	log.Println(util.DEVTRON, " -----> checking docker status")
 	impl.DockerdUpCheck() //FIXME: this call should be removed
 	//ensureDockerDaemonHasStopped(20)
+	dockerStopStageInfo.SetStatusEndTimeAndLog("Success")
 	return nil
 }
 

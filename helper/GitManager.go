@@ -82,9 +82,9 @@ func NewGitManagerImpl(gitCliManager GitCliManager) *GitManager {
 }
 
 func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
+	gitCloneStageInfo := util.NewStageInfoWithStartLog(util.GIT_CLONE_CHECKOUT, "", nil, nil)
 	for index, prj := range ciProjectDetails {
 		// git clone
-
 		log.Println("-----> git " + prj.CloningMode + " cloning " + prj.GitRepository)
 
 		if prj.CheckoutPath != "./" {
@@ -112,12 +112,14 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 			cErr = util.CreateSshPrivateKeyOnDisk(index, prj.GitOptions.SshPrivateKey)
 			cErr = util.CreateSshPrivateKeyOnDisk(index, prj.GitOptions.SshPrivateKey)
 			if cErr != nil {
+				gitCloneStageInfo.SetStatusEndTimeAndLog("Failure")
 				log.Fatal("could not create ssh private key on disk ", " err ", cErr)
 			}
 		}
 
 		_, msgMsg, cErr := impl.gitCliManager.Clone(gitContext, prj)
 		if cErr != nil {
+			gitCloneStageInfo.SetStatusEndTimeAndLog("Failure")
 			log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
 		}
 
@@ -136,6 +138,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 			log.Println("checkout commit in branch fix : ", checkoutSource)
 			msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository)
 			if cErr != nil {
+				gitCloneStageInfo.SetStatusEndTimeAndLog("Failure")
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 			}
 
@@ -146,6 +149,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 
 			targetCheckout := webhookDataData[WEBHOOK_SELECTOR_TARGET_CHECKOUT_NAME]
 			if len(targetCheckout) == 0 {
+				gitCloneStageInfo.SetStatusEndTimeAndLog("Failure")
 				log.Fatal("could not get target checkout from request data")
 			}
 
@@ -154,6 +158,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 			// checkout target hash
 			msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository)
 			if cErr != nil {
+				gitCloneStageInfo.SetStatusEndTimeAndLog("Failure")
 				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
 				return cErr
 			}
@@ -164,6 +169,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 
 				// throw error if source checkout is empty
 				if len(sourceCheckout) == 0 {
+					gitCloneStageInfo.SetStatusEndTimeAndLog("Failure")
 					log.Fatal("sourceCheckout is empty")
 				}
 
@@ -172,6 +178,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 				// merge source
 				_, msgMsg, cErr = impl.gitCliManager.Merge(filepath.Join(util.WORKINGDIR, prj.CheckoutPath), sourceCheckout)
 				if cErr != nil {
+					gitCloneStageInfo.SetStatusEndTimeAndLog("Failure")
 					log.Fatal("could not merge ", "sourceCheckout ", sourceCheckout, " err ", cErr, " msgMsg", msgMsg)
 					return cErr
 				}
@@ -181,5 +188,6 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 		}
 
 	}
+	gitCloneStageInfo.SetStatusEndTimeAndLog("Success")
 	return nil
 }
