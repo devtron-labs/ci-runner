@@ -52,9 +52,13 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 	}*/
 	stageVariable := make(map[int]map[string]*helper.VariableObject)
 	for i, step := range steps {
+		stageLogInfo := util.NewStageInfoWithStartLog(step.Name, "", nil, nil)
 		failedStep, err = impl.RunCiCdStep(stepType, *ciCdRequest, i, step, refStageMap, globalEnvironmentVariables, preCiStageVariable, stageVariable)
 		if err != nil {
+			stageLogInfo.SetStatusEndTimeAndLog("Failure")
 			return nil, failedStep, err
+		} else {
+			stageLogInfo.SetStatusEndTimeAndLog("Success")
 		}
 	}
 	return stageVariable, nil, nil

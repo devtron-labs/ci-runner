@@ -102,7 +102,6 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 	if connection == util.INSECURE {
 		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, host, dockerMtuValueFlag)
 		util.LogStage("Insecure Registry")
-		util.NewStageInfoWithStartLog("Insecure Registry", "", nil, nil)
 	} else {
 		if connection == util.SECUREWITHCERT {
 			os.MkdirAll(fmt.Sprintf("/etc/docker/certs.d/%s", host), os.ModePerm)
@@ -120,12 +119,10 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 				log.Fatal(err2)
 			}
 			util.LogStage("Secure with Cert")
-			util.NewStageInfoWithStartLog("Secure with Cert", "", nil, nil)
 		}
 		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 	}
 	cmd := impl.GetCommandToExecute(dockerdstart)
-	dockerStartLogInfo := util.NewStageInfoWithStartLog("Starting Docker Demon", "", nil, nil)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Println("failed to start docker daemon")
@@ -134,12 +131,8 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 	log.Println("docker daemon started ", string(out))
 	err = impl.waitForDockerDaemon(util.DOCKER_PS_START_WAIT_SECONDS)
 	if err != nil {
-		dockerStartLogInfo.SetStatus("Failure")
-		dockerStartLogInfo.SetEndTimeNowAndLog()
 		log.Fatal("failed to start docker demon", err)
 	}
-	dockerStartLogInfo.SetStatus("Success")
-	dockerStartLogInfo.SetEndTimeNowAndLog()
 }
 
 const DOCKER_REGISTRY_TYPE_ECR = "ecr"
