@@ -351,11 +351,13 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		} else {
 			log.Println("Docker build started..")
 		}
+		dockerBuildStageInfo := util.NewStageInfoWithStartLog(util.DOCKER_BUILD, "", nil, nil)
 		err = impl.executeCmd(ciContext, dockerBuild)
 		if err != nil {
+			dockerBuildStageInfo.SetStatusEndTimeAndLog("Failure")
 			return "", err
 		}
-
+		dockerBuildStageInfo.SetStatusEndTimeAndLog("Success")
 		if useBuildK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver(); useBuildK8sDriver {
 			err = impl.CleanBuildxK8sDriver(ciContext, eligibleK8sDriverNodes)
 			if err != nil {

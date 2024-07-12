@@ -44,8 +44,10 @@ const (
 	DOCKER_DAEMON      = "Starting Docker Daemon"
 	DOCKER_LOGIN_STAGE = "Docker Login"
 	DOCKER_PUSH        = "Docker Push"
+	DOCKER_BUILD       = "Docker Build"
 	DOCKER_STOP        = "Docker Stop"
 	BUILD_ARTIFACT     = "Build Artifact"
+	PUSH_CASH          = "Pushing Cache"
 )
 
 func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) error {

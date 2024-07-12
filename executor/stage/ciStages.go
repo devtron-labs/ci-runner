@@ -95,18 +95,22 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	}
 
 	// sync cache
+	syncCacheStageInfo := util.NewStageInfoWithStartLog(util.PUSH_CASH, "", nil, nil)
 	log.Println(util.DEVTRON, " cache-push")
 	err = helper.SyncCache(ciRequest)
 	if err != nil {
 		log.Println(err)
 		if ciCdRequest.CommonWorkflowRequest.IsExtRun {
 			log.Println(util.DEVTRON, "Ignoring cache upload")
+			syncCacheStageInfo.SetStatusEndTimeAndLog("Failure")
 			return
 		}
 		*exitCode = util.DefaultErrorCode
+		syncCacheStageInfo.SetStatusEndTimeAndLog("Failure")
 		return
 	}
 	log.Println(util.DEVTRON, " /cache-push")
+	syncCacheStageInfo.SetStatusEndTimeAndLog("Success")
 }
 
 type CiFailReason string
@@ -309,7 +313,6 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics,
 	refStageMap map[int][]*helper.StepObject, scriptEnvs map[string]string, artifactUploaded bool,
 	preCiStageOutVariable map[int]map[string]*helper.VariableObject) (string, error) {
-	buildArtifactStageInfo := util.NewStageInfo(util.BUILD_ARTIFACT, "", nil, nil)
 	util.LogStage("Build")
 	// build
 	start := time.Now()
@@ -318,7 +321,6 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 	metrics.BuildDuration = time.Since(start).Seconds()
 	if err != nil {
 		log.Println("Error in building artifact", "err", err)
-		buildArtifactStageInfo.SetStatusEndTimeAndLog("Failure")
 		// code-block starts : run post-ci which are enabled to run on ci fail
 		postCiStepsToTriggerOnCiFail := getPostCiStepToRunOnCiFail(ciCdRequest.CommonWorkflowRequest.PostCiSteps)
 		if len(postCiStepsToTriggerOnCiFail) > 0 {
@@ -330,9 +332,6 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 		}
 		// code-block ends
 		err = sendFailureNotification(string(Build), ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
-	} else {
-		// else because in the case of err part the function is not returning and err is being changed
-		buildArtifactStageInfo.SetStatusEndTimeAndLog("Success")
 	}
 	log.Println(util.DEVTRON, " Build artifact completed", "dest", dest, "err", err)
 	return dest, err
