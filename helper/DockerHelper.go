@@ -835,11 +835,11 @@ func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflo
 }
 
 func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
-	dockerStopStageInfo := util.NewStageInfoWithStartLog(util.DOCKER_STOP, "", nil, nil)
+	//dockerStopStageInfo := util.NewStageInfoWithStartLog(util.DOCKER_STOP, "", nil, nil)
 	cmd := exec.Command("docker", "ps", "-a", "-q")
 	out, err := cmd.Output()
 	if err != nil {
-		dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
+		//dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
 		return err
 	}
 	if len(out) > 0 {
@@ -849,7 +849,7 @@ func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
 		err := impl.cmdExecutor.RunCommand(ciContext, stopCmd)
 		log.Println(util.DEVTRON, " -----> stopped docker container")
 		if err != nil {
-			dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
+			//dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
 			log.Fatal(err)
 			return err
 		}
@@ -859,7 +859,7 @@ func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
 		err = impl.cmdExecutor.RunCommand(ciContext, removeContainerCmd)
 		log.Println(util.DEVTRON, " -----> removed docker container")
 		if err != nil {
-			dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
+			//dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
 			log.Fatal(err)
 			return err
 		}
@@ -867,7 +867,7 @@ func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
 	file := "/var/run/docker.pid"
 	content, err := ioutil.ReadFile(file)
 	if err != nil {
-		dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
+		//dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
 		log.Fatal(err)
 		return err
 	}
@@ -878,21 +878,21 @@ func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
 	}
 	proc, err := os.FindProcess(pid)
 	if err != nil {
-		dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
+		//dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
 		log.Println(err)
 		return err
 	}
 	// Kill the process
 	err = proc.Signal(syscall.SIGTERM)
 	if err != nil {
-		dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
+		//dockerStopStageInfo.SetStatusEndTimeAndLog("Failure")
 		log.Println(err)
 		return err
 	}
 	log.Println(util.DEVTRON, " -----> checking docker status")
 	impl.DockerdUpCheck() //FIXME: this call should be removed
 	//ensureDockerDaemonHasStopped(20)
-	dockerStopStageInfo.SetStatusEndTimeAndLog("Success")
+	//dockerStopStageInfo.SetStatusEndTimeAndLog("Success")
 	return nil
 }
 

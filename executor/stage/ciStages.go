@@ -367,7 +367,8 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, artifactUploaded bool) error {
 	imageScanStageInfo := util.NewStageInfoWithStartLog("ImageScan", "", nil, nil)
 	util.LogStage("IMAGE SCAN")
-	log.Println(util.DEVTRON, " Image Scanning Started for digest", digest)
+	//log.Println(util.DEVTRON, " Image Scanning Started for digest", digest)
+	log.Println("Image Scanning Started for digest", digest)
 	scanEvent := &helper.ScanEvent{
 		Image:               dest,
 		ImageDigest:         digest,
@@ -386,7 +387,8 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 		imageScanStageInfo.SetStatusEndTimeAndLog("Failure")
 		return err
 	}
-	log.Println(util.DEVTRON, "Image scanning completed with scanEvent", scanEvent)
+	//log.Println(util.DEVTRON, "Image scanning completed with scanEvent", scanEvent)
+	log.Println("Image scanning completed with scanEvent", scanEvent)
 	imageScanStageInfo.SetStatusEndTimeAndLog("Success")
 	return nil
 }
