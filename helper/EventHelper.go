@@ -157,6 +157,8 @@ type CommonWorkflowRequest struct {
 	UseExternalClusterBlob         bool                              `json:"useExternalClusterBlob"`
 	ImageScanMaxRetries            int                               `json:"imageScanMaxRetries,omitempty"`
 	ImageScanRetryDelay            int                               `json:"imageScanRetryDelay,omitempty"`
+	EnableSecretMasking            bool                              `json:"enableSecretMasking"`
+	ExternalCiArtifact             string                            `json:"externalCiArtifact"`
 	// Data from CD Workflow service
 	WorkflowRunnerId              int                            `json:"workflowRunnerId"`
 	CdPipelineId                  int                            `json:"cdPipelineId"`
@@ -258,6 +260,8 @@ type CiRequest struct {
 	OrchestratorToken           string                            `json:"orchestratorToken"`
 	ImageRetryCount             int                               `json:"imageRetryCount"`
 	ImageRetryInterval          int                               `json:"imageRetryInterval"`
+	EnableSecretMasking         bool                              `json:"enableSecretMasking"`
+	ExternalCiArtifact          string                            `json:"externalCiArtifact"`
 }
 
 type CdRequest struct {
@@ -451,6 +455,11 @@ func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
 }
 
 func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failureReason string, imageDetailsFromCR *ImageDetailsFromCR) error {
+	// check if ciRequest.ExternalCiArtifact is not nil
+	if ciRequest.ExternalCiArtifact != "" {
+		log.Println(util.DEVTRON, "external ci artifact found. exiting now with success event")
+		image = ciRequest.ExternalCiArtifact
+	}
 
 	event := CiCompleteEvent{
 		CiProjectDetails:              ciRequest.CiProjectDetails,
