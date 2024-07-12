@@ -58,17 +58,21 @@ func UploadArtifact(cloudHelperBaseConfig *util.CloudHelperBaseConfig, artifactF
 }
 
 func ZipAndUpload(cloudHelperBaseConfig *util.CloudHelperBaseConfig, artifactFileName string) (bool, error) {
+	uploadArtifaceStageInfo := util.NewStageInfoWithStartLog(util.UPLOAD_ARTIFACT, "", nil, nil)
 	artifactUploaded := false
 	if !cloudHelperBaseConfig.StorageModuleConfigured {
 		log.Println(util.DEVTRON, "not going to upload artifact as storage module not configured...")
+		uploadArtifaceStageInfo.SetStatusEndTimeAndLog("Failure")
 		return artifactUploaded, nil
 	}
 	isEmpty, err := IsDirEmpty(util.TmpArtifactLocation)
 	if err != nil {
 		log.Println(util.DEVTRON, "artifact empty check error ")
+		uploadArtifaceStageInfo.SetStatusEndTimeAndLog("Failure")
 		return artifactUploaded, err
 	} else if isEmpty {
 		log.Println(util.DEVTRON, "no artifact to upload")
+		uploadArtifaceStageInfo.SetStatusEndTimeAndLog("Failure")
 		return artifactUploaded, nil
 	}
 	log.Println(util.DEVTRON, "artifact to upload")
@@ -76,14 +80,17 @@ func ZipAndUpload(cloudHelperBaseConfig *util.CloudHelperBaseConfig, artifactFil
 	zipCmd := exec.Command("zip", "-r", zipFile, util.TmpArtifactLocation)
 	err = util.RunCommand(zipCmd)
 	if err != nil {
+		uploadArtifaceStageInfo.SetStatusEndTimeAndLog("Failure")
 		return artifactUploaded, err
 	}
 	log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactFileName)
 	err = UploadFileToCloud(cloudHelperBaseConfig, zipFile, artifactFileName)
 	if err != nil {
+		uploadArtifaceStageInfo.SetStatusEndTimeAndLog("Failure")
 		return artifactUploaded, err
 	}
 	artifactUploaded = true
+	uploadArtifaceStageInfo.SetStatusEndTimeAndLog("Success")
 	return artifactUploaded, err
 }
 

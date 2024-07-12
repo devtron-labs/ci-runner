@@ -235,20 +235,17 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	metrics.PostCiDuration = postCiDuration
 	log.Println(util.DEVTRON, " /docker-push")
 
-	artifactUploadStageInfo := util.NewStageInfoWithStartLog("Artifact Upload", "", nil, nil)
 	log.Println(util.DEVTRON, " artifact-upload")
 	cloudHelperBaseConfig := ciCdRequest.CommonWorkflowRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
 	artifactUploaded, err = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
 
 	if err != nil {
-		artifactUploadStageInfo.SetStatusEndTimeAndLog("Failure")
 		return artifactUploaded, nil
 	}
 	//else {
 	//	artifactUploaded = true
 	//}
 	log.Println(util.DEVTRON, " /artifact-upload")
-	artifactUploadStageInfo.SetStatusEndTimeAndLog("Success")
 
 	dest, err = impl.dockerHelper.GetDestForNatsEvent(ciCdRequest.CommonWorkflowRequest, dest)
 	if err != nil {
@@ -257,10 +254,8 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	// scan only if ci scan enabled
 	if helper.IsEventTypeEligibleToScanImage(ciCdRequest.Type) &&
 		ciCdRequest.CommonWorkflowRequest.ScanEnabled {
-		imageScanStageInfo := util.NewStageInfo("ImageScan", "", nil, nil)
 		err = runImageScanning(dest, digest, ciCdRequest, metrics, artifactUploaded)
 		if err != nil {
-			imageScanStageInfo.SetStatusEndTimeAndLog("Failure")
 			return artifactUploaded, err
 		}
 	}
@@ -370,6 +365,7 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 }
 
 func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, artifactUploaded bool) error {
+	imageScanStageInfo := util.NewStageInfo("ImageScan", "", nil, nil)
 	util.LogStage("IMAGE SCAN")
 	log.Println(util.DEVTRON, " Image Scanning Started for digest", digest)
 	scanEvent := &helper.ScanEvent{
@@ -387,9 +383,11 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 	if err != nil {
 		log.Println("error in running Image Scan", "err", err)
 		err = sendFailureNotification(string(Scan), ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, err)
+		imageScanStageInfo.SetStatusEndTimeAndLog("Failure")
 		return err
 	}
 	log.Println(util.DEVTRON, "Image scanning completed with scanEvent", scanEvent)
+	imageScanStageInfo.SetStatusEndTimeAndLog("Success")
 	return nil
 }
 

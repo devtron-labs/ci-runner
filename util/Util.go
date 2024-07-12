@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/url"
 	"os"
@@ -47,6 +46,7 @@ const (
 	DOCKER_BUILD       = "Docker Build"
 	DOCKER_STOP        = "Docker Stop"
 	BUILD_ARTIFACT     = "Build Artifact"
+	UPLOAD_ARTIFACT    = "Uploading Artifact"
 	PUSH_CASH          = "Pushing Cache"
 )
 
@@ -113,11 +113,11 @@ func CleanupAfterFetchingHttpsSubmodules() error {
 }
 
 func LogStage(name string) {
-	stageTemplate := `
-------------------------------------------------------------------------------------------------------------------------
-STAGE:  %s
-------------------------------------------------------------------------------------------------------------------------`
-	log.Println(fmt.Sprintf(stageTemplate, name))
+	//	stageTemplate := `
+	//------------------------------------------------------------------------------------------------------------------------
+	//STAGE:  %s
+	//------------------------------------------------------------------------------------------------------------------------`
+	//	log.Println(fmt.Sprintf(stageTemplate, name))
 }
 
 var chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
