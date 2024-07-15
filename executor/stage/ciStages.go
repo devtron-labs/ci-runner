@@ -254,7 +254,6 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 
 	log.Println(util.DEVTRON, " event")
 	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
-	fmt.Println(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
 
 	// When externalCiArtifact is provided (run time Env at time of build) then this image will be used further in the pipeline
 	// imageDigest and ciProjectDetails are optional fields
@@ -269,16 +268,12 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 			fmt.Println("ignoring the error and continuing without saving ciProjectDetails")
 		}
 
-		var ciProjectDetailsList []helper.CiProjectDetails
-		for _, detail := range tempDetails {
-			ciProjectDetail := helper.CiProjectDetails{
-				CommitHash: detail.CommitHash,
-				Message:    detail.Message,
-				Author:     detail.Author,
-			}
-			ciProjectDetailsList = append(ciProjectDetailsList, ciProjectDetail)
+		if len(tempDetails) > 0 && len(ciCdRequest.CommonWorkflowRequest.CiProjectDetails) > 0 {
+			detail := tempDetails[0]
+			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].CommitHash = detail.CommitHash
+			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].Message = detail.Message
+			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].Author = detail.Author
 		}
-		ciCdRequest.CommonWorkflowRequest.CiProjectDetails = ciProjectDetailsList
 	}
 
 	err = helper.SendEvents(ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, "", resultsFromPlugin)

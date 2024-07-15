@@ -434,10 +434,12 @@ type CIMetrics struct {
 }
 
 type TempCommitDetails struct {
-	CommitHash string `json:"commitHash"`
-	Message    string `json:"message"`
-	Author     string `json:"author"`
-	CommitTime string `json:"commitTime"`
+	CommitHash    string `json:"commitHash"`
+	Message       string `json:"message"`
+	Author        string `json:"author"`
+	CommitTime    string `json:"commitTime"`
+	GitRepository string `json:"gitRepository"`
+	Branch        string `json:"branch"`
 }
 
 func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
