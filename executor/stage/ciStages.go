@@ -129,7 +129,6 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	start := time.Now()
 	metrics.TotalStartTime = start
 	artifactUploaded = false
-	//resourceAvailabilityLogInfo := util.NewStageInfoWithStartLog("Resource Availability", "", nil, nil)
 	// change the current working directory to '/'
 	err = os.Chdir(util.HOMEDIR)
 	if err != nil {
@@ -201,8 +200,6 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	for _, ref := range ciCdRequest.CommonWorkflowRequest.RefPlugins {
 		refStageMap[ref.Id] = ref.Steps
 	}
-
-	//resourceAvailabilityLogInfo.SetEndTimeNowAndLog()
 
 	var preCiStageOutVariable map[int]map[string]*helper.VariableObject
 	start = time.Now()
@@ -367,7 +364,6 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, artifactUploaded bool) error {
 	imageScanStageInfo := util.NewStageInfoWithStartLog("ImageScan", "", nil, nil)
 	util.LogStage("IMAGE SCAN")
-	//log.Println(util.DEVTRON, " Image Scanning Started for digest", digest)
 	log.Println("Image Scanning Started for digest", digest)
 	scanEvent := &helper.ScanEvent{
 		Image:               dest,
@@ -387,7 +383,6 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 		imageScanStageInfo.SetStatusEndTimeAndLog("Failure")
 		return err
 	}
-	//log.Println(util.DEVTRON, "Image scanning completed with scanEvent", scanEvent)
 	log.Println("Image scanning completed with scanEvent", scanEvent)
 	imageScanStageInfo.SetStatusEndTimeAndLog("Success")
 	return nil
