@@ -226,6 +226,7 @@ func (stageLogData *StageLogData) SetEndTimeNowAndLog() {
 func (stageLogData *StageLogData) Log() {
 	infoLog := fmt.Sprintf("STAGE_INFO|%s\n", stageLogData.String())
 	log.Writer().Write([]byte(infoLog))
+	os.Stdout.Sync()
 }
 
 func (stageLogData *StageLogData) String() string {
