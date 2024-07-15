@@ -254,16 +254,19 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 
 	log.Println(util.DEVTRON, " event")
 	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
+	fmt.Println(ciCdRequest)
 
-	// check if ciRequest.ExternalCiArtifact is not nil
+	// When externalCiArtifact is provided (run time Env at time of build) then this image will be used further in the pipeline
+	// imageDigest and ciProjectDetails are optional fields
 	if scriptEnvs["externalCiArtifact"] != "" {
-		log.Println(util.DEVTRON, "external ci artifact found. exiting now with success event")
+		log.Println(util.DEVTRON, "external ci artifact found! exiting now with success event")
 		dest = scriptEnvs["externalCiArtifact"]
 		digest = scriptEnvs["imageDigest"]
 		var tempDetails []*helper.TempCommitDetails
 		err := json.Unmarshal([]byte(scriptEnvs["ciProjectDetails"]), &tempDetails)
 		if err != nil {
 			fmt.Println("Error unmarshalling ciProjectDetails JSON:", err)
+			fmt.Println("ignoring the error and continuing without saving ciProjectDetails")
 		}
 
 		var ciProjectDetailsList []helper.CiProjectDetails
@@ -272,7 +275,6 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 				CommitHash: detail.CommitHash,
 				Message:    detail.Message,
 				Author:     detail.Author,
-				// Populate other fields as necessary
 			}
 			ciProjectDetailsList = append(ciProjectDetailsList, ciProjectDetail)
 
