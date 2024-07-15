@@ -455,12 +455,6 @@ func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
 }
 
 func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failureReason string, imageDetailsFromCR *ImageDetailsFromCR) error {
-	// check if ciRequest.ExternalCiArtifact is not nil
-	if ciRequest.ExternalCiArtifact != "" {
-		log.Println(util.DEVTRON, "external ci artifact found. exiting now with success event")
-		image = ciRequest.ExternalCiArtifact
-	}
-
 	event := CiCompleteEvent{
 		CiProjectDetails:              ciRequest.CiProjectDetails,
 		DockerImage:                   image,

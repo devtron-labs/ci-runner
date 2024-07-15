@@ -254,6 +254,12 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	log.Println(util.DEVTRON, " event")
 	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
 
+	// check if ciRequest.ExternalCiArtifact is not nil
+	if scriptEnvs["externalCiArtifact"] != "" {
+		log.Println(util.DEVTRON, "external ci artifact found. exiting now with success event")
+		dest = scriptEnvs["externalCiArtifact"]
+	}
+
 	err = helper.SendEvents(ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, "", resultsFromPlugin)
 	if err != nil {
 		log.Println(err)
