@@ -254,7 +254,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 
 	log.Println(util.DEVTRON, " event")
 	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
-	fmt.Println(ciCdRequest)
+	fmt.Println(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
 
 	// When externalCiArtifact is provided (run time Env at time of build) then this image will be used further in the pipeline
 	// imageDigest and ciProjectDetails are optional fields
@@ -277,9 +277,6 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 				Author:     detail.Author,
 			}
 			ciProjectDetailsList = append(ciProjectDetailsList, ciProjectDetail)
-
-			// Example of printing one of the fields
-			fmt.Println("Commit Hash:", ciProjectDetail.CommitHash)
 		}
 		ciCdRequest.CommonWorkflowRequest.CiProjectDetails = ciProjectDetailsList
 	}
