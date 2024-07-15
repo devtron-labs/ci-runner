@@ -158,7 +158,6 @@ type CommonWorkflowRequest struct {
 	ImageScanMaxRetries            int                               `json:"imageScanMaxRetries,omitempty"`
 	ImageScanRetryDelay            int                               `json:"imageScanRetryDelay,omitempty"`
 	EnableSecretMasking            bool                              `json:"enableSecretMasking"`
-	ExternalCiArtifact             string                            `json:"externalCiArtifact"`
 	// Data from CD Workflow service
 	WorkflowRunnerId              int                            `json:"workflowRunnerId"`
 	CdPipelineId                  int                            `json:"cdPipelineId"`
@@ -261,7 +260,6 @@ type CiRequest struct {
 	ImageRetryCount             int                               `json:"imageRetryCount"`
 	ImageRetryInterval          int                               `json:"imageRetryInterval"`
 	EnableSecretMasking         bool                              `json:"enableSecretMasking"`
-	ExternalCiArtifact          string                            `json:"externalCiArtifact"`
 }
 
 type CdRequest struct {
@@ -433,6 +431,13 @@ type CIMetrics struct {
 	PostCiStartTime    time.Time `json:"postCiStartTime"`
 	CacheUpStartTime   time.Time `json:"cacheUpStartTime"`
 	TotalStartTime     time.Time `json:"totalStartTime"`
+}
+
+type TempCommitDetails struct {
+	CommitHash string `json:"commitHash"`
+	Message    string `json:"message"`
+	Author     string `json:"author"`
+	CommitTime string `json:"commitTime"`
 }
 
 func SendCDEvent(cdRequest *CommonWorkflowRequest) error {

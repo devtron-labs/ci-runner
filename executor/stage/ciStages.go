@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/devtron-labs/ci-runner/executor"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
@@ -258,6 +259,26 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	if scriptEnvs["externalCiArtifact"] != "" {
 		log.Println(util.DEVTRON, "external ci artifact found. exiting now with success event")
 		dest = scriptEnvs["externalCiArtifact"]
+		var tempDetails []*helper.TempCommitDetails
+		err := json.Unmarshal([]byte(scriptEnvs["externalCiArtifact"]), &tempDetails)
+		if err != nil {
+			fmt.Println("Error unmarshalling JSON:", err)
+		}
+
+		var ciProjectDetailsList []helper.CiProjectDetails
+		for _, detail := range tempDetails {
+			ciProjectDetail := helper.CiProjectDetails{
+				CommitHash: detail.CommitHash,
+				Message:    detail.Message,
+				Author:     detail.Author,
+				// Populate other fields as necessary
+			}
+			ciProjectDetailsList = append(ciProjectDetailsList, ciProjectDetail)
+
+			// Example of printing one of the fields
+			fmt.Println("Commit Hash:", ciProjectDetail.CommitHash)
+		}
+		ciCdRequest.CommonWorkflowRequest.CiProjectDetails = ciProjectDetailsList
 	}
 
 	err = helper.SendEvents(ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, "", resultsFromPlugin)
