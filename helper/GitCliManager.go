@@ -56,7 +56,7 @@ func (impl *GitCliManagerImpl) Fetch(gitContext GitContext, rootDir string) (res
 	cmd := exec.Command("git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
 	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.Auth.Username, gitContext.Auth.Password)
 	log.Println(util.DEVTRON, "fetch output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
-	return output, "", nil
+	return output, errMsg, err
 }
 
 func (impl *GitCliManagerImpl) Checkout(gitContext GitContext, rootDir string, checkout string) (response, errMsg string, err error) {
@@ -64,7 +64,7 @@ func (impl *GitCliManagerImpl) Checkout(gitContext GitContext, rootDir string, c
 	cmd := exec.Command("git", "-C", rootDir, "checkout", checkout, "--force")
 	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.Auth.Username, gitContext.Auth.Password)
 	log.Println(util.DEVTRON, "checkout output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
-	return output, "", nil
+	return output, errMsg, err
 }
 
 func (impl *GitCliManagerImpl) RunCommandWithCred(cmd *exec.Cmd, userName, password string) (response, errMsg string, err error) {
