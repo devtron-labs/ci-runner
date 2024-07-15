@@ -115,11 +115,11 @@ func CleanupAfterFetchingHttpsSubmodules() error {
 }
 
 func LogStage(name string) {
-	stageTemplate := `
-	------------------------------------------------------------------------------------------------------------------------
-	STAGE:  %s
-	------------------------------------------------------------------------------------------------------------------------`
-	log.Println(fmt.Sprintf(stageTemplate, name))
+	//stageTemplate := `
+	//------------------------------------------------------------------------------------------------------------------------
+	//STAGE:  %s
+	//------------------------------------------------------------------------------------------------------------------------`
+	//log.Println(fmt.Sprintf(stageTemplate, name))
 }
 
 var chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
@@ -225,8 +225,7 @@ func (stageLogData *StageLogData) SetEndTimeNowAndLog() {
 
 func (stageLogData *StageLogData) Log() {
 	infoLog := fmt.Sprintf("STAGE_INFO|%s\n", stageLogData.String())
-	fmt.Println(infoLog)
-	os.Stdout.Sync()
+	log.Writer().Write([]byte(infoLog))
 }
 
 func (stageLogData *StageLogData) String() string {
