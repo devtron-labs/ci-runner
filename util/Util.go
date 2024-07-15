@@ -39,16 +39,17 @@ const (
 )
 
 const (
-	CACHE_PULL         = "Pulling Cache"
-	GIT_CLONE_CHECKOUT = "Git Clone & Checkout"
-	DOCKER_DAEMON      = "Starting Docker Daemon"
-	DOCKER_LOGIN_STAGE = "Docker Login"
-	DOCKER_PUSH        = "Docker Push"
-	DOCKER_BUILD       = "Docker Build"
-	DOCKER_STOP        = "Docker Stop"
-	BUILD_ARTIFACT     = "Build Artifact"
-	UPLOAD_ARTIFACT    = "Uploading Artifact"
-	PUSH_CASH          = "Pushing Cache"
+	CACHE_PULL                           = "Pulling Cache"
+	GIT_CLONE_CHECKOUT                   = "Git Clone & Checkout"
+	DOCKER_DAEMON                        = "Starting Docker Daemon"
+	DOCKER_LOGIN_STAGE                   = "Docker Login"
+	DOCKER_PUSH                          = "Docker Push"
+	DOCKER_BUILD                         = "Docker Build"
+	DOCKER_STOP                          = "Docker Stop"
+	BUILD_ARTIFACT                       = "Build Artifact"
+	UPLOAD_ARTIFACT                      = "Uploading Artifact"
+	PUSH_CASH                            = "Pushing Cache"
+	DOCKER_PUSH_AND_EXTRACT_IMAGE_DIGEST = "Docker Push And Extract Image Digest"
 )
 
 func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) error {

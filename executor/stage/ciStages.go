@@ -330,17 +330,29 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 }
 
 func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest string, metrics *helper.CIMetrics, artifactUploaded bool) (string, error) {
+	stageInfo := util.NewStageInfoWithStartLog(util.DOCKER_PUSH_AND_EXTRACT_IMAGE_DIGEST, "", nil, nil)
+	var err error
+	defer func() {
+		stageStatus := "Success"
+		if err != nil {
+			stageStatus = "Failure"
+		}
+		stageInfo.SetStatusEndTimeAndLog(stageStatus)
+	}()
+
 	ciBuildConfi := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
 	isBuildX := ciBuildConfi != nil && ciBuildConfi.DockerBuildConfig != nil && ciBuildConfi.DockerBuildConfig.CheckForBuildX()
 	var digest string
-	var err error
 	if isBuildX {
 		digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
 	} else {
 		util.LogStage("docker push")
 		// push to dest
 		log.Println(util.DEVTRON, "Docker push Artifact", "dest", dest)
-		impl.pushArtifact(ciCdRequest, dest, digest, metrics, artifactUploaded)
+		err = impl.pushArtifact(ciCdRequest, dest, digest, metrics, artifactUploaded)
+		if err != nil {
+			return digest, err
+		}
 		digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
 	}
 	return digest, err
@@ -462,7 +474,6 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 	imageRetryCountValue := ciCdRequest.CommonWorkflowRequest.ImageRetryCount
 	imageRetryIntervalValue := ciCdRequest.CommonWorkflowRequest.ImageRetryInterval
 	var err error
-	pushArtifactStageInfo := util.NewStageInfoWithStartLog(util.DOCKER_PUSH, "", nil, nil)
 	for i := 0; i < imageRetryCountValue+1; i++ {
 		if i != 0 {
 			time.Sleep(time.Duration(imageRetryIntervalValue) * time.Second)
@@ -477,10 +488,8 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 		}
 	}
 	if err != nil {
-		pushArtifactStageInfo.SetStatusEndTimeAndLog("Failure")
 		err = sendFailureNotification(string(Push), ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, err)
 		return err
 	}
-	pushArtifactStageInfo.SetStatusEndTimeAndLog("Success")
 	return err
 }
