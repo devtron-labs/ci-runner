@@ -63,7 +63,7 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 		} else {
 			stageLogInfo.SetStatusEndTime("Success")
 		}
-		if stepType == helper.STEP_TYPE_REF_PLUGIN {
+		if stepType != helper.STEP_TYPE_REF_PLUGIN {
 			stageLogInfo.Log()
 		}
 	}
