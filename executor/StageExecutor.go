@@ -60,6 +60,9 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 		failedStep, err = impl.RunCiCdStep(stepType, *ciCdRequest, i, step, refStageMap, globalEnvironmentVariables, preCiStageVariable, stageVariable)
 		if err != nil {
 			stageLogInfo.SetStatusEndTime("Failure")
+			if stepType != helper.STEP_TYPE_REF_PLUGIN {
+				stageLogInfo.Log()
+			}
 			return nil, failedStep, err
 		} else {
 			stageLogInfo.SetStatusEndTime("Success")
