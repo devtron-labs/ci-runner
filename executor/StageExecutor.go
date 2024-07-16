@@ -50,9 +50,10 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
-	stageLogInfo := util.NewStageInfo("", "", nil, nil)
+
 	stageVariable := make(map[int]map[string]*helper.VariableObject)
 	for i, step := range steps {
+		stageLogInfo := util.NewStageInfo("", "", nil, nil)
 		if stepType != helper.STEP_TYPE_REF_PLUGIN {
 			stageLogInfo = util.NewStageInfoWithStartLog(step.Name, "", nil, nil)
 		}
