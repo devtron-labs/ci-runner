@@ -25,11 +25,15 @@ import (
 )
 
 type GitOptions struct {
-	UserName      string   `json:"userName"`
-	Password      string   `json:"password"`
-	SshPrivateKey string   `json:"sshPrivateKey"`
-	AccessToken   string   `json:"accessToken"`
-	AuthMode      AuthMode `json:"authMode"`
+	UserName              string   `json:"userName"`
+	Password              string   `json:"password"`
+	SshPrivateKey         string   `json:"sshPrivateKey"`
+	AccessToken           string   `json:"accessToken"`
+	AuthMode              AuthMode `json:"authMode"`
+	TlsKey                string   `json:"tlsKey"`
+	TlsCert               string   `json:"tlsCert"`
+	CaCert                string   `json:"caCert"`
+	EnableTLSVerification bool     `json:"enableTLSVerification"`
 }
 
 type WebhookData struct {
@@ -39,9 +43,22 @@ type WebhookData struct {
 }
 
 type GitContext struct {
-	context.Context // Embedding original Go context
-	Auth            *BasicAuth
+	context.Context        // Embedding original Go context
+	Auth                   *BasicAuth
+	CACert                 string
+	TLSKey                 string
+	TLSCertificate         string
+	TLSVerificationEnabled bool
 }
+
+func (gitCtx GitContext) WithTLSData(caData string, tlsKey string, tlsCertificate string, tlsVerificationEnabled bool) GitContext {
+	gitCtx.CACert = caData
+	gitCtx.TLSKey = tlsKey
+	gitCtx.TLSCertificate = tlsCertificate
+	gitCtx.TLSVerificationEnabled = tlsVerificationEnabled
+	return gitCtx
+}
+
 type BasicAuth struct {
 	Username, Password string
 }
