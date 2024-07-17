@@ -17,12 +17,15 @@
 package stage
 
 import (
+	"context"
+	"log"
+	"os"
+
 	"github.com/devtron-labs/ci-runner/executor"
+	cictx "github.com/devtron-labs/ci-runner/executor/context"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
-	"log"
-	"os"
 )
 
 type CdStage struct {
@@ -107,7 +110,8 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
 	impl.dockerHelper.StartDockerDaemon(cicdRequest.CommonWorkflowRequest)
-	err = impl.dockerHelper.DockerLogin(&helper.DockerCredentials{
+	ciContext := cictx.BuildCiContext(context.Background(), cicdRequest.CommonWorkflowRequest.EnableSecretMasking)
+	err = impl.dockerHelper.DockerLogin(ciContext, &helper.DockerCredentials{
 		DockerUsername:     cicdRequest.CommonWorkflowRequest.DockerUsername,
 		DockerPassword:     cicdRequest.CommonWorkflowRequest.DockerPassword,
 		AwsRegion:          cicdRequest.CommonWorkflowRequest.AwsRegion,
@@ -155,7 +159,7 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		if err != nil {
 			return err
 		}
-		err = executor.RunCdStageTasks(tasks, scriptEnvs)
+		err = impl.stageExecutorManager.RunCdStageTasks(ciContext, tasks, scriptEnvs)
 		if err != nil {
 			return err
 		}
@@ -171,7 +175,7 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		}
 		log.Println(util.DEVTRON, " /event")
 	}
-	err = impl.dockerHelper.StopDocker()
+	err = impl.dockerHelper.StopDocker(ciContext)
 	if err != nil {
 		log.Println("error while stopping docker", err)
 		return err
