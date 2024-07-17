@@ -261,7 +261,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 		log.Println(util.DEVTRON, "external ci artifact found! exiting now with success event")
 		dest = scriptEnvs["externalCiArtifact"]
 		digest = scriptEnvs["imageDigest"]
-		var tempDetails []*helper.TempCommitDetails
+		var tempDetails []*helper.CiProjectDetailsMin
 		err := json.Unmarshal([]byte(scriptEnvs["ciProjectDetails"]), &tempDetails)
 		if err != nil {
 			fmt.Println("Error unmarshalling ciProjectDetails JSON:", err)
@@ -273,6 +273,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].CommitHash = detail.CommitHash
 			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].Message = detail.Message
 			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].Author = detail.Author
+			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].CommitTime = detail.CommitTime
 		}
 	}
 
