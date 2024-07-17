@@ -433,6 +433,15 @@ type CIMetrics struct {
 	TotalStartTime     time.Time `json:"totalStartTime"`
 }
 
+type TempCommitDetails struct {
+	CommitHash    string `json:"commitHash"`
+	Message       string `json:"message"`
+	Author        string `json:"author"`
+	CommitTime    string `json:"commitTime"`
+	GitRepository string `json:"gitRepository"`
+	Branch        string `json:"branch"`
+}
+
 func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
 	event := CdStageCompleteEvent{
 		CiProjectDetails:              cdRequest.CiProjectDetails,
@@ -453,7 +462,6 @@ func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
 }
 
 func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failureReason string, imageDetailsFromCR *ImageDetailsFromCR) error {
-
 	event := CiCompleteEvent{
 		CiProjectDetails:              ciRequest.CiProjectDetails,
 		DockerImage:                   image,
