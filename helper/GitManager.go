@@ -151,7 +151,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 				checkoutSource = prj.SourceValue
 			}
 			log.Println("checkout commit in branch fix : ", checkoutSource)
-			msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository)
+			msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository, prj)
 			if cErr != nil {
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 			}
@@ -169,7 +169,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 			log.Println("checkout commit in webhook : ", targetCheckout)
 
 			// checkout target hash
-			msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository)
+			msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository, prj)
 			if cErr != nil {
 				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
 				return cErr

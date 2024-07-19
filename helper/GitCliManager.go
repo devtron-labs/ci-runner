@@ -30,7 +30,7 @@ import (
 type GitCliManager interface {
 	Fetch(gitContext GitContext, rootDir string) (response, errMsg string, err error)
 	Checkout(gitContext GitContext, rootDir string, checkout string) (response, errMsg string, err error)
-	RunCommandWithCred(cmd *exec.Cmd, userName, password string) (response, errMsg string, err error)
+	RunCommandWithCred(cmd *exec.Cmd, userName, password string, tlsPathInfo *git_manager.TlsPathInfo) (response, errMsg string, err error)
 	RunCommand(cmd *exec.Cmd) (response, errMsg string, err error)
 	runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnvToNull bool) (response, errMsg string, err error)
 	Init(rootDir string, remoteUrl string, isBare bool) error
@@ -39,7 +39,7 @@ type GitCliManager interface {
 	RecursiveFetchSubmodules(rootDir string) (response, errMsg string, error error)
 	UpdateCredentialHelper(rootDir string) (response, errMsg string, error error)
 	UnsetCredentialHelper(rootDir string) (response, errMsg string, error error)
-	GitCheckout(gitContext GitContext, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, gitRepository string) (errMsg string, error error)
+	GitCheckout(gitContext GitContext, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, gitRepository string, prj CiProjectDetails) (errMsg string, error error)
 }
 
 type GitCliManagerImpl struct {
