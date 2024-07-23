@@ -70,7 +70,8 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	var artifactUploadErr error
 	if !artifactUploaded {
 		cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
-		artifactUploaded, artifactUploadErr = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
+		artifactUploadErr = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
+		artifactUploaded = artifactUploadErr == nil
 	}
 
 	if err != nil {
@@ -95,22 +96,26 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	}
 
 	// sync cache
-	syncCacheStageInfo := util.NewStageInfoWithStartLog(util.PUSH_CASH, "", nil, nil)
-	log.Println(util.DEVTRON, " cache-push")
-	err = helper.SyncCache(ciRequest)
-	if err != nil {
-		log.Println(err)
-		if ciCdRequest.CommonWorkflowRequest.IsExtRun {
-			log.Println(util.DEVTRON, "Ignoring cache upload")
-			syncCacheStageInfo.SetStatusEndTimeAndLog("Failure")
-			return
+	uploadCache := func() error {
+		log.Println(util.DEVTRON, " cache-push")
+		err = helper.SyncCache(ciRequest)
+		if err != nil {
+			log.Println(err)
+			if ciCdRequest.CommonWorkflowRequest.IsExtRun {
+				log.Println(util.DEVTRON, "Ignoring cache upload")
+				// not returning error as we are ignoring the cache upload, todo: re confirm this
+				return nil
+			}
+			*exitCode = util.DefaultErrorCode
+			return err
 		}
-		*exitCode = util.DefaultErrorCode
-		syncCacheStageInfo.SetStatusEndTimeAndLog("Failure")
-		return
+		log.Println(util.DEVTRON, " /cache-push")
+		return nil
 	}
-	log.Println(util.DEVTRON, " /cache-push")
-	syncCacheStageInfo.SetStatusEndTimeAndLog("Success")
+
+	// not returning error by choice, do not want to report this error to caller
+	// cache push can fail and we don't want to break the flow
+	util.ExecuteWithStageInfoLog(util.PUSH_CACHE, uploadCache)
 }
 
 type CiFailReason string
@@ -142,18 +147,26 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	}
 
 	// Get ci cache TODO
-	cachePullStageInfo := util.NewStageInfoWithStartLog(util.CACHE_PULL, "", nil, nil)
-	log.Println(util.DEVTRON, " cache-pull")
-	start = time.Now()
-	metrics.CacheDownStartTime = start
-	err = helper.GetCache(ciCdRequest.CommonWorkflowRequest)
-	metrics.CacheDownDuration = time.Since(start).Seconds()
-	if err != nil {
-		cachePullStageInfo.SetStatusEndTimeAndLog("Failure")
+	pullCacheStage := func() error {
+		log.Println(util.DEVTRON, " cache-pull")
+		start = time.Now()
+		metrics.CacheDownStartTime = start
+
+		defer func() {
+			log.Println(util.DEVTRON, " /cache-pull")
+			metrics.CacheDownDuration = time.Since(start).Seconds()
+		}()
+
+		err = helper.GetCache(ciCdRequest.CommonWorkflowRequest)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if err = util.ExecuteWithStageInfoLog(util.CACHE_PULL, pullCacheStage); err != nil {
 		return artifactUploaded, err
 	}
-	log.Println(util.DEVTRON, " /cache-pull")
-	cachePullStageInfo.SetStatusEndTimeAndLog("Success")
 
 	// change the current working directory to WORKINGDIR
 	err = os.Chdir(util.WORKINGDIR)
@@ -234,14 +247,12 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 
 	log.Println(util.DEVTRON, " artifact-upload")
 	cloudHelperBaseConfig := ciCdRequest.CommonWorkflowRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
-	artifactUploaded, err = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
-
+	err = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
 	if err != nil {
 		return artifactUploaded, nil
+	} else {
+		artifactUploaded = true
 	}
-	//else {
-	//	artifactUploaded = true
-	//}
 	log.Println(util.DEVTRON, " /artifact-upload")
 
 	dest, err = impl.dockerHelper.GetDestForNatsEvent(ciCdRequest.CommonWorkflowRequest, dest)
@@ -330,31 +341,29 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 }
 
 func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest string, metrics *helper.CIMetrics, artifactUploaded bool) (string, error) {
-	stageInfo := util.NewStageInfoWithStartLog(util.DOCKER_PUSH_AND_EXTRACT_IMAGE_DIGEST, "", nil, nil)
-	var err error
-	defer func() {
-		stageStatus := "Success"
-		if err != nil {
-			stageStatus = "Failure"
-		}
-		stageInfo.SetStatusEndTimeAndLog(stageStatus)
-	}()
 
-	ciBuildConfi := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
-	isBuildX := ciBuildConfi != nil && ciBuildConfi.DockerBuildConfig != nil && ciBuildConfi.DockerBuildConfig.CheckForBuildX()
 	var digest string
-	if isBuildX {
-		digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
-	} else {
-		util.LogStage("docker push")
-		// push to dest
-		log.Println(util.DEVTRON, "Docker push Artifact", "dest", dest)
-		err = impl.pushArtifact(ciCdRequest, dest, digest, metrics, artifactUploaded)
-		if err != nil {
-			return digest, err
+	var err error
+
+	extractDigestStage := func() error {
+		ciBuildConfi := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
+		isBuildX := ciBuildConfi != nil && ciBuildConfi.DockerBuildConfig != nil && ciBuildConfi.DockerBuildConfig.CheckForBuildX()
+		if isBuildX {
+			digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
+		} else {
+			util.LogStage("docker push")
+			// push to dest
+			log.Println(util.DEVTRON, "Docker push Artifact", "dest", dest)
+			err = impl.pushArtifact(ciCdRequest, dest, digest, metrics, artifactUploaded)
+			if err != nil {
+				return err
+			}
+			digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
 		}
-		digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
+		return err
 	}
+
+	err = util.ExecuteWithStageInfoLog(util.DOCKER_PUSH_AND_EXTRACT_IMAGE_DIGEST, extractDigestStage)
 	return digest, err
 }
 
@@ -374,30 +383,31 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 }
 
 func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, artifactUploaded bool) error {
-	imageScanStageInfo := util.NewStageInfoWithStartLog("ImageScan", "", nil, nil)
-	util.LogStage("IMAGE SCAN")
-	log.Println("Image Scanning Started for digest", digest)
-	scanEvent := &helper.ScanEvent{
-		Image:               dest,
-		ImageDigest:         digest,
-		PipelineId:          ciCdRequest.CommonWorkflowRequest.PipelineId,
-		UserId:              ciCdRequest.CommonWorkflowRequest.TriggeredBy,
-		DockerRegistryId:    ciCdRequest.CommonWorkflowRequest.DockerRegistryId,
-		DockerConnection:    ciCdRequest.CommonWorkflowRequest.DockerConnection,
-		DockerCert:          ciCdRequest.CommonWorkflowRequest.DockerCert,
-		ImageScanMaxRetries: ciCdRequest.CommonWorkflowRequest.ImageScanMaxRetries,
-		ImageScanRetryDelay: ciCdRequest.CommonWorkflowRequest.ImageScanRetryDelay,
+	imageScanningStage := func() error {
+		util.LogStage("IMAGE SCAN")
+		log.Println("Image Scanning Started for digest", digest)
+		scanEvent := &helper.ScanEvent{
+			Image:               dest,
+			ImageDigest:         digest,
+			PipelineId:          ciCdRequest.CommonWorkflowRequest.PipelineId,
+			UserId:              ciCdRequest.CommonWorkflowRequest.TriggeredBy,
+			DockerRegistryId:    ciCdRequest.CommonWorkflowRequest.DockerRegistryId,
+			DockerConnection:    ciCdRequest.CommonWorkflowRequest.DockerConnection,
+			DockerCert:          ciCdRequest.CommonWorkflowRequest.DockerCert,
+			ImageScanMaxRetries: ciCdRequest.CommonWorkflowRequest.ImageScanMaxRetries,
+			ImageScanRetryDelay: ciCdRequest.CommonWorkflowRequest.ImageScanRetryDelay,
+		}
+		err := helper.SendEventToClairUtility(scanEvent)
+		if err != nil {
+			log.Println("error in running Image Scan", "err", err)
+			err = sendFailureNotification(string(Scan), ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, err)
+			return err
+		}
+		log.Println("Image scanning completed with scanEvent", scanEvent)
+		return nil
 	}
-	err := helper.SendEventToClairUtility(scanEvent)
-	if err != nil {
-		log.Println("error in running Image Scan", "err", err)
-		err = sendFailureNotification(string(Scan), ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, err)
-		imageScanStageInfo.SetStatusEndTimeAndLog("Failure")
-		return err
-	}
-	log.Println("Image scanning completed with scanEvent", scanEvent)
-	imageScanStageInfo.SetStatusEndTimeAndLog("Success")
-	return nil
+
+	return util.ExecuteWithStageInfoLog(util.IMAGE_SCAN, imageScanningStage)
 }
 
 func (impl *CiStage) getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, artifactUploaded bool) (string, string, error) {
