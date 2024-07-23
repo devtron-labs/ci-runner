@@ -175,15 +175,22 @@ func newStageInfo(name string) *StageLogData {
 	}
 }
 
+type Status string
+
+const (
+	success Status = "Success"
+	failure Status = "Failure"
+)
+
 type StageLogData struct {
 	//eg : 'STAGE_INFO|{"stage":"Resource availability","startTime":"2021-01-01T00:00:00Z"}'
 	Stage     string     `json:"stage,omitempty"`
 	StartTime *time.Time `json:"startTime,omitempty"`
 	EndTime   *time.Time `json:"endTime,omitempty"`
-	Status    string     `json:"status,omitempty"`
+	Status    Status     `json:"status,omitempty"`
 }
 
-func (stageLogData *StageLogData) withStatus(status string) *StageLogData {
+func (stageLogData *StageLogData) withStatus(status Status) *StageLogData {
 	stageLogData.Status = status
 	return stageLogData
 }
@@ -219,9 +226,9 @@ func ExecuteWithStageInfoLog(stageName string, stageExecutor func() error) (err 
 	startDockerStageInfo := newStageInfo(stageName).withCurrentStartTime()
 	startDockerStageInfo.log()
 	defer func() {
-		status := "Success"
+		status := success
 		if err != nil {
-			status = "Failure"
+			status = failure
 		}
 		startDockerStageInfo.withStatus(status).withCurrentEndTime().log()
 	}()
