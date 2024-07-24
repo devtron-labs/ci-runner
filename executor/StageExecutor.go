@@ -67,8 +67,10 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 		}
 
 		if stageInfoLoggingRequired {
+			log.Println(util.DEVTRON, "stage logging required")
 			err = util.ExecuteWithStageInfoLog(step.Name, executeStep)
 		} else {
+			log.Println(util.DEVTRON, "stage logging not required")
 			err = executeStep()
 		}
 
