@@ -330,7 +330,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			// refer buildxExportCacheFunc
 
 			multiNodeK8sDriver := useBuildxK8sDriver && len(eligibleK8sDriverNodes) > 1
-			exportBuildxCacheAfterBuild := ciRequest.AsyncBuildxCacheExport || multiNodeK8sDriver
+			exportBuildxCacheAfterBuild := ciRequest.AsyncBuildxCacheExport && multiNodeK8sDriver
 			dockerBuild, buildxExportCacheFunc = impl.getBuildxBuildCommand(ciContext, exportBuildxCacheAfterBuild, cacheEnabled, ciRequest.BuildxCacheModeMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
@@ -418,6 +418,16 @@ func parseDockerFlagParam(param string) string {
 	if strings.HasPrefix(param, DEVTRON_ENV_VAR_PREFIX) {
 		value = os.Getenv(strings.TrimPrefix(param, DEVTRON_ENV_VAR_PREFIX))
 	}
+
+	return wrapSingleOrDoubleQuotedValue(value)
+}
+
+func wrapSingleOrDoubleQuotedValue(value string) string {
+	if strings.HasPrefix(value, `'`) && strings.HasSuffix(value, `'`) {
+		unquotedString := strings.Trim(value, `'`)
+		return fmt.Sprintf(`='%s'`, unquotedString)
+	}
+
 	unquotedString := strings.Trim(value, `"`)
 
 	return fmt.Sprintf(`="%s"`, unquotedString)
