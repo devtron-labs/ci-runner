@@ -54,6 +54,7 @@ const (
 	SETUP_BUILDX_BUILDER                 = "Setting Up Buildx Builder"
 	CLEANUP_BUILDX_BUILDER               = "Cleaning Up Buildx Builder"
 	BUILD_PACK_BUILD                     = "Build Packs Build"
+	EXPORT_BUILD_CACHE                   = "Exporting Build Cache"
 )
 
 func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) error {

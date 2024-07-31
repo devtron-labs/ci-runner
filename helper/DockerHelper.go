@@ -299,7 +299,8 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		dockerBuildConfig.BuildContext = path.Join(ROOT_PATH, dockerBuildConfig.BuildContext)
 
 		dockerfilePath := getDockerfilePath(ciBuildConfig, ciRequest.CheckoutPath)
-		var buildxExportCacheFunc func() = nil
+		var buildxExportCacheFunc func() error = nil
+		useBuildxK8sDriver, eligibleK8sDriverNodes := false, make([]map[string]string, 0)
 		if useBuildx {
 			setupBuildxBuilder := func() error {
 				err := impl.checkAndCreateDirectory(ciContext, util.LOCAL_BUILDX_LOCATION)
@@ -307,7 +308,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 					log.Println(util.DEVTRON, " error in creating LOCAL_BUILDX_LOCATION ", util.LOCAL_BUILDX_LOCATION)
 					return err
 				}
-				useBuildxK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver()
+				useBuildxK8sDriver, eligibleK8sDriverNodes = dockerBuildConfig.CheckForBuildXK8sDriver()
 				if useBuildxK8sDriver {
 					err = impl.createBuildxBuilderWithK8sDriver(ciContext, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
 					if err != nil {
@@ -372,9 +373,8 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			return "", nil
 		}
 
-		// todo: gireesh
 		if buildxExportCacheFunc != nil {
-			buildxExportCacheFunc()
+			util.ExecuteWithStageInfoLog(util.EXPORT_BUILD_CACHE, buildxExportCacheFunc)
 		}
 
 		if useBuildK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver(); useBuildK8sDriver {
@@ -488,8 +488,8 @@ func getDockerfilePath(CiBuildConfig *CiBuildConfigBean, checkoutPath string) st
 }
 
 // getBuildxExportCacheFunc  will concurrently execute the given export cache commands
-func (impl *DockerHelperImpl) getBuildxExportCacheFunc(ciContext cicxt.CiContext, exportCacheCmds map[string]string) func() {
-	exportCacheFunc := func() {
+func (impl *DockerHelperImpl) getBuildxExportCacheFunc(ciContext cicxt.CiContext, exportCacheCmds map[string]string) func() error {
+	exportCacheFunc := func() error {
 		// run export cache cmd for buildx
 		if len(exportCacheCmds) > 0 {
 			log.Println("exporting build caches...")
@@ -509,6 +509,7 @@ func (impl *DockerHelperImpl) getBuildxExportCacheFunc(ciContext cicxt.CiContext
 			}
 			wg.Wait()
 		}
+		return nil
 	}
 	return exportCacheFunc
 }
@@ -543,7 +544,7 @@ func getSourceCaches(targetPlatforms, oldCachePathLocation string) string {
 	return strings.Join(allCachePaths, " ")
 }
 
-func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func()) {
+func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
 	dockerBuild = fmt.Sprintf("%s %s -f %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.BuildContext, dockerfilePath)
 	exportCacheCmds := make(map[string]string)
 
@@ -570,7 +571,7 @@ func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext,
 	return dockerBuild, impl.getBuildxExportCacheFunc(ciContext, exportCacheCmds)
 }
 
-func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func()) {
+func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
 
 	cacheMode := CacheModeMax
 	if useCacheMin {
@@ -589,7 +590,7 @@ func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCach
 	return dockerBuild, nil
 }
 
-func (impl *DockerHelperImpl) getBuildxBuildCommand(ciContext cicxt.CiContext, exportBuildxCacheAfterBuild bool, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func()) {
+func (impl *DockerHelperImpl) getBuildxBuildCommand(ciContext cicxt.CiContext, exportBuildxCacheAfterBuild bool, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
 	if exportBuildxCacheAfterBuild {
 		return impl.getBuildxBuildCommandV2(ciContext, cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
 	}
