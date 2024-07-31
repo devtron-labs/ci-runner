@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/devtron-labs/ci-runner/executor"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
@@ -271,6 +272,28 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	log.Println(util.DEVTRON, " event")
 	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
 
+	// When externalCiArtifact is provided (run time Env at time of build) then this image will be used further in the pipeline
+	// imageDigest and ciProjectDetails are optional fields
+	if scriptEnvs["externalCiArtifact"] != "" {
+		log.Println(util.DEVTRON, "external ci artifact found! exiting now with success event")
+		dest = scriptEnvs["externalCiArtifact"]
+		digest = scriptEnvs["imageDigest"]
+		var tempDetails []*helper.CiProjectDetailsMin
+		err := json.Unmarshal([]byte(scriptEnvs["ciProjectDetails"]), &tempDetails)
+		if err != nil {
+			fmt.Println("Error unmarshalling ciProjectDetails JSON:", err)
+			fmt.Println("ignoring the error and continuing without saving ciProjectDetails")
+		}
+
+		if len(tempDetails) > 0 && len(ciCdRequest.CommonWorkflowRequest.CiProjectDetails) > 0 {
+			detail := tempDetails[0]
+			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].CommitHash = detail.CommitHash
+			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].Message = detail.Message
+			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].Author = detail.Author
+			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].CommitTime = detail.CommitTime
+		}
+	}
+
 	err = helper.SendEvents(ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, "", resultsFromPlugin)
 	if err != nil {
 		log.Println(err)
@@ -320,7 +343,7 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 	// build
 	start := time.Now()
 	metrics.BuildStartTime = start
-	dest, err := impl.dockerHelper.BuildArtifact(ciCdRequest.CommonWorkflowRequest) //TODO make it skipable
+	dest, err := impl.dockerHelper.BuildArtifact(ciCdRequest.CommonWorkflowRequest) // TODO make it skipable
 	metrics.BuildDuration = time.Since(start).Seconds()
 	if err != nil {
 		log.Println("Error in building artifact", "err", err)
