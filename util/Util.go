@@ -48,8 +48,12 @@ const (
 	DOCKER_STOP                          = "Docker Stop"
 	BUILD_ARTIFACT                       = "Build Artifact"
 	UPLOAD_ARTIFACT                      = "Uploading Artifact"
-	PUSH_CASH                            = "Pushing Cache"
+	PUSH_CACHE                           = "Pushing Cache"
 	DOCKER_PUSH_AND_EXTRACT_IMAGE_DIGEST = "Docker Push And Extract Image Digest"
+	IMAGE_SCAN                           = "Image Scanning"
+	SETUP_BUILDX_BUILDER                 = "Setting Up Buildx Builder"
+	CLEANUP_BUILDX_BUILDER               = "Cleaning Up Buildx Builder"
+	BUILD_PACK_BUILD                     = "Build Packs Build"
 )
 
 func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) error {
@@ -165,78 +169,69 @@ func GetProjectName(url string) string {
 	return projectName
 }
 
-func NewStageInfo(name, status string, startTime, endTime *time.Time) *StageLogData {
+func newStageInfo(name string) *StageLogData {
 	return &StageLogData{
-		Status:    status,
-		Stage:     name,
-		StartTime: startTime,
-		EndTime:   endTime,
+		Stage: name,
 	}
 }
 
-func NewStageInfoWithStartLog(name, status string, startTime, endTime *time.Time) *StageLogData {
-	stageInfo := &StageLogData{
-		Status:    status,
-		Stage:     name,
-		StartTime: startTime,
-		EndTime:   endTime,
-	}
-	if startTime == nil {
-		stageInfo.SetStartTimeNow()
-	}
-	stageInfo.Log()
-	return stageInfo
-}
+type Status string
+
+const (
+	success Status = "Success"
+	failure Status = "Failure"
+)
 
 type StageLogData struct {
 	//eg : 'STAGE_INFO|{"stage":"Resource availability","startTime":"2021-01-01T00:00:00Z"}'
 	Stage     string     `json:"stage,omitempty"`
 	StartTime *time.Time `json:"startTime,omitempty"`
 	EndTime   *time.Time `json:"endTime,omitempty"`
-	Status    string     `json:"status,omitempty"`
+	Status    Status     `json:"status,omitempty"`
 }
 
-func (stageLogData *StageLogData) SetStartTimeNow() {
+func (stageLogData *StageLogData) withStatus(status Status) *StageLogData {
+	stageLogData.Status = status
+	return stageLogData
+}
+
+func (stageLogData *StageLogData) withCurrentStartTime() *StageLogData {
 	currentTime := time.Now()
 	stageLogData.StartTime = &currentTime
+	return stageLogData
 }
 
-func (stageLogData *StageLogData) SetEndTimeNow() {
+func (stageLogData *StageLogData) withCurrentEndTime() *StageLogData {
 	currentTime := time.Now()
 	stageLogData.EndTime = &currentTime
+	return stageLogData
 }
 
-func (stageLogData *StageLogData) SetStatus(status string) {
-	stageLogData.Status = status
-}
-
-func (stageLogData *StageLogData) SetStatusEndTimeAndLog(status string) {
-	stageLogData.Status = status
-	currentTime := time.Now()
-	stageLogData.EndTime = &currentTime
-	stageLogData.Log()
-}
-
-func (stageLogData *StageLogData) SetStatusEndTime(status string) {
-	stageLogData.Status = status
-	currentTime := time.Now()
-	stageLogData.EndTime = &currentTime
-}
-
-func (stageLogData *StageLogData) SetEndTimeNowAndLog() {
-	currentTime := time.Now()
-	stageLogData.EndTime = &currentTime
-	stageLogData.Log()
-}
-
-func (stageLogData *StageLogData) Log() {
-	infoLog := fmt.Sprintf("STAGE_INFO|%s\n", stageLogData.String())
+func (stageLogData *StageLogData) log() {
+	infoLog := fmt.Sprintf("STAGE_INFO|%s\n", stageLogData.string())
 	log.SetFlags(0)
 	log.Println(infoLog)
 	log.SetFlags(log.Ldate | log.Ltime)
 }
 
-func (stageLogData *StageLogData) String() string {
+func (stageLogData *StageLogData) string() string {
 	bytes, _ := json.Marshal(stageLogData)
 	return string(bytes)
+}
+
+// ExecuteWithStageInfoLog logs the stage info.
+// it will log info for pre stage execution and post the stage execution
+// return the error returned by the stageExecutor func
+func ExecuteWithStageInfoLog(stageName string, stageExecutor func() error) (err error) {
+	startDockerStageInfo := newStageInfo(stageName).withCurrentStartTime()
+	startDockerStageInfo.log()
+	defer func() {
+		status := success
+		if err != nil {
+			status = failure
+		}
+		startDockerStageInfo.withStatus(status).withCurrentEndTime().log()
+	}()
+
+	return stageExecutor()
 }
