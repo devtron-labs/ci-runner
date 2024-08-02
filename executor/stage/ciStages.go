@@ -261,6 +261,14 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 		log.Println(util.DEVTRON, "external ci artifact found! exiting now with success event")
 		dest = scriptEnvs["externalCiArtifact"]
 		digest = scriptEnvs["imageDigest"]
+		if len(digest) == 0 {
+			//user has not provided imageDigest in that case fetch from docker.
+			imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(dest)
+			if err != nil {
+				fmt.Println("Error unmarshalling ciProjectDetails JSON:", err)
+			}
+			digest = imgDigest
+		}
 		var tempDetails []*helper.CiProjectDetailsMin
 		err := json.Unmarshal([]byte(scriptEnvs["ciProjectDetails"]), &tempDetails)
 		if err != nil {
