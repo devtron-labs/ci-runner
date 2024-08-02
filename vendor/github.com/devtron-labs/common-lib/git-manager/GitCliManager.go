@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package helper
+package git_manager
 
 import (
 	"fmt"
-	"github.com/devtron-labs/ci-runner/util"
-	"github.com/devtron-labs/common-lib/git-manager"
+	"github.com/devtron-labs/common-lib/git-manager/util"
 	"log"
 	"os"
 	"os/exec"
@@ -30,7 +29,7 @@ import (
 type GitCliManager interface {
 	Fetch(gitContext GitContext, rootDir string) (response, errMsg string, err error)
 	Checkout(gitContext GitContext, rootDir string, checkout string) (response, errMsg string, err error)
-	RunCommandWithCred(cmd *exec.Cmd, userName, password string, tlsPathInfo *git_manager.TlsPathInfo) (response, errMsg string, err error)
+	RunCommandWithCred(cmd *exec.Cmd, userName, password string, tlsPathInfo *TlsPathInfo) (response, errMsg string, err error)
 	RunCommand(cmd *exec.Cmd) (response, errMsg string, err error)
 	runCommandForSuppliedNullifiedEnv(cmd *exec.Cmd, setHomeEnvToNull bool) (response, errMsg string, err error)
 	Init(rootDir string, remoteUrl string, isBare bool) error
@@ -39,7 +38,7 @@ type GitCliManager interface {
 	RecursiveFetchSubmodules(rootDir string) (response, errMsg string, error error)
 	UpdateCredentialHelper(rootDir string) (response, errMsg string, error error)
 	UnsetCredentialHelper(rootDir string) (response, errMsg string, error error)
-	GitCheckout(gitContext GitContext, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, gitRepository string, prj CiProjectDetails) (errMsg string, error error)
+	GitCheckout(gitContext GitContext, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, gitRepository string) (errMsg string, error error)
 }
 
 type GitCliManagerImpl struct {
@@ -53,17 +52,14 @@ const GIT_AKS_PASS = "/git-ask-pass.sh"
 const DefaultRemoteName = "origin"
 
 func (impl *GitCliManagerImpl) Fetch(gitContext GitContext, rootDir string) (response, errMsg string, err error) {
-
 	log.Println(util.DEVTRON, "git fetch ", "location", rootDir)
-	cmd := exec.Command("git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
-
-	tlsPathInfo, err := git_manager.CreateFilesForTlsData(git_manager.BuildTlsData(gitContext.TLSKey, gitContext.TLSCertificate, gitContext.CACert, gitContext.TLSVerificationEnabled), git_manager.TLS_FILES_DIR)
+	tlsPathInfo, err := CreateFilesForTlsData(gitContext.TLSData, gitContext.WorkingDir)
 	if err != nil {
 		//making it non-blocking
-		log.Println("error encountered in createFilesForTlsData", "err", err)
+		fmt.Println("error encountered in createFilesForTlsData", "err", err)
 	}
-	defer git_manager.DeleteTlsFiles(tlsPathInfo)
-
+	defer DeleteTlsFiles(tlsPathInfo)
+	cmd := exec.Command("git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
 	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.Auth.Username, gitContext.Auth.Password, tlsPathInfo)
 	log.Println(util.DEVTRON, "fetch output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, "", nil
@@ -71,21 +67,19 @@ func (impl *GitCliManagerImpl) Fetch(gitContext GitContext, rootDir string) (res
 
 func (impl *GitCliManagerImpl) Checkout(gitContext GitContext, rootDir string, checkout string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git checkout ", "location", rootDir)
-	cmd := exec.Command("git", "-C", rootDir, "checkout", checkout, "--force")
-
-	tlsPathInfo, err := git_manager.CreateFilesForTlsData(git_manager.BuildTlsData(gitContext.TLSKey, gitContext.TLSCertificate, gitContext.CACert, gitContext.TLSVerificationEnabled), git_manager.TLS_FILES_DIR)
+	tlsPathInfo, err := CreateFilesForTlsData(gitContext.TLSData, gitContext.WorkingDir)
 	if err != nil {
 		//making it non-blocking
-		log.Println("error encountered in createFilesForTlsData", "err", err)
+		fmt.Println("error encountered in createFilesForTlsData", "err", err)
 	}
-	defer git_manager.DeleteTlsFiles(tlsPathInfo)
-
+	defer DeleteTlsFiles(tlsPathInfo)
+	cmd := exec.Command("git", "-C", rootDir, "checkout", checkout, "--force")
 	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.Auth.Username, gitContext.Auth.Password, tlsPathInfo)
 	log.Println(util.DEVTRON, "checkout output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, "", nil
 }
 
-func (impl *GitCliManagerImpl) RunCommandWithCred(cmd *exec.Cmd, userName, password string, tlsPathInfo *git_manager.TlsPathInfo) (response, errMsg string, err error) {
+func (impl *GitCliManagerImpl) RunCommandWithCred(cmd *exec.Cmd, userName, password string, tlsPathInfo *TlsPathInfo) (response, errMsg string, err error) {
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("GIT_ASKPASS=%s", GIT_AKS_PASS),
 		fmt.Sprintf("GIT_USERNAME=%s", userName), // ignored
@@ -164,18 +158,6 @@ func (impl *GitCliManagerImpl) gitCreateRemote(rootDir string, url string) error
 	return err
 }
 
-func (impl *GitCliManagerImpl) Clone(gitContext GitContext, prj CiProjectDetails) (response, errMsg string, err error) {
-	rootDir := filepath.Join(util.WORKINGDIR, prj.CheckoutPath)
-	remoteUrl := prj.GitRepository
-	err = impl.Init(rootDir, remoteUrl, false)
-	if err != nil {
-		return "", "", err
-	}
-	gitContext = gitContext.WithTLSData(prj.GitOptions.CaCert, prj.GitOptions.TlsKey, prj.GitOptions.TlsCert, prj.GitOptions.EnableTLSVerification)
-	response, errMsg, err = impl.Fetch(gitContext, rootDir)
-	return response, errMsg, err
-}
-
 // setting user.name and user.email as for non-fast-forward merge, git ask for user.name and email
 func (impl *GitCliManagerImpl) Merge(rootDir string, commit string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git merge ", "location", rootDir)
@@ -210,11 +192,9 @@ func (impl *GitCliManagerImpl) UnsetCredentialHelper(rootDir string) (response, 
 	return output, eMsg, err
 }
 
-func (impl *GitCliManagerImpl) GitCheckout(gitContext GitContext, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, gitRepository string, prj CiProjectDetails) (errMsg string, error error) {
+func (impl *GitCliManagerImpl) GitCheckout(gitContext GitContext, checkoutPath string, targetCheckout string, authMode AuthMode, fetchSubmodules bool, gitRepository string) (errMsg string, error error) {
 
-	rootDir := filepath.Join(util.WORKINGDIR, checkoutPath)
-
-	gitContext = gitContext.WithTLSData(prj.GitOptions.CaCert, prj.GitOptions.TlsKey, prj.GitOptions.TlsCert, prj.GitOptions.EnableTLSVerification)
+	rootDir := filepath.Join(gitContext.WorkingDir, checkoutPath)
 
 	// checkout target hash
 	_, eMsg, cErr := impl.Checkout(gitContext, rootDir, targetCheckout)
@@ -271,4 +251,49 @@ func (impl *GitCliManagerImpl) GitCheckout(gitContext GitContext, checkoutPath s
 
 	return "", nil
 
+}
+
+func (impl *GitCliManagerImpl) shallowClone(gitContext GitContext, rootDir string, remoteUrl string, sourceBranch string) (response, errMsg string, err error) {
+	log.Println(util.DEVTRON, "git shallow clone ", "location", rootDir)
+	tlsPathInfo, err := CreateFilesForTlsData(gitContext.TLSData, gitContext.WorkingDir)
+	if err != nil {
+		//making it non-blocking
+		fmt.Println("error encountered in createFilesForTlsData", "err", err)
+	}
+	defer DeleteTlsFiles(tlsPathInfo)
+	cmd := exec.Command("git", "-C", rootDir, "clone", "--filter=tree:0", "--single-branch", "-b", sourceBranch, remoteUrl, "--no-checkout")
+	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.Auth.Username, gitContext.Auth.Password, tlsPathInfo)
+	log.Println(util.DEVTRON, "shallow clone output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
+	return output, errMsg, err
+}
+
+func (impl *GitCliManagerImpl) moveFilesFromSourceToDestination(scrDir, dest string) (response, errMsg string, err error) {
+	cmd := exec.Command("mv", scrDir+"/.git", dest+"/")
+	output, errMsg, err := impl.RunCommand(cmd)
+	log.Println(util.DEVTRON, "moving files from: ", scrDir+"/.git", " to: ", dest+"/", "opt: ", output, "errMsg: ", errMsg, "error: ", err)
+	return output, errMsg, err
+}
+
+func (impl *GitCliManagerImpl) Clone(gitContext GitContext, prj CiProjectDetails) (response, errMsg string, err error) {
+	var msgMsg string
+	var checkoutPath string
+	var cErr error
+	checkoutBranch := prj.GetCheckoutBranchName()
+	checkoutPath = filepath.Join(gitContext.WorkingDir, prj.CheckoutPath)
+	err = os.MkdirAll(checkoutPath, 0755)
+	if err != nil {
+		return "", "", err
+	}
+	_, msgMsg, cErr = impl.shallowClone(gitContext, checkoutPath, prj.GitRepository, checkoutBranch)
+	if cErr != nil {
+		log.Fatal("could not clone repo ", " err: ", cErr, "msgMsg: ", msgMsg)
+	}
+	projectName := util.GetProjectName(prj.GitRepository)
+	projRootDir := filepath.Join(checkoutPath, projectName)
+
+	_, msgMsg, cErr = impl.moveFilesFromSourceToDestination(projRootDir, checkoutPath)
+	if cErr != nil {
+		log.Fatal("could not move files between files ", "err: ", cErr, "msgMsg: ", msgMsg)
+	}
+	return response, msgMsg, cErr
 }

@@ -14,26 +14,28 @@
  * limitations under the License.
  */
 
-package helper
+package git_manager
 
 import (
 	"context"
-	"github.com/devtron-labs/ci-runner/util"
+	"fmt"
+	"github.com/devtron-labs/common-lib/git-manager/util"
+	"github.com/devtron-labs/common-lib/utils"
 	"log"
 	"os"
 	"path/filepath"
 )
 
 type GitOptions struct {
-	UserName              string   `json:"userName"`
-	Password              string   `json:"password"`
-	SshPrivateKey         string   `json:"sshPrivateKey"`
-	AccessToken           string   `json:"accessToken"`
-	AuthMode              AuthMode `json:"authMode"`
-	TlsKey                string   `json:"tlsKey"`
-	TlsCert               string   `json:"tlsCert"`
-	CaCert                string   `json:"caCert"`
-	EnableTLSVerification bool     `json:"enableTLSVerification"`
+	UserName               string   `json:"userName"`
+	Password               string   `json:"password"`
+	SshPrivateKey          string   `json:"sshPrivateKey"`
+	AccessToken            string   `json:"accessToken"`
+	AuthMode               AuthMode `json:"authMode"`
+	TlsKey                 string   `json:"tlsKey"`
+	TlsCert                string   `json:"tlsCert"`
+	CaCert                 string   `json:"caCert"`
+	TlsVerificationEnabled bool     `json:"tlsVerificationEnabled"`
 }
 
 type WebhookData struct {
@@ -43,24 +45,20 @@ type WebhookData struct {
 }
 
 type GitContext struct {
-	context.Context        // Embedding original Go context
-	Auth                   *BasicAuth
-	CACert                 string
-	TLSKey                 string
-	TLSCertificate         string
-	TLSVerificationEnabled bool
+	context.Context // Embedding original Go context
+	Auth            *BasicAuth
+	WorkingDir      string
+	TLSData         *TLSData
 }
-
-func (gitCtx GitContext) WithTLSData(caData string, tlsKey string, tlsCertificate string, tlsVerificationEnabled bool) GitContext {
-	gitCtx.CACert = caData
-	gitCtx.TLSKey = tlsKey
-	gitCtx.TLSCertificate = tlsCertificate
-	gitCtx.TLSVerificationEnabled = tlsVerificationEnabled
-	return gitCtx
-}
-
 type BasicAuth struct {
 	Username, Password string
+}
+
+type TLSData struct {
+	TLSKey                 string
+	TLSCertificate         string
+	CACert                 string
+	TlsVerificationEnabled bool
 }
 
 type AuthMode string
@@ -89,24 +87,24 @@ const (
 )
 
 type GitManager struct {
-	gitCliManager GitCliManager
+	GitCliManager GitCliManager
 }
 
 func NewGitManagerImpl(gitCliManager GitCliManager) *GitManager {
 	return &GitManager{
-		gitCliManager: gitCliManager,
+		GitCliManager: gitCliManager,
 	}
 }
 
-func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
+func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails, workingDir string) error {
 	for index, prj := range ciProjectDetails {
 		// git clone
 
 		log.Println("-----> git " + prj.CloningMode + " cloning " + prj.GitRepository)
 
 		if prj.CheckoutPath != "./" {
-			if _, err := os.Stat(prj.CheckoutPath); os.IsNotExist(err) {
-				_ = os.Mkdir(prj.CheckoutPath, os.ModeDir)
+			if _, err := os.Stat(workingDir + prj.CheckoutPath); os.IsNotExist(err) {
+				_ = os.Mkdir(workingDir+prj.CheckoutPath, os.ModeDir)
 			}
 		}
 		var cErr error
@@ -120,9 +118,11 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 		default:
 			auth = &BasicAuth{}
 		}
-
+		tlsData := BuildTlsData(prj.GitOptions.TlsKey, prj.GitOptions.TlsCert, prj.GitOptions.CaCert, prj.GitOptions.TlsVerificationEnabled)
 		gitContext := GitContext{
-			Auth: auth,
+			Auth:       auth,
+			WorkingDir: workingDir,
+			TLSData:    tlsData,
 		}
 		// create ssh private key on disk
 		if authMode == AUTH_MODE_SSH {
@@ -133,7 +133,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 			}
 		}
 
-		_, msgMsg, cErr := impl.gitCliManager.Clone(gitContext, prj)
+		_, msgMsg, cErr := impl.GitCliManager.Clone(gitContext, prj)
 		if cErr != nil {
 			log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
 		}
@@ -151,7 +151,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 				checkoutSource = prj.SourceValue
 			}
 			log.Println("checkout commit in branch fix : ", checkoutSource)
-			msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository, prj)
+			msgMsg, cErr = impl.GitCliManager.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 			}
@@ -169,7 +169,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 			log.Println("checkout commit in webhook : ", targetCheckout)
 
 			// checkout target hash
-			msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository, prj)
+			msgMsg, cErr = impl.GitCliManager.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository)
 			if cErr != nil {
 				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
 				return cErr
@@ -187,7 +187,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 				log.Println("merge commit in webhook : ", sourceCheckout)
 
 				// merge source
-				_, msgMsg, cErr = impl.gitCliManager.Merge(filepath.Join(util.WORKINGDIR, prj.CheckoutPath), sourceCheckout)
+				_, msgMsg, cErr = impl.GitCliManager.Merge(filepath.Join(gitContext.WorkingDir, prj.CheckoutPath), sourceCheckout)
 				if cErr != nil {
 					log.Fatal("could not merge ", "sourceCheckout ", sourceCheckout, " err ", cErr, " msgMsg", msgMsg)
 					return cErr
@@ -199,4 +199,62 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 
 	}
 	return nil
+}
+
+func CreateFilesForTlsData(tlsData *TLSData, directoryPath string) (*TlsPathInfo, error) {
+
+	if tlsData == nil {
+		return nil, nil
+	}
+	if tlsData.TlsVerificationEnabled {
+		var tlsKeyFilePath string
+		var tlsCertFilePath string
+		var caCertFilePath string
+		var err error
+		// this is to avoid concurrency issue, random number is appended at the end of file, where this file is read/created/deleted by multiple commands simultaneously.
+		if tlsData.TLSKey != "" && tlsData.TLSCertificate != "" {
+			tlsKeyFilePath, err = utils.CreateFolderAndFileWithContent(tlsData.TLSKey, getTLSKeyFileName(), directoryPath)
+			if err != nil {
+				return nil, err
+			}
+			tlsCertFilePath, err = utils.CreateFolderAndFileWithContent(tlsData.TLSCertificate, getCertFileName(), directoryPath)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if tlsData.CACert != "" {
+			caCertFilePath, err = utils.CreateFolderAndFileWithContent(tlsData.CACert, getCertFileName(), directoryPath)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return &TlsPathInfo{caCertFilePath, tlsKeyFilePath, tlsCertFilePath}, nil
+	}
+	return nil, nil
+}
+
+func DeleteTlsFiles(pathInfo *TlsPathInfo) {
+	if pathInfo == nil {
+		return
+	}
+	if pathInfo.TlsKeyPath != "" {
+		err := utils.DeleteAFileIfExists(pathInfo.TlsKeyPath)
+		if err != nil {
+			fmt.Println("error in deleting file", "tlsKeyPath", pathInfo.TlsKeyPath, "err", err)
+		}
+	}
+
+	if pathInfo.TlsCertPath != "" {
+		err := utils.DeleteAFileIfExists(pathInfo.TlsCertPath)
+		if err != nil {
+			fmt.Println("error in deleting file", "TlsCertPath", pathInfo.TlsCertPath, "err", err)
+		}
+	}
+	if pathInfo.CaCertPath != "" {
+		err := utils.DeleteAFileIfExists(pathInfo.CaCertPath)
+		if err != nil {
+			fmt.Println("error in deleting file", "CaCertPath", pathInfo.CaCertPath, "err", err)
+		}
+	}
+	return
 }
