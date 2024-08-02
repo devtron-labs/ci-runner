@@ -234,9 +234,9 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	if err != nil {
 		return artifactUploaded, nil
 	}
-	//else {
+	// else {
 	//	artifactUploaded = true
-	//}
+	// }
 	log.Println(util.DEVTRON, " /artifact-upload")
 
 	dest, err = impl.dockerHelper.GetDestForNatsEvent(ciCdRequest.CommonWorkflowRequest, dest)
@@ -326,7 +326,7 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 	// build
 	start := time.Now()
 	metrics.BuildStartTime = start
-	dest, err := impl.dockerHelper.BuildArtifact(ciCdRequest.CommonWorkflowRequest) //TODO make it skipable
+	dest, err := impl.dockerHelper.BuildArtifact(ciCdRequest.CommonWorkflowRequest) // TODO make it skipable
 	metrics.BuildDuration = time.Since(start).Seconds()
 	if err != nil {
 		log.Println("Error in building artifact", "err", err)

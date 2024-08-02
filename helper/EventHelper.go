@@ -182,7 +182,8 @@ type CommonWorkflowRequest struct {
 	PluginArtifactStage           string                         `json:"pluginArtifactStage"`
 	PushImageBeforePostCI         bool                           `json:"pushImageBeforePostCI"`
 	IntermediateDockerRegistryUrl string                         `json:"-"` // this URL will be used for all operations and can be mutated
-	AppLabels                     map[string]string              `json:"AppLabels"`
+	BuildxCacheModeMin            bool                           `json:"buildxCacheModeMin"`
+	AsyncBuildxCacheExport        bool                           `json:"asyncBuildxCacheExport"`
 }
 
 func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {
