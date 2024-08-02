@@ -538,6 +538,11 @@ func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCach
 		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=%s --cache-from=type=local,src=%s", dockerBuild, localCachePath, cacheMode, oldCacheBuildxPath)
 	}
 
+	isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
+	if isTargetPlatformSet {
+		dockerBuild = fmt.Sprintf("%s --platform %s", dockerBuild, dockerBuildConfig.TargetPlatform)
+	}
+
 	provenanceFlag := dockerBuildConfig.GetProvenanceFlag()
 	dockerBuild = fmt.Sprintf("%s %s", dockerBuild, provenanceFlag)
 	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
