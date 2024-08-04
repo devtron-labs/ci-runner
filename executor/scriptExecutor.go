@@ -191,7 +191,9 @@ func RunScriptsInDocker(ciContext cictx.CiContext, impl *StageExecutorImpl, exec
 		}
 		executionConf.CustomScriptMount.SrcPath = customScriptMountFileName
 	}
-
+	log.Println(util.DEVTRON, "envInputFilePath", envInputFileName)
+	log.Println(util.DEVTRON, "entryScriptFilePath", entryScriptFileName)
+	log.Println(util.DEVTRON, "envOutFilePath", envOutFileName)
 	executionConf.EnvInputFileName = envInputFileName
 	executionConf.EntryScriptFileName = entryScriptFileName
 	executionConf.EnvOutFileName = envOutFileName
