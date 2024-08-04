@@ -176,6 +176,8 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	if err != nil {
 		return artifactUploaded, err
 	}
+	ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables = impl.AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciCdRequest.CommonWorkflowRequest)
+	log.Println(util.DEVTRON, "all extra environment variables ", ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables)
 	// Get devtron-ci yaml
 	yamlLocation := ciCdRequest.CommonWorkflowRequest.CheckoutPath
 	log.Println(util.DEVTRON, "devtron-ci yaml location ", yamlLocation)
@@ -265,7 +267,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 			//user has not provided imageDigest in that case fetch from docker.
 			imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(dest)
 			if err != nil {
-				fmt.Println("Error unmarshalling ciProjectDetails JSON:", err)
+				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", dest), err)
 			}
 			digest = imgDigest
 		}
@@ -502,4 +504,19 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 		return err
 	}
 	return err
+}
+
+func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *helper.CommonWorkflowRequest) map[string]string {
+	if len(ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]) > 0 {
+		image := ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]
+		if len(ciRequest.ExtraEnvironmentVariables["imageDigest"]) == 0 {
+			//user has not provided imageDigest in that case fetch from docker.
+			imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(image)
+			if err != nil {
+				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
+			}
+			ciRequest.ExtraEnvironmentVariables["imageDigest"] = imgDigest
+		}
+	}
+	return ciRequest.ExtraEnvironmentVariables
 }
