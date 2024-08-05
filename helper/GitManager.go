@@ -26,11 +26,15 @@ import (
 )
 
 type GitOptions struct {
-	UserName      string   `json:"userName"`
-	Password      string   `json:"password"`
-	SshPrivateKey string   `json:"sshPrivateKey"`
-	AccessToken   string   `json:"accessToken"`
-	AuthMode      AuthMode `json:"authMode"`
+	UserName              string   `json:"userName"`
+	Password              string   `json:"password"`
+	SshPrivateKey         string   `json:"sshPrivateKey"`
+	AccessToken           string   `json:"accessToken"`
+	AuthMode              AuthMode `json:"authMode"`
+	TlsKey                string   `json:"tlsKey"`
+	TlsCert               string   `json:"tlsCert"`
+	CaCert                string   `json:"caCert"`
+	EnableTLSVerification bool     `json:"enableTLSVerification"`
 }
 
 type WebhookData struct {
@@ -40,9 +44,22 @@ type WebhookData struct {
 }
 
 type GitContext struct {
-	context.Context // Embedding original Go context
-	Auth            *BasicAuth
+	context.Context        // Embedding original Go context
+	Auth                   *BasicAuth
+	CACert                 string
+	TLSKey                 string
+	TLSCertificate         string
+	TLSVerificationEnabled bool
 }
+
+func (gitCtx GitContext) WithTLSData(caData string, tlsKey string, tlsCertificate string, tlsVerificationEnabled bool) GitContext {
+	gitCtx.CACert = caData
+	gitCtx.TLSKey = tlsKey
+	gitCtx.TLSCertificate = tlsCertificate
+	gitCtx.TLSVerificationEnabled = tlsVerificationEnabled
+	return gitCtx
+}
+
 type BasicAuth struct {
 	Username, Password string
 }
@@ -137,7 +154,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 					checkoutSource = prj.SourceValue
 				}
 				log.Println("checkout commit in branch fix : ", checkoutSource)
-				msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository)
+				msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository, prj)
 				if cErr != nil {
 					log.Println("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
 					return cErr
@@ -157,7 +174,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 				log.Println("checkout commit in webhook : ", targetCheckout)
 
 				// checkout target hash
-				msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository)
+				msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository, prj)
 				if cErr != nil {
 					log.Println("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
 					return cErr
