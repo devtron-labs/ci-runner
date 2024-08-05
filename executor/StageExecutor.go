@@ -92,7 +92,6 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	for key, value := range globalEnvironmentVariables {
 		scriptEnvs[key] = value
 	}
-	log.Println(util.DEVTRON, "scriptEnvVariables", scriptEnvs)
 	if stepType == helper.STEP_TYPE_PRE || stepType == helper.STEP_TYPE_POST {
 		log.Println(fmt.Sprintf("variables with empty value : %v", emptyVariableList))
 	}

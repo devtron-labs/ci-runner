@@ -173,7 +173,6 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	log.Println(util.DEVTRON, " docker-build")
 	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest)
 	ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables = impl.AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciCdRequest.CommonWorkflowRequest)
-	log.Println(util.DEVTRON, "all extra environment variables ", ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables)
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {
 		return artifactUploaded, err
