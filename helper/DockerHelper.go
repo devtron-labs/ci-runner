@@ -81,59 +81,67 @@ func (impl *DockerHelperImpl) GetDestForNatsEvent(commonWorkflowRequest *CommonW
 }
 
 func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWorkflowRequest) {
-	connection := commonWorkflowRequest.DockerConnection
-	dockerRegistryUrl := commonWorkflowRequest.IntermediateDockerRegistryUrl
-	registryUrl, err := util.ParseUrl(dockerRegistryUrl)
-	if err != nil {
+	startDockerDaemon := func() error {
+		connection := commonWorkflowRequest.DockerConnection
+		dockerRegistryUrl := commonWorkflowRequest.IntermediateDockerRegistryUrl
+		registryUrl, err := util.ParseUrl(dockerRegistryUrl)
+		if err != nil {
+			return err
+		}
+		host := registryUrl.Host
+		dockerdstart := ""
+		defaultAddressPoolFlag := ""
+		dockerMtuValueFlag := ""
+		if len(commonWorkflowRequest.DefaultAddressPoolBaseCidr) > 0 {
+			if commonWorkflowRequest.DefaultAddressPoolSize <= 0 {
+				commonWorkflowRequest.DefaultAddressPoolSize = 24
+			}
+			defaultAddressPoolFlag = fmt.Sprintf("--default-address-pool base=%s,size=%d", commonWorkflowRequest.DefaultAddressPoolBaseCidr, commonWorkflowRequest.DefaultAddressPoolSize)
+		}
+		if commonWorkflowRequest.CiBuildDockerMtuValue > 0 {
+			dockerMtuValueFlag = fmt.Sprintf("--mtu=%d", commonWorkflowRequest.CiBuildDockerMtuValue)
+		}
+		if connection == util.INSECURE {
+			dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, host, dockerMtuValueFlag)
+			util.LogStage("Insecure Registry")
+		} else {
+			if connection == util.SECUREWITHCERT {
+				os.MkdirAll(fmt.Sprintf("/etc/docker/certs.d/%s", host), os.ModePerm)
+				f, err := os.Create(fmt.Sprintf("/etc/docker/certs.d/%s/ca.crt", host))
+
+				if err != nil {
+					return err
+				}
+
+				defer f.Close()
+
+				_, err2 := f.WriteString(commonWorkflowRequest.DockerCert)
+
+				if err2 != nil {
+					return err
+				}
+				util.LogStage("Secure with Cert")
+			}
+			dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
+		}
+		cmd := impl.GetCommandToExecute(dockerdstart)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Println("failed to start docker daemon")
+			return err
+		}
+		log.Println("docker daemon started ", string(out))
+		err = impl.waitForDockerDaemon(util.DOCKER_PS_START_WAIT_SECONDS)
+		if err != nil {
+			return err
+		}
+		return err
+	}
+
+	if err := util.ExecuteWithStageInfoLog(util.DOCKER_DAEMON, startDockerDaemon); err != nil {
 		log.Fatal(err)
 	}
-	host := registryUrl.Host
-	dockerdstart := ""
-	defaultAddressPoolFlag := ""
-	dockerMtuValueFlag := ""
-	if len(commonWorkflowRequest.DefaultAddressPoolBaseCidr) > 0 {
-		if commonWorkflowRequest.DefaultAddressPoolSize <= 0 {
-			commonWorkflowRequest.DefaultAddressPoolSize = 24
-		}
-		defaultAddressPoolFlag = fmt.Sprintf("--default-address-pool base=%s,size=%d", commonWorkflowRequest.DefaultAddressPoolBaseCidr, commonWorkflowRequest.DefaultAddressPoolSize)
-	}
-	if commonWorkflowRequest.CiBuildDockerMtuValue > 0 {
-		dockerMtuValueFlag = fmt.Sprintf("--mtu=%d", commonWorkflowRequest.CiBuildDockerMtuValue)
-	}
-	if connection == util.INSECURE {
-		dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, host, dockerMtuValueFlag)
-		util.LogStage("Insecure Registry")
-	} else {
-		if connection == util.SECUREWITHCERT {
-			os.MkdirAll(fmt.Sprintf("/etc/docker/certs.d/%s", host), os.ModePerm)
-			f, err := os.Create(fmt.Sprintf("/etc/docker/certs.d/%s/ca.crt", host))
-
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			defer f.Close()
-
-			_, err2 := f.WriteString(commonWorkflowRequest.DockerCert)
-
-			if err2 != nil {
-				log.Fatal(err2)
-			}
-			util.LogStage("Secure with Cert")
-		}
-		dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
-	}
-	cmd := impl.GetCommandToExecute(dockerdstart)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Println("failed to start docker daemon")
-		log.Fatal(err)
-	}
-	log.Println("docker daemon started ", string(out))
-	err = impl.waitForDockerDaemon(util.DOCKER_PS_START_WAIT_SECONDS)
-	if err != nil {
-		log.Fatal("failed to start docker demon", err)
-	}
+	return
 }
 
 const DOCKER_REGISTRY_TYPE_ECR = "ecr"
@@ -160,73 +168,77 @@ func (impl *DockerHelperImpl) GetCommandToExecute(cmd string) *exec.Cmd {
 }
 
 func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCredentials *DockerCredentials) error {
-	username := dockerCredentials.DockerUsername
-	pwd := dockerCredentials.DockerPassword
-	if dockerCredentials.DockerRegistryType == DOCKER_REGISTRY_TYPE_ECR {
-		accessKey, secretKey := dockerCredentials.AccessKey, dockerCredentials.SecretKey
-		// fmt.Printf("accessKey %s, secretKey %s\n", accessKey, secretKey)
+	performDockerLogin := func() error {
+		username := dockerCredentials.DockerUsername
+		pwd := dockerCredentials.DockerPassword
+		if dockerCredentials.DockerRegistryType == DOCKER_REGISTRY_TYPE_ECR {
+			accessKey, secretKey := dockerCredentials.AccessKey, dockerCredentials.SecretKey
+			//fmt.Printf("accessKey %s, secretKey %s\n", accessKey, secretKey)
 
-		var creds *credentials.Credentials
+			var creds *credentials.Credentials
 
-		if len(dockerCredentials.AccessKey) == 0 || len(dockerCredentials.SecretKey) == 0 {
-			// fmt.Println("empty accessKey or secretKey")
+			if len(dockerCredentials.AccessKey) == 0 || len(dockerCredentials.SecretKey) == 0 {
+				//fmt.Println("empty accessKey or secretKey")
+				sess, err := session.NewSession(&aws.Config{
+					Region: &dockerCredentials.AwsRegion,
+				})
+				if err != nil {
+					log.Println(err)
+					return err
+				}
+				creds = ec2rolecreds.NewCredentials(sess)
+			} else {
+				creds = credentials.NewStaticCredentials(accessKey, secretKey, "")
+			}
 			sess, err := session.NewSession(&aws.Config{
-				Region: &dockerCredentials.AwsRegion,
+				Region:      &dockerCredentials.AwsRegion,
+				Credentials: creds,
 			})
 			if err != nil {
 				log.Println(err)
 				return err
 			}
-			creds = ec2rolecreds.NewCredentials(sess)
-		} else {
-			creds = credentials.NewStaticCredentials(accessKey, secretKey, "")
-		}
-		sess, err := session.NewSession(&aws.Config{
-			Region:      &dockerCredentials.AwsRegion,
-			Credentials: creds,
-		})
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		svc := ecr.New(sess)
-		input := &ecr.GetAuthorizationTokenInput{}
-		authData, err := svc.GetAuthorizationToken(input)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		// decode token
-		token := authData.AuthorizationData[0].AuthorizationToken
-		decodedToken, err := base64.StdEncoding.DecodeString(*token)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		credsSlice := strings.Split(string(decodedToken), ":")
-		username = credsSlice[0]
-		pwd = credsSlice[1]
+			svc := ecr.New(sess)
+			input := &ecr.GetAuthorizationTokenInput{}
+			authData, err := svc.GetAuthorizationToken(input)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+			// decode token
+			token := authData.AuthorizationData[0].AuthorizationToken
+			decodedToken, err := base64.StdEncoding.DecodeString(*token)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+			credsSlice := strings.Split(string(decodedToken), ":")
+			username = credsSlice[0]
+			pwd = credsSlice[1]
 
-	} else if (dockerCredentials.DockerRegistryType == REGISTRY_TYPE_GCR || dockerCredentials.DockerRegistryType == REGISTRY_TYPE_ARTIFACT_REGISTRY) && username == JSON_KEY_USERNAME {
-		// for gcr and artifact registry password is already saved as string in DB
-		if strings.HasPrefix(pwd, "'") {
-			pwd = pwd[1:]
+		} else if (dockerCredentials.DockerRegistryType == REGISTRY_TYPE_GCR || dockerCredentials.DockerRegistryType == REGISTRY_TYPE_ARTIFACT_REGISTRY) && username == JSON_KEY_USERNAME {
+			// for gcr and artifact registry password is already saved as string in DB
+			if strings.HasPrefix(pwd, "'") {
+				pwd = pwd[1:]
+			}
+			if strings.HasSuffix(pwd, "'") {
+				pwd = pwd[:len(pwd)-1]
+			}
 		}
-		if strings.HasSuffix(pwd, "'") {
-			pwd = pwd[:len(pwd)-1]
-		}
-	}
-	host := dockerCredentials.DockerRegistryURL
-	dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, host)
+		host := dockerCredentials.DockerRegistryURL
+		dockerLogin := fmt.Sprintf("docker login -u '%s' -p '%s' '%s' ", username, pwd, host)
 
-	awsLoginCmd := impl.GetCommandToExecute(dockerLogin)
-	err := impl.cmdExecutor.RunCommand(ciContext, awsLoginCmd)
-	if err != nil {
-		log.Println(err)
-		return err
+		awsLoginCmd := impl.GetCommandToExecute(dockerLogin)
+		err := impl.cmdExecutor.RunCommand(ciContext, awsLoginCmd)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		log.Println("Docker login successful with username ", username, " on docker registry URL ", dockerCredentials.DockerRegistryURL)
+		return nil
 	}
-	log.Println("Docker login successful with username ", username, " on docker registry URL ", dockerCredentials.DockerRegistryURL)
-	return nil
+
+	return util.ExecuteWithStageInfoLog(util.DOCKER_LOGIN_STAGE, performDockerLogin)
 }
 
 func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
@@ -287,25 +299,33 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		dockerBuildConfig.BuildContext = path.Join(ROOT_PATH, dockerBuildConfig.BuildContext)
 
 		dockerfilePath := getDockerfilePath(ciBuildConfig, ciRequest.CheckoutPath)
-		var buildxExportCacheFunc func() = nil
+		var buildxExportCacheFunc func() error = nil
+		useBuildxK8sDriver, eligibleK8sDriverNodes := false, make([]map[string]string, 0)
 		if useBuildx {
-			err := impl.checkAndCreateDirectory(ciContext, util.LOCAL_BUILDX_LOCATION)
-			if err != nil {
-				log.Println(util.DEVTRON, " error in creating LOCAL_BUILDX_LOCATION ", util.LOCAL_BUILDX_LOCATION)
-				return "", err
+			setupBuildxBuilder := func() error {
+				err := impl.checkAndCreateDirectory(ciContext, util.LOCAL_BUILDX_LOCATION)
+				if err != nil {
+					log.Println(util.DEVTRON, " error in creating LOCAL_BUILDX_LOCATION ", util.LOCAL_BUILDX_LOCATION)
+					return err
+				}
+				useBuildxK8sDriver, eligibleK8sDriverNodes = dockerBuildConfig.CheckForBuildXK8sDriver()
+				if useBuildxK8sDriver {
+					err = impl.createBuildxBuilderWithK8sDriver(ciContext, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
+					if err != nil {
+						log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
+						return err
+					}
+				} else {
+					err = impl.createBuildxBuilderForMultiArchBuild(ciContext)
+					if err != nil {
+						return err
+					}
+				}
+				return nil
 			}
-			useBuildxK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver()
-			if useBuildxK8sDriver {
-				err = impl.createBuildxBuilderWithK8sDriver(ciContext, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
-				if err != nil {
-					log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
-					return "", err
-				}
-			} else {
-				err = impl.createBuildxBuilderForMultiArchBuild(ciContext)
-				if err != nil {
-					return "", err
-				}
+
+			if err = util.ExecuteWithStageInfoLog(util.SETUP_BUILDX_BUILDER, setupBuildxBuilder); err != nil {
+				return "", err
 			}
 
 			cacheEnabled := (ciRequest.IsPvcMounted || ciRequest.BlobStorageConfigured)
@@ -335,25 +355,40 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
-		if envVars.ShowDockerBuildCmdInLogs {
-			log.Println("Starting docker build : ", dockerBuild)
-		} else {
-			log.Println("Docker build started..")
+
+		buildImageStage := func() error {
+			if envVars.ShowDockerBuildCmdInLogs {
+				log.Println("Starting docker build : ", dockerBuild)
+			} else {
+				log.Println("Docker build started..")
+			}
+			err = impl.executeCmd(ciContext, dockerBuild)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
-		err = impl.executeCmd(ciContext, dockerBuild)
-		if err != nil {
-			return "", err
+
+		if err = util.ExecuteWithStageInfoLog(util.DOCKER_BUILD, buildImageStage); err != nil {
+			return "", nil
 		}
 
 		if buildxExportCacheFunc != nil {
-			buildxExportCacheFunc()
+			util.ExecuteWithStageInfoLog(util.EXPORT_BUILD_CACHE, buildxExportCacheFunc)
 		}
 
 		if useBuildK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver(); useBuildK8sDriver {
-			err = impl.CleanBuildxK8sDriver(ciContext, eligibleK8sDriverNodes)
-			if err != nil {
-				log.Println(util.DEVTRON, " error in cleaning buildx K8s driver ", " err: ", err)
+
+			buildxCleanupSatge := func() error {
+				err = impl.CleanBuildxK8sDriver(ciContext, eligibleK8sDriverNodes)
+				if err != nil {
+					log.Println(util.DEVTRON, " error in cleaning buildx K8s driver ", " err: ", err)
+				}
+				return nil
 			}
+
+			// do not need to handle the below error
+			util.ExecuteWithStageInfoLog(util.CLEANUP_BUILDX_BUILDER, buildxCleanupSatge)
 		}
 
 		if !useBuildx {
@@ -365,34 +400,43 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			return dest, nil
 		}
 	} else if ciBuildConfig.CiBuildType == BUILDPACK_BUILD_TYPE {
-		buildPackParams := ciRequest.CiBuildConfig.BuildPackConfig
-		projectPath := buildPackParams.ProjectPath
-		if projectPath == "" || !strings.HasPrefix(projectPath, "./") {
-			projectPath = "./" + projectPath
-		}
-		impl.handleLanguageVersion(ciContext, projectPath, buildPackParams)
-		buildPackCmd := fmt.Sprintf("pack build %s --path %s --builder %s", dest, projectPath, buildPackParams.BuilderId)
-		BuildPackArgsMap := buildPackParams.Args
-		for k, v := range BuildPackArgsMap {
-			buildPackCmd = buildPackCmd + " --env " + k + "=" + v
+
+		buildPacksImageBuildStage := func() error {
+			buildPackParams := ciRequest.CiBuildConfig.BuildPackConfig
+			projectPath := buildPackParams.ProjectPath
+			if projectPath == "" || !strings.HasPrefix(projectPath, "./") {
+				projectPath = "./" + projectPath
+			}
+			impl.handleLanguageVersion(ciContext, projectPath, buildPackParams)
+			buildPackCmd := fmt.Sprintf("pack build %s --path %s --builder %s", dest, projectPath, buildPackParams.BuilderId)
+			BuildPackArgsMap := buildPackParams.Args
+			for k, v := range BuildPackArgsMap {
+				buildPackCmd = buildPackCmd + " --env " + k + "=" + v
+			}
+
+			if len(buildPackParams.BuildPacks) > 0 {
+				for _, buildPack := range buildPackParams.BuildPacks {
+					buildPackCmd = buildPackCmd + " --buildpack " + buildPack
+				}
+			}
+			log.Println(" -----> " + buildPackCmd)
+			err = impl.executeCmd(ciContext, buildPackCmd)
+			if err != nil {
+				return err
+			}
+			builderRmCmdString := "docker image rm " + buildPackParams.BuilderId
+			builderRmCmd := impl.GetCommandToExecute(builderRmCmdString)
+			err := builderRmCmd.Run()
+			if err != nil {
+				return err
+			}
+			return nil
 		}
 
-		if len(buildPackParams.BuildPacks) > 0 {
-			for _, buildPack := range buildPackParams.BuildPacks {
-				buildPackCmd = buildPackCmd + " --buildpack " + buildPack
-			}
+		if err = util.ExecuteWithStageInfoLog(util.BUILD_PACK_BUILD, buildPacksImageBuildStage); err != nil {
+			return "", nil
 		}
-		log.Println(" -----> " + buildPackCmd)
-		err = impl.executeCmd(ciContext, buildPackCmd)
-		if err != nil {
-			return "", err
-		}
-		builderRmCmdString := "docker image rm " + buildPackParams.BuilderId
-		builderRmCmd := impl.GetCommandToExecute(builderRmCmdString)
-		err := builderRmCmd.Run()
-		if err != nil {
-			return "", err
-		}
+
 	}
 
 	return dest, nil
@@ -444,8 +488,8 @@ func getDockerfilePath(CiBuildConfig *CiBuildConfigBean, checkoutPath string) st
 }
 
 // getBuildxExportCacheFunc  will concurrently execute the given export cache commands
-func (impl *DockerHelperImpl) getBuildxExportCacheFunc(ciContext cicxt.CiContext, exportCacheCmds map[string]string) func() {
-	exportCacheFunc := func() {
+func (impl *DockerHelperImpl) getBuildxExportCacheFunc(ciContext cicxt.CiContext, exportCacheCmds map[string]string) func() error {
+	exportCacheFunc := func() error {
 		// run export cache cmd for buildx
 		if len(exportCacheCmds) > 0 {
 			log.Println("exporting build caches...")
@@ -465,6 +509,7 @@ func (impl *DockerHelperImpl) getBuildxExportCacheFunc(ciContext cicxt.CiContext
 			}
 			wg.Wait()
 		}
+		return nil
 	}
 	return exportCacheFunc
 }
@@ -499,7 +544,7 @@ func getSourceCaches(targetPlatforms, oldCachePathLocation string) string {
 	return strings.Join(allCachePaths, " ")
 }
 
-func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func()) {
+func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
 	dockerBuild = fmt.Sprintf("%s %s -f %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.BuildContext, dockerfilePath)
 	exportCacheCmds := make(map[string]string)
 
@@ -526,7 +571,7 @@ func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext,
 	return dockerBuild, impl.getBuildxExportCacheFunc(ciContext, exportCacheCmds)
 }
 
-func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func()) {
+func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
 
 	cacheMode := CacheModeMax
 	if useCacheMin {
@@ -550,7 +595,7 @@ func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCach
 	return dockerBuild, nil
 }
 
-func (impl *DockerHelperImpl) getBuildxBuildCommand(ciContext cicxt.CiContext, exportBuildxCacheAfterBuild bool, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func()) {
+func (impl *DockerHelperImpl) getBuildxBuildCommand(ciContext cicxt.CiContext, exportBuildxCacheAfterBuild bool, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
 	if exportBuildxCacheAfterBuild {
 		return impl.getBuildxBuildCommandV2(ciContext, cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
 	}

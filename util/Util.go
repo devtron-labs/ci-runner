@@ -17,6 +17,7 @@
 package util
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -35,6 +36,25 @@ const (
 	GIT_CREDENTIAL_FILE_NAME  = ".git-credentials"
 	CLONING_MODE_SHALLOW      = "SHALLOW"
 	CLONING_MODE_FULL         = "FULL"
+)
+
+const (
+	CACHE_PULL                           = "Pulling Cache"
+	GIT_CLONE_CHECKOUT                   = "Git Clone & Checkout"
+	DOCKER_DAEMON                        = "Starting Docker Daemon"
+	DOCKER_LOGIN_STAGE                   = "Docker Login"
+	DOCKER_PUSH                          = "Docker Push"
+	DOCKER_BUILD                         = "Docker Build"
+	DOCKER_STOP                          = "Docker Stop"
+	BUILD_ARTIFACT                       = "Build Artifact"
+	UPLOAD_ARTIFACT                      = "Uploading Artifact"
+	PUSH_CACHE                           = "Pushing Cache"
+	DOCKER_PUSH_AND_EXTRACT_IMAGE_DIGEST = "Docker Push And Extract Image Digest"
+	IMAGE_SCAN                           = "Image Scanning"
+	SETUP_BUILDX_BUILDER                 = "Setting Up Buildx Builder"
+	CLEANUP_BUILDX_BUILDER               = "Cleaning Up Buildx Builder"
+	BUILD_PACK_BUILD                     = "Build Packs Build"
+	EXPORT_BUILD_CACHE                   = "Exporting Build Cache"
 )
 
 func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) error {
@@ -100,11 +120,11 @@ func CleanupAfterFetchingHttpsSubmodules() error {
 }
 
 func LogStage(name string) {
-	stageTemplate := `
-------------------------------------------------------------------------------------------------------------------------
-STAGE:  %s
-------------------------------------------------------------------------------------------------------------------------`
-	log.Println(fmt.Sprintf(stageTemplate, name))
+	//stageTemplate := `
+	//------------------------------------------------------------------------------------------------------------------------
+	//STAGE:  %s
+	//------------------------------------------------------------------------------------------------------------------------`
+	//log.Println(fmt.Sprintf(stageTemplate, name))
 }
 
 var chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
@@ -148,4 +168,71 @@ func GetProjectName(url string) string {
 	projName := strings.Split(url, ".")[1]
 	projectName := projName[strings.LastIndex(projName, "/")+1:]
 	return projectName
+}
+
+func newStageInfo(name string) *StageLogData {
+	return &StageLogData{
+		Stage: name,
+	}
+}
+
+type Status string
+
+const (
+	success Status = "Success"
+	failure Status = "Failure"
+)
+
+type StageLogData struct {
+	//eg : 'STAGE_INFO|{"stage":"Resource availability","startTime":"2021-01-01T00:00:00Z"}'
+	Stage     string     `json:"stage,omitempty"`
+	StartTime *time.Time `json:"startTime,omitempty"`
+	EndTime   *time.Time `json:"endTime,omitempty"`
+	Status    Status     `json:"status,omitempty"`
+}
+
+func (stageLogData *StageLogData) withStatus(status Status) *StageLogData {
+	stageLogData.Status = status
+	return stageLogData
+}
+
+func (stageLogData *StageLogData) withCurrentStartTime() *StageLogData {
+	currentTime := time.Now()
+	stageLogData.StartTime = &currentTime
+	return stageLogData
+}
+
+func (stageLogData *StageLogData) withCurrentEndTime() *StageLogData {
+	currentTime := time.Now()
+	stageLogData.EndTime = &currentTime
+	return stageLogData
+}
+
+func (stageLogData *StageLogData) log() {
+	infoLog := fmt.Sprintf("STAGE_INFO|%s\n", stageLogData.string())
+	log.SetFlags(0)
+	log.Println(infoLog)
+	log.SetFlags(log.Ldate | log.Ltime)
+}
+
+func (stageLogData *StageLogData) string() string {
+	bytes, _ := json.Marshal(stageLogData)
+	return string(bytes)
+}
+
+// ExecuteWithStageInfoLog logs the stage info.
+// it will log info for pre stage execution and post the stage execution
+// return the error returned by the stageExecutor func
+func ExecuteWithStageInfoLog(stageName string, stageExecutor func() error) (err error) {
+	startDockerStageInfo := newStageInfo(stageName).withCurrentStartTime()
+	startDockerStageInfo.log()
+	defer func() {
+		status := success
+		if err != nil {
+			status = failure
+		}
+		startDockerStageInfo.withStatus(status).withCurrentEndTime().log()
+	}()
+
+	return stageExecutor()
 }

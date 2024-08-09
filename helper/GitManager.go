@@ -18,6 +18,7 @@ package helper
 
 import (
 	"context"
+	"errors"
 	"github.com/devtron-labs/ci-runner/util"
 	"log"
 	"os"
@@ -99,104 +100,116 @@ func NewGitManagerImpl(gitCliManager GitCliManager) *GitManager {
 }
 
 func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
-	for index, prj := range ciProjectDetails {
-		// git clone
+	cloneAndCheckoutGitMaterials := func() error {
+		for index, prj := range ciProjectDetails {
+			// git clone
+			log.Println("-----> git " + prj.CloningMode + " cloning " + prj.GitRepository)
 
-		log.Println("-----> git " + prj.CloningMode + " cloning " + prj.GitRepository)
-
-		if prj.CheckoutPath != "./" {
-			if _, err := os.Stat(prj.CheckoutPath); os.IsNotExist(err) {
-				_ = os.Mkdir(prj.CheckoutPath, os.ModeDir)
-			}
-		}
-		var cErr error
-		var auth *BasicAuth
-		authMode := prj.GitOptions.AuthMode
-		switch authMode {
-		case AUTH_MODE_USERNAME_PASSWORD:
-			auth = &BasicAuth{Password: prj.GitOptions.Password, Username: prj.GitOptions.UserName}
-		case AUTH_MODE_ACCESS_TOKEN:
-			auth = &BasicAuth{Password: prj.GitOptions.AccessToken, Username: prj.GitOptions.UserName}
-		default:
-			auth = &BasicAuth{}
-		}
-
-		gitContext := GitContext{
-			Auth: auth,
-		}
-		// create ssh private key on disk
-		if authMode == AUTH_MODE_SSH {
-			cErr = util.CreateSshPrivateKeyOnDisk(index, prj.GitOptions.SshPrivateKey)
-			cErr = util.CreateSshPrivateKeyOnDisk(index, prj.GitOptions.SshPrivateKey)
-			if cErr != nil {
-				log.Fatal("could not create ssh private key on disk ", " err ", cErr)
-			}
-		}
-
-		_, msgMsg, cErr := impl.gitCliManager.Clone(gitContext, prj)
-		if cErr != nil {
-			log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
-		}
-
-		// checkout code
-		if prj.SourceType == SOURCE_TYPE_BRANCH_FIXED {
-			// checkout incoming commit hash or branch name
-			checkoutSource := ""
-			if len(prj.CommitHash) > 0 {
-				checkoutSource = prj.CommitHash
-			} else {
-				if len(prj.SourceValue) == 0 {
-					prj.SourceValue = "main"
+			if prj.CheckoutPath != "./" {
+				if _, err := os.Stat(prj.CheckoutPath); os.IsNotExist(err) {
+					_ = os.Mkdir(prj.CheckoutPath, os.ModeDir)
 				}
-				checkoutSource = prj.SourceValue
 			}
-			log.Println("checkout commit in branch fix : ", checkoutSource)
-			msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository, prj)
+			var cErr error
+			var auth *BasicAuth
+			authMode := prj.GitOptions.AuthMode
+			switch authMode {
+			case AUTH_MODE_USERNAME_PASSWORD:
+				auth = &BasicAuth{Password: prj.GitOptions.Password, Username: prj.GitOptions.UserName}
+			case AUTH_MODE_ACCESS_TOKEN:
+				auth = &BasicAuth{Password: prj.GitOptions.AccessToken, Username: prj.GitOptions.UserName}
+			default:
+				auth = &BasicAuth{}
+			}
+
+			gitContext := GitContext{
+				Auth: auth,
+			}
+			// create ssh private key on disk
+			if authMode == AUTH_MODE_SSH {
+				cErr = util.CreateSshPrivateKeyOnDisk(index, prj.GitOptions.SshPrivateKey)
+				cErr = util.CreateSshPrivateKeyOnDisk(index, prj.GitOptions.SshPrivateKey)
+				if cErr != nil {
+					log.Println("could not create ssh private key on disk ", " err ", cErr)
+					return cErr
+				}
+			}
+
+			_, msgMsg, cErr := impl.gitCliManager.Clone(gitContext, prj)
 			if cErr != nil {
-				log.Fatal("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
-			}
-
-		} else if prj.SourceType == SOURCE_TYPE_WEBHOOK {
-
-			webhookData := prj.WebhookData
-			webhookDataData := webhookData.Data
-
-			targetCheckout := webhookDataData[WEBHOOK_SELECTOR_TARGET_CHECKOUT_NAME]
-			if len(targetCheckout) == 0 {
-				log.Fatal("could not get target checkout from request data")
-			}
-
-			log.Println("checkout commit in webhook : ", targetCheckout)
-
-			// checkout target hash
-			msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository, prj)
-			if cErr != nil {
-				log.Fatal("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
+				log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
 				return cErr
 			}
 
-			// merge source if action type is merged
-			if webhookData.EventActionType == WEBHOOK_EVENT_MERGED_ACTION_TYPE {
-				sourceCheckout := webhookDataData[WEBHOOK_SELECTOR_SOURCE_CHECKOUT_NAME]
-
-				// throw error if source checkout is empty
-				if len(sourceCheckout) == 0 {
-					log.Fatal("sourceCheckout is empty")
+			// checkout code
+			if prj.SourceType == SOURCE_TYPE_BRANCH_FIXED {
+				// checkout incoming commit hash or branch name
+				checkoutSource := ""
+				if len(prj.CommitHash) > 0 {
+					checkoutSource = prj.CommitHash
+				} else {
+					if len(prj.SourceValue) == 0 {
+						prj.SourceValue = "main"
+					}
+					checkoutSource = prj.SourceValue
+				}
+				log.Println("checkout commit in branch fix : ", checkoutSource)
+				msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository, prj)
+				if cErr != nil {
+					log.Println("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
+					return cErr
 				}
 
-				log.Println("merge commit in webhook : ", sourceCheckout)
+			} else if prj.SourceType == SOURCE_TYPE_WEBHOOK {
 
-				// merge source
-				_, msgMsg, cErr = impl.gitCliManager.Merge(filepath.Join(util.WORKINGDIR, prj.CheckoutPath), sourceCheckout)
+				webhookData := prj.WebhookData
+				webhookDataData := webhookData.Data
+
+				targetCheckout := webhookDataData[WEBHOOK_SELECTOR_TARGET_CHECKOUT_NAME]
+				if len(targetCheckout) == 0 {
+					log.Println("could not get target checkout from request data")
+					return errors.New("could not get target checkout from request data for webhook")
+				}
+
+				log.Println("checkout commit in webhook : ", targetCheckout)
+
+				// checkout target hash
+				msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository, prj)
 				if cErr != nil {
-					log.Fatal("could not merge ", "sourceCheckout ", sourceCheckout, " err ", cErr, " msgMsg", msgMsg)
+					log.Println("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
 					return cErr
+				}
+
+				// merge source if action type is merged
+				if webhookData.EventActionType == WEBHOOK_EVENT_MERGED_ACTION_TYPE {
+					sourceCheckout := webhookDataData[WEBHOOK_SELECTOR_SOURCE_CHECKOUT_NAME]
+
+					// throw error if source checkout is empty
+					if len(sourceCheckout) == 0 {
+						log.Println("sourceCheckout is empty")
+						return errors.New("sourceCheckout is empty")
+					}
+
+					log.Println("merge commit in webhook : ", sourceCheckout)
+
+					// merge source
+					_, msgMsg, cErr = impl.gitCliManager.Merge(filepath.Join(util.WORKINGDIR, prj.CheckoutPath), sourceCheckout)
+					if cErr != nil {
+						log.Println("could not merge ", "sourceCheckout ", sourceCheckout, " err ", cErr, " msgMsg", msgMsg)
+						return cErr
+					}
+
 				}
 
 			}
 
 		}
-
+		return nil
 	}
-	return nil
+
+	err := util.ExecuteWithStageInfoLog(util.GIT_CLONE_CHECKOUT, cloneAndCheckoutGitMaterials)
+	if err != nil {
+		log.Fatal("error in cloning and checking out the git materials ", "err : ", err)
+	}
+	return err
 }

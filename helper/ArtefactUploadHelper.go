@@ -53,38 +53,37 @@ func UploadArtifact(cloudHelperBaseConfig *util.CloudHelperBaseConfig, artifactF
 			return err
 		}
 	}
-	_, err = ZipAndUpload(cloudHelperBaseConfig, artifactFileLocation)
+	err = ZipAndUpload(cloudHelperBaseConfig, artifactFileLocation)
 	return err
 }
 
-func ZipAndUpload(cloudHelperBaseConfig *util.CloudHelperBaseConfig, artifactFileName string) (bool, error) {
-	artifactUploaded := false
-	if !cloudHelperBaseConfig.StorageModuleConfigured {
-		log.Println(util.DEVTRON, "not going to upload artifact as storage module not configured...")
-		return artifactUploaded, nil
+func ZipAndUpload(cloudHelperBaseConfig *util.CloudHelperBaseConfig, artifactFileName string) error {
+	uploadArtifact := func() error {
+		if !cloudHelperBaseConfig.StorageModuleConfigured {
+			log.Println(util.DEVTRON, "not going to upload artifact as storage module not configured...")
+			return nil
+		}
+		isEmpty, err := IsDirEmpty(util.TmpArtifactLocation)
+		if err != nil {
+			log.Println(util.DEVTRON, "artifact empty check error ")
+			return err
+		} else if isEmpty {
+			log.Println(util.DEVTRON, "no artifact to upload")
+			return nil
+		}
+		log.Println(util.DEVTRON, "artifact to upload")
+		zipFile := "job-artifact.zip"
+
+		zipCmd := exec.Command("zip", "-r", zipFile, util.TmpArtifactLocation)
+		err = util.RunCommand(zipCmd)
+		if err != nil {
+			return err
+		}
+		log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactFileName)
+		err = UploadFileToCloud(cloudHelperBaseConfig, zipFile, artifactFileName)
+		return err
 	}
-	isEmpty, err := IsDirEmpty(util.TmpArtifactLocation)
-	if err != nil {
-		log.Println(util.DEVTRON, "artifact empty check error ")
-		return artifactUploaded, err
-	} else if isEmpty {
-		log.Println(util.DEVTRON, "no artifact to upload")
-		return artifactUploaded, nil
-	}
-	log.Println(util.DEVTRON, "artifact to upload")
-	zipFile := "job-artifact.zip"
-	zipCmd := exec.Command("zip", "-r", zipFile, util.TmpArtifactLocation)
-	err = util.RunCommand(zipCmd)
-	if err != nil {
-		return artifactUploaded, err
-	}
-	log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactFileName)
-	err = UploadFileToCloud(cloudHelperBaseConfig, zipFile, artifactFileName)
-	if err != nil {
-		return artifactUploaded, err
-	}
-	artifactUploaded = true
-	return artifactUploaded, err
+	return util.ExecuteWithStageInfoLog(util.UPLOAD_ARTIFACT, uploadArtifact)
 }
 
 func IsDirEmpty(name string) (bool, error) {

@@ -46,17 +46,40 @@ func NewStageExecutorImpl(cmdExecutor helper.CommandExecutor, scriptExecutor Scr
 	}
 }
 
-func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error) {
+func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (map[int]map[string]*helper.VariableObject, *helper.StepObject, error) {
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
+
 	stageVariable := make(map[int]map[string]*helper.VariableObject)
 	for i, step := range steps {
-		failedStep, err = impl.RunCiCdStep(stepType, *ciCdRequest, i, step, refStageMap, globalEnvironmentVariables, preCiStageVariable, stageVariable)
+
+		stageInfoLoggingRequired := stepType != helper.STEP_TYPE_REF_PLUGIN
+		failedStep := step
+		var err error
+
+		executeStep := func() error {
+			failedStep, err = impl.RunCiCdStep(stepType, *ciCdRequest, i, step, refStageMap, globalEnvironmentVariables, preCiStageVariable, stageVariable)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+
+		if stageInfoLoggingRequired {
+			log.Println(util.DEVTRON, "stage logging required")
+			err = util.ExecuteWithStageInfoLog(step.Name, executeStep)
+		} else {
+			log.Println(util.DEVTRON, "stage logging not required")
+			err = executeStep()
+		}
+
+		// if errored, we can return the failed step and the error
 		if err != nil {
-			return nil, failedStep, err
+			return stageVariable, failedStep, err
 		}
 	}
+
 	return stageVariable, nil, nil
 }
 
