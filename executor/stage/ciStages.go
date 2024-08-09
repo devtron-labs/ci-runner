@@ -191,6 +191,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	// Start docker daemon TODO
 	log.Println(util.DEVTRON, " docker-build")
 	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest)
+	ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables = impl.AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciCdRequest.CommonWorkflowRequest)
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {
 		return artifactUploaded, err
@@ -278,6 +279,14 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 		log.Println(util.DEVTRON, "external ci artifact found! exiting now with success event")
 		dest = scriptEnvs["externalCiArtifact"]
 		digest = scriptEnvs["imageDigest"]
+		if len(digest) == 0 {
+			//user has not provided imageDigest in that case fetch from docker.
+			imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(dest)
+			if err != nil {
+				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", dest), err)
+			}
+			digest = imgDigest
+		}
 		var tempDetails []*helper.CiProjectDetailsMin
 		err := json.Unmarshal([]byte(scriptEnvs["ciProjectDetails"]), &tempDetails)
 		if err != nil {
@@ -525,4 +534,19 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 		return err
 	}
 	return err
+}
+
+func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *helper.CommonWorkflowRequest) map[string]string {
+	if len(ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]) > 0 {
+		image := ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]
+		if len(ciRequest.ExtraEnvironmentVariables["imageDigest"]) == 0 {
+			//user has not provided imageDigest in that case fetch from docker.
+			imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(image)
+			if err != nil {
+				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
+			}
+			ciRequest.ExtraEnvironmentVariables["imageDigest"] = imgDigest
+		}
+	}
+	return ciRequest.ExtraEnvironmentVariables
 }

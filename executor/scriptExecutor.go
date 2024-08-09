@@ -196,6 +196,8 @@ func RunScriptsInDocker(ciContext cictx.CiContext, impl *StageExecutorImpl, exec
 	executionConf.EntryScriptFileName = entryScriptFileName
 	executionConf.EnvOutFileName = envOutFileName
 
+	log.Println(util.DEVTRON, "envInputFilePath", envInputFileName)
+	log.Println(util.DEVTRON, "EnvInputVars", executionConf.EnvInputVars)
 	//Write env input vars to env file
 	err := writeToEnvFile(executionConf.EnvInputVars, envInputFileName)
 	if err != nil {

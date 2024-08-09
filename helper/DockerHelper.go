@@ -62,6 +62,7 @@ type DockerHelper interface {
 	ExtractDigestForBuildx(dest string) (string, error)
 	CleanBuildxK8sDriver(ciContext cicxt.CiContext, nodes []map[string]string) error
 	GetDestForNatsEvent(commonWorkflowRequest *CommonWorkflowRequest, dest string) (string, error)
+	ExtractDigestUsingPull(dest string) (string, error)
 }
 
 type DockerHelperImpl struct {
