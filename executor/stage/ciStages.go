@@ -545,6 +545,7 @@ func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *
 		var err error
 		image := ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]
 		if !strings.Contains(image, ":") {
+			ciRequest.DockerImageTag = image
 			image, err = helper.BuildDockerImagePath(ciRequest)
 			if err != nil {
 				log.Println("Error in building docker image", "err", err)
