@@ -29,6 +29,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -191,7 +192,10 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	// Start docker daemon TODO
 	log.Println(util.DEVTRON, " docker-build")
 	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest)
-	ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables = impl.AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciCdRequest.CommonWorkflowRequest)
+	ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables, err = impl.AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciCdRequest.CommonWorkflowRequest)
+	if err != nil {
+		return artifactUploaded, err
+	}
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {
 		return artifactUploaded, err
@@ -536,17 +540,26 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 	return err
 }
 
-func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *helper.CommonWorkflowRequest) map[string]string {
+func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *helper.CommonWorkflowRequest) (map[string]string, error) {
 	if len(ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]) > 0 {
+		var err error
 		image := ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]
+		if !strings.Contains(image, ":") {
+			image, err = helper.BuildDockerImagePath(ciRequest)
+			if err != nil {
+				log.Println("Error in building docker image", "err", err)
+				return nil, err
+			}
+		}
 		if len(ciRequest.ExtraEnvironmentVariables["imageDigest"]) == 0 {
 			//user has not provided imageDigest in that case fetch from docker.
 			imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(image)
 			if err != nil {
 				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
+				return nil, err
 			}
 			ciRequest.ExtraEnvironmentVariables["imageDigest"] = imgDigest
 		}
 	}
-	return ciRequest.ExtraEnvironmentVariables
+	return ciRequest.ExtraEnvironmentVariables, nil
 }
