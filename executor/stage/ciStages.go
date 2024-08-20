@@ -540,6 +540,7 @@ func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *
 	if len(ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]) > 0 {
 		image := ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]
 		if ciRequest.ShouldPullDigest {
+
 			log.Println("image scanning plugin configured and digest not provided hence pulling image digest")
 			//user has not provided imageDigest in that case fetch from docker.
 			imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(image)
