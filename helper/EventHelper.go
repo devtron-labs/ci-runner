@@ -157,6 +157,7 @@ type CommonWorkflowRequest struct {
 	UseExternalClusterBlob         bool                              `json:"useExternalClusterBlob"`
 	ImageScanMaxRetries            int                               `json:"imageScanMaxRetries,omitempty"`
 	ImageScanRetryDelay            int                               `json:"imageScanRetryDelay,omitempty"`
+	ShouldPullDigest               bool                              `json:"shouldPullDigest,omitempty"`
 	EnableSecretMasking            bool                              `json:"enableSecretMasking"`
 	// Data from CD Workflow service
 	WorkflowRunnerId              int                            `json:"workflowRunnerId"`
