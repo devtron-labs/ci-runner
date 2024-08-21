@@ -116,7 +116,9 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 
 	// not returning error by choice, do not want to report this error to caller
 	// cache push can fail and we don't want to break the flow
-	util.ExecuteWithStageInfoLog(util.PUSH_CACHE, uploadCache)
+	if !ciCdRequest.CommonWorkflowRequest.SkipCiJobBuildCachePushPull {
+		util.ExecuteWithStageInfoLog(util.PUSH_CACHE, uploadCache)
+	}
 }
 
 type CiFailReason string
@@ -249,17 +251,15 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	metrics.PostCiDuration = postCiDuration
 	log.Println(util.DEVTRON, " /docker-push")
 
-	if !ciCdRequest.CommonWorkflowRequest.SkipCiJobBuildCachePushPull {
-		log.Println(util.DEVTRON, " artifact-upload")
-		cloudHelperBaseConfig := ciCdRequest.CommonWorkflowRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
-		err = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
-		if err != nil {
-			return artifactUploaded, nil
-		} else {
-			artifactUploaded = true
-		}
-		log.Println(util.DEVTRON, " /artifact-upload")
+	log.Println(util.DEVTRON, " artifact-upload")
+	cloudHelperBaseConfig := ciCdRequest.CommonWorkflowRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
+	err = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
+	if err != nil {
+		return artifactUploaded, nil
+	} else {
+		artifactUploaded = true
 	}
+	log.Println(util.DEVTRON, " /artifact-upload")
 
 	dest, err = impl.dockerHelper.GetDestForNatsEvent(ciCdRequest.CommonWorkflowRequest, dest)
 	if err != nil {
