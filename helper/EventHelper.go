@@ -185,6 +185,7 @@ type CommonWorkflowRequest struct {
 	IntermediateDockerRegistryUrl string                         `json:"-"` // this URL will be used for all operations and can be mutated
 	BuildxCacheModeMin            bool                           `json:"buildxCacheModeMin"`
 	AsyncBuildxCacheExport        bool                           `json:"asyncBuildxCacheExport"`
+	SkipCiJobBuildCachePushPull   bool                           `json:"skipCiJobBuildCachePushPull"`
 }
 
 func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {
