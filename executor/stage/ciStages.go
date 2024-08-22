@@ -116,9 +116,7 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 
 	// not returning error by choice, do not want to report this error to caller
 	// cache push can fail and we don't want to break the flow
-	if !ciCdRequest.CommonWorkflowRequest.SkipCiJobBuildCachePushPull {
-		util.ExecuteWithStageInfoLog(util.PUSH_CACHE, uploadCache)
-	}
+	util.ExecuteWithStageInfoLog(util.PUSH_CACHE, uploadCache)
 }
 
 type CiFailReason string
@@ -167,10 +165,8 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 		return nil
 	}
 
-	if !ciCdRequest.CommonWorkflowRequest.SkipCiJobBuildCachePushPull {
-		if err = util.ExecuteWithStageInfoLog(util.CACHE_PULL, pullCacheStage); err != nil {
-			return artifactUploaded, err
-		}
+	if err = util.ExecuteWithStageInfoLog(util.CACHE_PULL, pullCacheStage); err != nil {
+		return artifactUploaded, err
 	}
 
 	// change the current working directory to WORKINGDIR
