@@ -442,7 +442,8 @@ type CiProjectDetailsMin struct {
 	CommitTime time.Time `json:"commitTime"`
 }
 
-func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
+func SendCDEvent(cdRequest *CommonWorkflowRequest, pluginArtifacts map[string][]string) error {
+
 	event := CdStageCompleteEvent{
 		CiProjectDetails:              cdRequest.CiProjectDetails,
 		CdPipelineId:                  cdRequest.CdPipelineId,
@@ -450,7 +451,7 @@ func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
 		WorkflowRunnerId:              cdRequest.WorkflowRunnerId,
 		CiArtifactDTO:                 cdRequest.CiArtifactDTO,
 		TriggeredBy:                   cdRequest.TriggeredBy,
-		PluginRegistryArtifactDetails: cdRequest.RegistryDestinationImageMap,
+		PluginRegistryArtifactDetails: util.MergeMaps(cdRequest.RegistryDestinationImageMap, pluginArtifacts), // merging artifacts copied by copy container image plugin and copy container image plugin v2
 		PluginArtifactStage:           cdRequest.PluginArtifactStage,
 	}
 	err := SendCdCompleteEvent(cdRequest, event)
@@ -461,7 +462,7 @@ func SendCDEvent(cdRequest *CommonWorkflowRequest) error {
 	return nil
 }
 
-func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failureReason string, imageDetailsFromCR *ImageDetailsFromCR) error {
+func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failureReason string, imageDetailsFromCR *ImageDetailsFromCR, pluginArtifacts map[string][]string) error {
 	event := CiCompleteEvent{
 		CiProjectDetails:              ciRequest.CiProjectDetails,
 		DockerImage:                   image,
@@ -477,7 +478,7 @@ func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, m
 		IsArtifactUploaded:            artifactUploaded,
 		FailureReason:                 failureReason,
 		ImageDetailsFromCR:            imageDetailsFromCR,
-		PluginRegistryArtifactDetails: ciRequest.RegistryDestinationImageMap,
+		PluginRegistryArtifactDetails: util.MergeMaps(pluginArtifacts, ciRequest.RegistryDestinationImageMap),
 		PluginArtifactStage:           ciRequest.PluginArtifactStage,
 		IsScanEnabled:                 ciRequest.ScanEnabled,
 	}

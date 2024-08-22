@@ -165,10 +165,15 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		}
 	}
 
+	pluginArtifacts, err := util2.ExtractPluginArtifacts()
+	if err != nil {
+		log.Println("error in extracting plugin artifacts", "err", err)
+		return err
+	}
 	// dry run flag indicates that ci runner image is being run from external helm chart
 	if !cicdRequest.CommonWorkflowRequest.IsDryRun {
 		log.Println(util.DEVTRON, " event")
-		err = helper.SendCDEvent(cicdRequest.CommonWorkflowRequest)
+		err = helper.SendCDEvent(cicdRequest.CommonWorkflowRequest, pluginArtifacts)
 		if err != nil {
 			log.Println(err)
 			return err
