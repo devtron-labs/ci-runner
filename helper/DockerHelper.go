@@ -107,24 +107,21 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 			util.LogStage("Insecure Registry")
 		} else {
 			if connection == util.SECUREWITHCERT {
-				os.MkdirAll(fmt.Sprintf("/etc/docker/certs.d/%s", host), os.ModePerm)
-				f, err := os.Create(fmt.Sprintf("/etc/docker/certs.d/%s/ca.crt", host))
+				util.LogStage("Secure with Cert")
 
-				if err != nil {
+				// Create /etc/docker/certs.d/<host>/ca.crt with specified content
+				log.Printf("creating /etc/docker/certs.d/%s/ca.crt", host)
+				certDir := fmt.Sprintf("/etc/docker/certs.d/%s", host)
+				os.MkdirAll(certDir, os.ModePerm)
+				certFilePath := fmt.Sprintf("%s/ca.crt", certDir)
+
+				if err := util.CreateAndWriteFile(certFilePath, commonWorkflowRequest.DockerCert); err != nil {
 					return err
 				}
 
-				defer f.Close()
-
-				_, err = f.WriteString(commonWorkflowRequest.DockerCert)
-
-				if err != nil {
-					return err
-				}
-
-				// Run additional commands
+				// Run "update-ca-certificates" to update the system certificates
 				log.Println("update-ca-certificates")
-				cpCmd := exec.Command("cp", fmt.Sprintf("/etc/docker/certs.d/%s/ca.crt", host), "/usr/local/share/ca-certificates/")
+				cpCmd := exec.Command("cp", certFilePath, "/usr/local/share/ca-certificates/")
 				if err := cpCmd.Run(); err != nil {
 					return err
 				}
@@ -134,23 +131,13 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 					return err
 				}
 
-				log.Println("creating /etc/buildkitd.toml")
 				// Create /etc/buildkitd.toml with specified content
-				buildkitdContent := `debug = true
-[registry."stage-harbor.devtron.info"]
-  ca=["/etc/docker/certs.d/stage-harbor.devtron.info/ca.crt"]`
+				log.Println("creating /etc/buildkitd.toml")
+				buildkitdContent := util.GenerateBuildkitdContent(host)
 
-				f1, err := os.Create("/etc/buildkitd.toml")
-				if err != nil {
+				if err := util.CreateAndWriteFile("/etc/buildkitd.toml", buildkitdContent); err != nil {
 					return err
 				}
-				defer f.Close()
-				_, err = f1.WriteString(buildkitdContent)
-				if err != nil {
-					return err
-				}
-
-				util.LogStage("Secure with Cert")
 			}
 			dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 		}

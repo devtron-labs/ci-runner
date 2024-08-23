@@ -236,3 +236,20 @@ func ExecuteWithStageInfoLog(stageName string, stageExecutor func() error) (err 
 
 	return stageExecutor()
 }
+
+func GenerateBuildkitdContent(host string) string {
+	return fmt.Sprintf(`debug = true
+[registry."%s"]
+  ca=["/etc/docker/certs.d/%s/ca.crt"]`, host, host)
+}
+
+func CreateAndWriteFile(filePath string, content string) error {
+	f, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(content)
+	return err
+}
