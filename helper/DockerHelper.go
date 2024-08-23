@@ -340,13 +340,13 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 				useBuildxK8sDriver, eligibleK8sDriverNodes = dockerBuildConfig.CheckForBuildXK8sDriver()
 				if useBuildxK8sDriver {
-					err = impl.createBuildxBuilderWithK8sDriver(ciContext, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
+					err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.DockerConnection, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 						return err
 					}
 				} else {
-					err = impl.createBuildxBuilderForMultiArchBuild(ciContext)
+					err = impl.createBuildxBuilderForMultiArchBuild(ciContext, ciRequest.DockerConnection)
 					if err != nil {
 						return err
 					}
@@ -758,8 +758,13 @@ func (impl *DockerHelperImpl) setupCacheForBuildx(ciContext cicxt.CiContext, loc
 	return nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilder(ciContext cicxt.CiContext) error {
-	multiPlatformCmd := "docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'"
+func (impl *DockerHelperImpl) createBuildxBuilder(ciContext cicxt.CiContext, dockerConnection string) error {
+	buildkitToml := ""
+	if dockerConnection == util.SECUREWITHCERT {
+		buildkitToml = "--config /etc/buildkitd.toml"
+	}
+	multiPlatformCmd := fmt.Sprintf("docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' %s", buildkitToml)
+
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := impl.GetCommandToExecute(multiPlatformCmd)
 	err := impl.cmdExecutor.RunCommand(ciContext, dockerBuildCMD)
@@ -893,26 +898,25 @@ func readImageDigestFromManifest(manifestFilePath string) (string, error) {
 	return imageDigest.(string), nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cicxt.CiContext) error {
+func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cicxt.CiContext, dockerConnection string) error {
 	err := impl.installAllSupportedPlatforms(ciContext)
 	if err != nil {
 		return err
 	}
-	err = impl.createBuildxBuilder(ciContext)
+	err = impl.createBuildxBuilder(ciContext, dockerConnection)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
-
+func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, dockerConnection string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
 	defaultNodeOpts := builderNodes[0]
 
-	buildxCreate := getBuildxK8sDriverCmd(defaultNodeOpts, ciPipelineId, ciWorkflowId)
+	buildxCreate := getBuildxK8sDriverCmd(dockerConnection, defaultNodeOpts, ciPipelineId, ciWorkflowId)
 	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--use")
 	fmt.Println(util.DEVTRON, " cmd : ", buildxCreate)
 	builderCreateCmd := impl.GetCommandToExecute(buildxCreate)
@@ -925,7 +929,7 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 	// appending other nodes to the builder,except default node ,since we already added it
 	for i := 1; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
-		appendNode := getBuildxK8sDriverCmd(nodeOpts, ciPipelineId, ciWorkflowId)
+		appendNode := getBuildxK8sDriverCmd(dockerConnection, nodeOpts, ciPipelineId, ciWorkflowId)
 		appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
 		fmt.Println(util.DEVTRON, " cmd : ", appendNode)
 		appendNodeCmd := impl.GetCommandToExecute(appendNode)
@@ -988,8 +992,8 @@ func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	return err, errBuf
 }
 
-func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflowId int) string {
-	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap --config /etc/buildkitd.toml "
+func getBuildxK8sDriverCmd(dockerConnection string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) string {
+	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
 		nodeName = BUILDX_NODE_NAME + fmt.Sprintf("%v-%v-", ciPipelineId, ciWorkflowId) + util.Generate(3) // need this to generate unique name for builder node in same builder.
@@ -1004,6 +1008,11 @@ func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflo
 		buildxCreate += " '--driver-opt=%s' "
 		buildxCreate = fmt.Sprintf(buildxCreate, driverOpts["driverOptions"])
 	}
+	buildkitToml := ""
+	if dockerConnection == util.SECUREWITHCERT {
+		buildkitToml = "--config /etc/buildkitd.toml"
+	}
+	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, buildkitToml)
 	return buildxCreate
 }
 
