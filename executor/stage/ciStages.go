@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/devtron-labs/ci-runner/executor"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
@@ -70,7 +71,8 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	var artifactUploadErr error
 	if !artifactUploaded {
 		cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
-		artifactUploaded, artifactUploadErr = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
+		artifactUploadErr = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
+		artifactUploaded = artifactUploadErr == nil
 	}
 
 	if err != nil {
@@ -95,18 +97,26 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	}
 
 	// sync cache
-	log.Println(util.DEVTRON, " cache-push")
-	err = helper.SyncCache(ciRequest)
-	if err != nil {
-		log.Println(err)
-		if ciCdRequest.CommonWorkflowRequest.IsExtRun {
-			log.Println(util.DEVTRON, "Ignoring cache upload")
-			return
+	uploadCache := func() error {
+		log.Println(util.DEVTRON, " cache-push")
+		err = helper.SyncCache(ciRequest)
+		if err != nil {
+			log.Println(err)
+			if ciCdRequest.CommonWorkflowRequest.IsExtRun {
+				log.Println(util.DEVTRON, "Ignoring cache upload")
+				// not returning error as we are ignoring the cache upload, todo: re confirm this
+				return nil
+			}
+			*exitCode = util.DefaultErrorCode
+			return err
 		}
-		*exitCode = util.DefaultErrorCode
-		return
+		log.Println(util.DEVTRON, " /cache-push")
+		return nil
 	}
-	log.Println(util.DEVTRON, " /cache-push")
+
+	// not returning error by choice, do not want to report this error to caller
+	// cache push can fail and we don't want to break the flow
+	util.ExecuteWithStageInfoLog(util.PUSH_CACHE, uploadCache)
 }
 
 type CiFailReason string
@@ -125,7 +135,6 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	start := time.Now()
 	metrics.TotalStartTime = start
 	artifactUploaded = false
-
 	// change the current working directory to '/'
 	err = os.Chdir(util.HOMEDIR)
 	if err != nil {
@@ -138,16 +147,27 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 		_ = os.Mkdir(util.WORKINGDIR, os.ModeDir)
 	}
 
-	// Get ci cache
-	log.Println(util.DEVTRON, " cache-pull")
-	start = time.Now()
-	metrics.CacheDownStartTime = start
-	err = helper.GetCache(ciCdRequest.CommonWorkflowRequest)
-	metrics.CacheDownDuration = time.Since(start).Seconds()
-	if err != nil {
+	// Get ci cache TODO
+	pullCacheStage := func() error {
+		log.Println(util.DEVTRON, " cache-pull")
+		start = time.Now()
+		metrics.CacheDownStartTime = start
+
+		defer func() {
+			log.Println(util.DEVTRON, " /cache-pull")
+			metrics.CacheDownDuration = time.Since(start).Seconds()
+		}()
+
+		err = helper.GetCache(ciCdRequest.CommonWorkflowRequest)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if err = util.ExecuteWithStageInfoLog(util.CACHE_PULL, pullCacheStage); err != nil {
 		return artifactUploaded, err
 	}
-	log.Println(util.DEVTRON, " /cache-pull")
 
 	// change the current working directory to WORKINGDIR
 	err = os.Chdir(util.WORKINGDIR)
@@ -168,9 +188,10 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	}
 	log.Println(util.DEVTRON, " /git")
 
-	// Start docker daemon
+	// Start docker daemon TODO
 	log.Println(util.DEVTRON, " docker-build")
 	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest)
+	ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables = impl.AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciCdRequest.CommonWorkflowRequest)
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {
 		return artifactUploaded, err
@@ -228,14 +249,12 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 
 	log.Println(util.DEVTRON, " artifact-upload")
 	cloudHelperBaseConfig := ciCdRequest.CommonWorkflowRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
-	artifactUploaded, err = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
-
+	err = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
 	if err != nil {
 		return artifactUploaded, nil
+	} else {
+		artifactUploaded = true
 	}
-	//else {
-	//	artifactUploaded = true
-	//}
 	log.Println(util.DEVTRON, " /artifact-upload")
 
 	dest, err = impl.dockerHelper.GetDestForNatsEvent(ciCdRequest.CommonWorkflowRequest, dest)
@@ -253,6 +272,36 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 
 	log.Println(util.DEVTRON, " event")
 	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
+
+	// When externalCiArtifact is provided (run time Env at time of build) then this image will be used further in the pipeline
+	// imageDigest and ciProjectDetails are optional fields
+	if scriptEnvs["externalCiArtifact"] != "" {
+		log.Println(util.DEVTRON, "external ci artifact found! exiting now with success event")
+		dest = scriptEnvs["externalCiArtifact"]
+		digest = scriptEnvs["imageDigest"]
+		if len(digest) == 0 {
+			//user has not provided imageDigest in that case fetch from docker.
+			imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(dest)
+			if err != nil {
+				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", dest), err)
+			}
+			digest = imgDigest
+		}
+		var tempDetails []*helper.CiProjectDetailsMin
+		err := json.Unmarshal([]byte(scriptEnvs["ciProjectDetails"]), &tempDetails)
+		if err != nil {
+			fmt.Println("Error unmarshalling ciProjectDetails JSON:", err)
+			fmt.Println("ignoring the error and continuing without saving ciProjectDetails")
+		}
+
+		if len(tempDetails) > 0 && len(ciCdRequest.CommonWorkflowRequest.CiProjectDetails) > 0 {
+			detail := tempDetails[0]
+			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].CommitHash = detail.CommitHash
+			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].Message = detail.Message
+			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].Author = detail.Author
+			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].CommitTime = detail.CommitTime
+		}
+	}
 
 	err = helper.SendEvents(ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, "", resultsFromPlugin)
 	if err != nil {
@@ -302,7 +351,7 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 	// build
 	start := time.Now()
 	metrics.BuildStartTime = start
-	dest, err := impl.dockerHelper.BuildArtifact(ciCdRequest.CommonWorkflowRequest) //TODO make it skipable
+	dest, err := impl.dockerHelper.BuildArtifact(ciCdRequest.CommonWorkflowRequest) // TODO make it skipable
 	metrics.BuildDuration = time.Since(start).Seconds()
 	if err != nil {
 		log.Println("Error in building artifact", "err", err)
@@ -323,19 +372,29 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 }
 
 func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest string, metrics *helper.CIMetrics, artifactUploaded bool) (string, error) {
-	ciBuildConfi := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
-	isBuildX := ciBuildConfi != nil && ciBuildConfi.DockerBuildConfig != nil && ciBuildConfi.DockerBuildConfig.CheckForBuildX()
+
 	var digest string
 	var err error
-	if isBuildX {
-		digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
-	} else {
-		util.LogStage("docker push")
-		// push to dest
-		log.Println(util.DEVTRON, "Docker push Artifact", "dest", dest)
-		impl.pushArtifact(ciCdRequest, dest, digest, metrics, artifactUploaded)
-		digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
+
+	extractDigestStage := func() error {
+		ciBuildConfi := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
+		isBuildX := ciBuildConfi != nil && ciBuildConfi.DockerBuildConfig != nil && ciBuildConfi.DockerBuildConfig.CheckForBuildX()
+		if isBuildX {
+			digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
+		} else {
+			util.LogStage("docker push")
+			// push to dest
+			log.Println(util.DEVTRON, "Docker push Artifact", "dest", dest)
+			err = impl.pushArtifact(ciCdRequest, dest, digest, metrics, artifactUploaded)
+			if err != nil {
+				return err
+			}
+			digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
+		}
+		return err
 	}
+
+	err = util.ExecuteWithStageInfoLog(util.DOCKER_PUSH_AND_EXTRACT_IMAGE_DIGEST, extractDigestStage)
 	return digest, err
 }
 
@@ -355,27 +414,31 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 }
 
 func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, artifactUploaded bool) error {
-	util.LogStage("IMAGE SCAN")
-	log.Println(util.DEVTRON, " Image Scanning Started for digest", digest)
-	scanEvent := &helper.ScanEvent{
-		Image:               dest,
-		ImageDigest:         digest,
-		PipelineId:          ciCdRequest.CommonWorkflowRequest.PipelineId,
-		UserId:              ciCdRequest.CommonWorkflowRequest.TriggeredBy,
-		DockerRegistryId:    ciCdRequest.CommonWorkflowRequest.DockerRegistryId,
-		DockerConnection:    ciCdRequest.CommonWorkflowRequest.DockerConnection,
-		DockerCert:          ciCdRequest.CommonWorkflowRequest.DockerCert,
-		ImageScanMaxRetries: ciCdRequest.CommonWorkflowRequest.ImageScanMaxRetries,
-		ImageScanRetryDelay: ciCdRequest.CommonWorkflowRequest.ImageScanRetryDelay,
+	imageScanningStage := func() error {
+		util.LogStage("IMAGE SCAN")
+		log.Println("Image Scanning Started for digest", digest)
+		scanEvent := &helper.ScanEvent{
+			Image:               dest,
+			ImageDigest:         digest,
+			PipelineId:          ciCdRequest.CommonWorkflowRequest.PipelineId,
+			UserId:              ciCdRequest.CommonWorkflowRequest.TriggeredBy,
+			DockerRegistryId:    ciCdRequest.CommonWorkflowRequest.DockerRegistryId,
+			DockerConnection:    ciCdRequest.CommonWorkflowRequest.DockerConnection,
+			DockerCert:          ciCdRequest.CommonWorkflowRequest.DockerCert,
+			ImageScanMaxRetries: ciCdRequest.CommonWorkflowRequest.ImageScanMaxRetries,
+			ImageScanRetryDelay: ciCdRequest.CommonWorkflowRequest.ImageScanRetryDelay,
+		}
+		err := helper.SendEventToClairUtility(scanEvent)
+		if err != nil {
+			log.Println("error in running Image Scan", "err", err)
+			err = sendFailureNotification(string(Scan), ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, err)
+			return err
+		}
+		log.Println("Image scanning completed with scanEvent", scanEvent)
+		return nil
 	}
-	err := helper.SendEventToClairUtility(scanEvent)
-	if err != nil {
-		log.Println("error in running Image Scan", "err", err)
-		err = sendFailureNotification(string(Scan), ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, err)
-		return err
-	}
-	log.Println(util.DEVTRON, "Image scanning completed with scanEvent", scanEvent)
-	return nil
+
+	return util.ExecuteWithStageInfoLog(util.IMAGE_SCAN, imageScanningStage)
 }
 
 func (impl *CiStage) getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, artifactUploaded bool) (string, string, error) {
@@ -464,4 +527,21 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 		return err
 	}
 	return err
+}
+
+func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *helper.CommonWorkflowRequest) map[string]string {
+	if len(ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]) > 0 {
+		image := ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]
+		if ciRequest.ShouldPullDigest {
+
+			log.Println("image scanning plugin configured and digest not provided hence pulling image digest")
+			//user has not provided imageDigest in that case fetch from docker.
+			imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(image)
+			if err != nil {
+				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
+			}
+			ciRequest.ExtraEnvironmentVariables["imageDigest"] = imgDigest
+		}
+	}
+	return ciRequest.ExtraEnvironmentVariables
 }
