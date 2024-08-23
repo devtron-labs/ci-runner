@@ -1,12 +1,14 @@
 module github.com/devtron-labs/ci-runner
 
-go 1.20
+go 1.21
+
+toolchain go1.21.0
 
 require (
 	github.com/Knetic/govaluate v3.0.0+incompatible
 	github.com/aws/aws-sdk-go v1.44.116
 	github.com/caarlos0/env v3.5.0+incompatible
-	github.com/devtron-labs/common-lib v0.16.1-0.20240822072501-fd6db69c3479
+	github.com/devtron-labs/common-lib v0.16.1-0.20240823093253-28bcf3a4b2d7
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/joho/godotenv v1.4.0
 	github.com/otiai10/copy v1.7.0
