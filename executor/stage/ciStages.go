@@ -383,7 +383,6 @@ func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest st
 		if isBuildX {
 			digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
 		} else {
-			util.LogStage("docker push")
 			// push to dest
 			log.Println(util.DEVTRON, "Docker push Artifact", "dest", dest)
 			err = impl.pushArtifact(ciCdRequest, dest, digest, metrics, artifactUploaded)
@@ -416,7 +415,6 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 
 func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, artifactUploaded bool) error {
 	imageScanningStage := func() error {
-		util.LogStage("IMAGE SCAN")
 		log.Println("Image Scanning Started for digest", digest)
 		scanEvent := &helper.ScanEvent{
 			Image:               dest,

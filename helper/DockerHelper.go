@@ -116,11 +116,40 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 
 				defer f.Close()
 
-				_, err2 := f.WriteString(commonWorkflowRequest.DockerCert)
+				_, err = f.WriteString(commonWorkflowRequest.DockerCert)
 
-				if err2 != nil {
+				if err != nil {
 					return err
 				}
+
+				// Run additional commands
+				log.Println("update-ca-certificates")
+				cpCmd := exec.Command("cp", fmt.Sprintf("/etc/docker/certs.d/%s/ca.crt", host), "/usr/local/share/ca-certificates/")
+				if err := cpCmd.Run(); err != nil {
+					return err
+				}
+
+				updateCmd := exec.Command("update-ca-certificates")
+				if err := updateCmd.Run(); err != nil {
+					return err
+				}
+
+				log.Println("creating /etc/buildkitd.toml")
+				// Create /etc/buildkitd.toml with specified content
+				buildkitdContent := `debug = true
+[registry."stage-harbor.devtron.info"]
+  ca=["/etc/docker/certs.d/stage-harbor.devtron.info/ca.crt"]`
+
+				f1, err := os.Create("/etc/buildkitd.toml")
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+				_, err = f1.WriteString(buildkitdContent)
+				if err != nil {
+					return err
+				}
+
 				util.LogStage("Secure with Cert")
 			}
 			dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
@@ -960,7 +989,7 @@ func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 }
 
 func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflowId int) string {
-	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
+	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap --config /etc/buildkitd.toml "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
 		nodeName = BUILDX_NODE_NAME + fmt.Sprintf("%v-%v-", ciPipelineId, ciWorkflowId) + util.Generate(3) // need this to generate unique name for builder node in same builder.
