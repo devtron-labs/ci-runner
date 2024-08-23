@@ -104,38 +104,39 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 		}
 		if connection == util.INSECURE {
 			dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, host, dockerMtuValueFlag)
-			util.LogStage("Insecure Registry")
+			log.Println("Insecure Registry")
 		} else {
 			if connection == util.SECUREWITHCERT {
-				util.LogStage("Secure with Cert")
+				log.Println("Secure with Cert")
 
 				// Create /etc/docker/certs.d/<host>/ca.crt with specified content
-				log.Printf("creating /etc/docker/certs.d/%s/ca.crt", host)
-				certDir := fmt.Sprintf("/etc/docker/certs.d/%s", host)
+				certDir := fmt.Sprintf("%s/%s", CertDir, host)
 				os.MkdirAll(certDir, os.ModePerm)
 				certFilePath := fmt.Sprintf("%s/ca.crt", certDir)
+
+				log.Printf("creating %s", certFilePath)
 
 				if err := util.CreateAndWriteFile(certFilePath, commonWorkflowRequest.DockerCert); err != nil {
 					return err
 				}
 
 				// Run "update-ca-certificates" to update the system certificates
-				log.Println("update-ca-certificates")
-				cpCmd := exec.Command("cp", certFilePath, "/usr/local/share/ca-certificates/")
+				log.Println(UpdateCaCertCommand)
+				cpCmd := exec.Command("cp", certFilePath, CaCertPath)
 				if err := cpCmd.Run(); err != nil {
 					return err
 				}
 
-				updateCmd := exec.Command("update-ca-certificates")
+				updateCmd := exec.Command(UpdateCaCertCommand)
 				if err := updateCmd.Run(); err != nil {
 					return err
 				}
 
 				// Create /etc/buildkitd.toml with specified content
-				log.Println("creating /etc/buildkitd.toml")
+				log.Printf("creating %s", BuildkitdConfigPath)
 				buildkitdContent := util.GenerateBuildkitdContent(host)
 
-				if err := util.CreateAndWriteFile("/etc/buildkitd.toml", buildkitdContent); err != nil {
+				if err := util.CreateAndWriteFile(BuildkitdConfigPath, buildkitdContent); err != nil {
 					return err
 				}
 			}
@@ -161,6 +162,10 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 	return
 }
 
+const CertDir = "/etc/docker/certs.d"
+const UpdateCaCertCommand = "update-ca-certificates"
+const CaCertPath = "/usr/local/share/ca-certificates/"
+const BuildkitdConfigPath = "/etc/buildkitd.toml"
 const DOCKER_REGISTRY_TYPE_ECR = "ecr"
 const DOCKER_REGISTRY_TYPE_DOCKERHUB = "docker-hub"
 const DOCKER_REGISTRY_TYPE_OTHER = "other"

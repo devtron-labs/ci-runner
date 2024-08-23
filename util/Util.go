@@ -119,14 +119,6 @@ func CleanupAfterFetchingHttpsSubmodules() error {
 	return nil
 }
 
-func LogStage(name string) {
-	stageTemplate := `
-	------------------------------------------------------------------------------------------------------------------------
-	STAGE:  %s
-	------------------------------------------------------------------------------------------------------------------------`
-	log.Println(fmt.Sprintf(stageTemplate, name))
-}
-
 var chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
 // Generates random string
@@ -246,10 +238,14 @@ func GenerateBuildkitdContent(host string) string {
 func CreateAndWriteFile(filePath string, content string) error {
 	f, err := os.Create(filePath)
 	if err != nil {
+		log.Printf("Error creating file %s: %v", filePath, err)
 		return err
 	}
 	defer f.Close()
 
 	_, err = f.WriteString(content)
+	if err != nil {
+		log.Printf("Error writing content to file %s: %v", filePath, err)
+	}
 	return err
 }
