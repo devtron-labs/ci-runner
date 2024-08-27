@@ -412,10 +412,14 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 		log.Println("error in running Post Ci Steps", "err", err)
 		return nil, sendFailureNotification(string(PostCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
 	}
-	pluginArtifacts, err := util2.ExtractPluginArtifacts()
-	if err != nil {
-		log.Println("error in extracting plugin artifacts", "err", err)
-		return nil, sendFailureNotification(string(PostCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
+	// for copy container image plugin v1.0.0 plugin artifacts is equal to RegistryDestinationImageMap
+	pluginArtifacts := ciCdRequest.CommonWorkflowRequest.RegistryDestinationImageMap
+	if pluginArtifacts == nil {
+		// if nil, check pluginArtifacts v2 may be configured - in that case artifacts are written in file by plugin
+		pluginArtifacts, err = util2.ExtractPluginArtifacts()
+		if err != nil {
+			log.Println("error in extracting plugin artifacts", "err", err)
+		}
 	}
 	return pluginArtifacts, nil
 }

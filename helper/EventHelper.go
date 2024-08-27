@@ -451,7 +451,7 @@ func SendCDEvent(cdRequest *CommonWorkflowRequest, pluginArtifacts map[string][]
 		WorkflowRunnerId:              cdRequest.WorkflowRunnerId,
 		CiArtifactDTO:                 cdRequest.CiArtifactDTO,
 		TriggeredBy:                   cdRequest.TriggeredBy,
-		PluginRegistryArtifactDetails: util.MergeMaps(cdRequest.RegistryDestinationImageMap, pluginArtifacts), // merging artifacts copied by copy container image plugin and copy container image plugin v2
+		PluginRegistryArtifactDetails: pluginArtifacts,
 		PluginArtifactStage:           cdRequest.PluginArtifactStage,
 	}
 	err := SendCdCompleteEvent(cdRequest, event)
@@ -478,7 +478,7 @@ func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, m
 		IsArtifactUploaded:            artifactUploaded,
 		FailureReason:                 failureReason,
 		ImageDetailsFromCR:            imageDetailsFromCR,
-		PluginRegistryArtifactDetails: util.MergeMaps(pluginArtifacts, ciRequest.RegistryDestinationImageMap),
+		PluginRegistryArtifactDetails: pluginArtifacts,
 		PluginArtifactStage:           ciRequest.PluginArtifactStage,
 		IsScanEnabled:                 ciRequest.ScanEnabled,
 	}

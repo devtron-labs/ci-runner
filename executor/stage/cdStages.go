@@ -165,11 +165,17 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		}
 	}
 
-	pluginArtifacts, err := util2.ExtractPluginArtifacts()
-	if err != nil {
-		log.Println("error in extracting plugin artifacts", "err", err)
-		return err
+	// for copy container image plugin v1.0.0 plugin artifacts is equal to RegistryDestinationImageMap
+	pluginArtifacts := cicdRequest.CommonWorkflowRequest.RegistryDestinationImageMap
+	if pluginArtifacts == nil {
+		// if nil, check pluginArtifacts v2 may be configured - in that case artifacts are written in file by plugin
+		pluginArtifacts, err = util2.ExtractPluginArtifacts()
+		if err != nil {
+			log.Println("error in extracting plugin artifacts", "err", err)
+			return err
+		}
 	}
+
 	// dry run flag indicates that ci runner image is being run from external helm chart
 	if !cicdRequest.CommonWorkflowRequest.IsDryRun {
 		log.Println(util.DEVTRON, " event")

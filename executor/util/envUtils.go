@@ -47,6 +47,7 @@ func GetGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["DOCKER_REGISTRY_URL"] = cicdRequest.CommonWorkflowRequest.DockerRegistryURL
 		envs["TRIGGER_BY_AUTHOR"] = cicdRequest.CommonWorkflowRequest.TriggerByAuthor
 		envs["DOCKER_IMAGE"] = image
+		envs["DOCKER_IMAGE_TAG"] = cicdRequest.CommonWorkflowRequest.DockerImageTag
 
 		if cicdRequest.Type == util.JOBEVENT {
 			envs["JOB_NAME"] = cicdRequest.CommonWorkflowRequest.AppName
@@ -94,6 +95,7 @@ func GetGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["REGISTRY_CREDENTIALS"] = string(RegistryCredentials)
 	} else {
 		envs["DOCKER_IMAGE"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
+		envs["DOCKER_IMAGE_TAG"] = cicdRequest.CommonWorkflowRequest.DockerImageTag
 		envs["DEPLOYMENT_RELEASE_ID"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.DeploymentReleaseCounter)
 		envs["DEPLOYMENT_UNIQUE_ID"] = strconv.Itoa(cicdRequest.CommonWorkflowRequest.WorkflowRunnerId)
 		envs["CD_TRIGGERED_BY"] = cicdRequest.CommonWorkflowRequest.DeploymentTriggeredBy
