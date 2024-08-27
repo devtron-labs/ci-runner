@@ -558,6 +558,7 @@ func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *
 				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
 			}
 			log.Println(fmt.Sprintf("time since extract digest from image process:- %s", time.Since(startTime).String()))
+			log.Println(fmt.Sprintf("image digest:- %s", imgDigest))
 			ciRequest.ExtraEnvironmentVariables["imageDigest"] = imgDigest
 		}
 	}
