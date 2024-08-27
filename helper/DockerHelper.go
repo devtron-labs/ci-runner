@@ -31,6 +31,8 @@ import (
 	"github.com/caarlos0/env"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	"github.com/devtron-labs/ci-runner/util"
+	"github.com/devtron-labs/common-lib/utils/bean"
+	"github.com/devtron-labs/common-lib/utils/dockerOperations"
 	"io"
 	"io/ioutil"
 	"log"
@@ -63,6 +65,7 @@ type DockerHelper interface {
 	CleanBuildxK8sDriver(ciContext cicxt.CiContext, nodes []map[string]string) error
 	GetDestForNatsEvent(commonWorkflowRequest *CommonWorkflowRequest, dest string) (string, error)
 	ExtractDigestUsingPull(dest string) (string, error)
+	ExtractDigestFromImage(image string, useDockerApiToGetDigest bool, dockerAuthConfig *bean.DockerAuthConfig) (string, error)
 }
 
 type DockerHelperImpl struct {
@@ -815,6 +818,25 @@ func (impl *DockerHelperImpl) ExtractDigestForBuildx(dest string) (string, error
 	log.Println("Digest -----> ", digest)
 
 	return digest, err
+}
+
+func (impl *DockerHelperImpl) ExtractDigestFromImage(image string, useDockerApiToGetDigest bool, dockerAuthConfig *bean.DockerAuthConfig) (string, error) {
+	var digest string
+	var err error
+	if useDockerApiToGetDigest {
+		digest, err = dockerOperations.GetImageDigestByImage(context.Background(), image, dockerAuthConfig)
+		if err != nil {
+			fmt.Println(fmt.Sprintf("get digest via docker api error, error in extracting digest from image %s, err:", image), err)
+			return "", err
+		}
+	} else {
+		digest, err = impl.ExtractDigestUsingPull(image)
+		if err != nil {
+			fmt.Println(fmt.Sprintf("docker pull image error, error in extracting digest from image %s, err:", image), err)
+			return "", err
+		}
+	}
+	return digest, nil
 }
 
 func (impl *DockerHelperImpl) ExtractDigestUsingPull(dest string) (string, error) {

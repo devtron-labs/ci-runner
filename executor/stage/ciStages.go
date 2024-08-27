@@ -26,6 +26,7 @@ import (
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
+	"github.com/devtron-labs/common-lib/utils/bean"
 	"io/ioutil"
 	"log"
 	"os"
@@ -280,11 +281,16 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 		dest = scriptEnvs["externalCiArtifact"]
 		digest = scriptEnvs["imageDigest"]
 		if len(digest) == 0 {
+			startTime := time.Now()
 			//user has not provided imageDigest in that case fetch from docker.
-			imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(dest)
+			imgDigest, err := impl.dockerHelper.ExtractDigestFromImage(dest, ciCdRequest.CommonWorkflowRequest.UseDockerApiToGetDigest, &bean.DockerAuthConfig{
+				Username: ciCdRequest.CommonWorkflowRequest.DockerUsername,
+				Password: ciCdRequest.CommonWorkflowRequest.DockerPassword,
+			})
 			if err != nil {
 				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", dest), err)
 			}
+			log.Println(fmt.Sprintf("time since extract digest from image process:- %s", time.Since(startTime).String()))
 			digest = imgDigest
 		}
 		var tempDetails []*helper.CiProjectDetailsMin
@@ -542,11 +548,16 @@ func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *
 		if ciRequest.ShouldPullDigest {
 
 			log.Println("image scanning plugin configured and digest not provided hence pulling image digest")
+			startTime := time.Now()
 			//user has not provided imageDigest in that case fetch from docker.
-			imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(image)
+			imgDigest, err := impl.dockerHelper.ExtractDigestFromImage(image, ciRequest.UseDockerApiToGetDigest, &bean.DockerAuthConfig{
+				Username: ciRequest.DockerUsername,
+				Password: ciRequest.DockerPassword,
+			})
 			if err != nil {
 				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
 			}
+			log.Println(fmt.Sprintf("time since extract digest from image process:- %s", time.Since(startTime).String()))
 			ciRequest.ExtraEnvironmentVariables["imageDigest"] = imgDigest
 		}
 	}
