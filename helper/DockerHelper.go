@@ -753,7 +753,7 @@ func (impl *DockerHelperImpl) setupCacheForBuildx(ciContext cicxt.CiContext, loc
 func (impl *DockerHelperImpl) createBuildxBuilder(ciContext cicxt.CiContext, dockerConnection string) error {
 	buildkitToml := ""
 	if dockerConnection == util.SECUREWITHCERT {
-		buildkitToml = "--config /etc/buildkitd.toml"
+		buildkitToml = fmt.Sprintf("--config %s", BuildkitdConfigPath)
 	}
 	multiPlatformCmd := fmt.Sprintf("docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' %s", buildkitToml)
 
@@ -1002,7 +1002,7 @@ func getBuildxK8sDriverCmd(dockerConnection string, driverOpts map[string]string
 	}
 	buildkitToml := ""
 	if dockerConnection == util.SECUREWITHCERT {
-		buildkitToml = "--config /etc/buildkitd.toml"
+		buildkitToml = fmt.Sprintf("--config %s", BuildkitdConfigPath)
 	}
 	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, buildkitToml)
 	return buildxCreate
