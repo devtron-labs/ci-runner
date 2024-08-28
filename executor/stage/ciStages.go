@@ -26,6 +26,7 @@ import (
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
+	"github.com/devtron-labs/common-lib/utils"
 	"io/ioutil"
 	"log"
 	"os"
@@ -545,12 +546,18 @@ func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *
 		var err error
 		image := ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]
 		if !strings.Contains(image, ":") {
-			ciRequest.DockerImageTag = image
-			image, err = helper.BuildDockerImagePath(ciRequest)
-			if err != nil {
-				log.Println("Error in building docker image", "err", err)
-				return nil, err
+			//check for tag name
+			if utils.IsValidDockerTagName(image) {
+				ciRequest.DockerImageTag = image
+				image, err = helper.BuildDockerImagePath(ciRequest)
+				if err != nil {
+					log.Println("Error in building docker image", "err", err)
+					return nil, err
+				}
+			} else {
+				return nil, errors.New("external-ci-artifact image is neither a url nor a tag name")
 			}
+
 		}
 		if len(ciRequest.ExtraEnvironmentVariables["imageDigest"]) == 0 {
 			//user has not provided imageDigest in that case fetch from docker.
