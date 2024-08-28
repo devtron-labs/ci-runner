@@ -49,7 +49,7 @@ const (
 const (
 	ResultsDirInCIRunnerPath        = "/polling-plugin/results.json"
 	PathInPollingPlugin             = "/tmp/results.json"
-	CopyContainerImagePluginResults = "/pluginArtifacts/images"
+	CopyContainerImagePluginResults = "/copy-container-image/images"
 )
 
 var (
