@@ -35,7 +35,7 @@ type StageExecutorImpl struct {
 }
 
 type StageExecutor interface {
-	RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error)
+	RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (pluginArtifacts map[string][]string, outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error)
 	RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvs map[string]string) error
 }
 
@@ -46,12 +46,13 @@ func NewStageExecutorImpl(cmdExecutor helper.CommandExecutor, scriptExecutor Scr
 	}
 }
 
-func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (map[int]map[string]*helper.VariableObject, *helper.StepObject, error) {
+func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (map[string][]string, map[int]map[string]*helper.VariableObject, *helper.StepObject, error) {
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
 
 	stageVariable := make(map[int]map[string]*helper.VariableObject)
+	pluginArtifactsFromFile := make(map[string][]string)
 	for i, step := range steps {
 
 		stageInfoLoggingRequired := stepType != helper.STEP_TYPE_REF_PLUGIN
@@ -73,14 +74,18 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 			log.Println(util.DEVTRON, "stage logging not required")
 			err = executeStep()
 		}
-
 		// if errored, we can return the failed step and the error
 		if err != nil {
-			return stageVariable, failedStep, err
+			return nil, stageVariable, failedStep, err
 		}
+		pluginArtifacts, err := util2.ExtractPluginArtifacts()
+		if err != nil {
+			log.Println("error in extracting plugin artifacts from file", "err", err)
+		}
+		pluginArtifactsFromFile = util.MergeMaps(pluginArtifactsFromFile, pluginArtifacts)
 	}
 
-	return stageVariable, nil, nil
+	return pluginArtifactsFromFile, stageVariable, nil, nil
 }
 
 func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest helper.CommonWorkflowRequest, index int, step *helper.StepObject,
@@ -245,7 +250,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 				}
 			}
 		}
-		opt, _, err := impl.RunCiCdSteps(helper.STEP_TYPE_REF_PLUGIN, &ciCdRequest, steps, refStageMap, globalEnvironmentVariables, nil)
+		_, opt, _, err := impl.RunCiCdSteps(helper.STEP_TYPE_REF_PLUGIN, &ciCdRequest, steps, refStageMap, globalEnvironmentVariables, nil)
 		if err != nil {
 			fmt.Println(err)
 			return step, err

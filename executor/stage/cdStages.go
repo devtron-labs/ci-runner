@@ -126,6 +126,7 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 
 	scriptEnvs, err := util2.GetGlobalEnvVariables(cicdRequest)
 
+	var allPluginArtifacts map[string][]string
 	if len(cicdRequest.CommonWorkflowRequest.PrePostDeploySteps) > 0 {
 		refStageMap := make(map[int][]*helper.StepObject)
 		for _, ref := range cicdRequest.CommonWorkflowRequest.RefPlugins {
@@ -134,10 +135,14 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		scriptEnvs["DEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
 		scriptEnvs["DIGEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
 		var stage = helper.StepType(cicdRequest.CommonWorkflowRequest.StageType)
-		_, _, err = impl.stageExecutorManager.RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
+		pluginArtifactsFromFile, _, _, err := impl.stageExecutorManager.RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
+		//sent by orchestrator only if copy container image v1 is configured, all images in RegistryDestinationImageMap images are copied by plugin
+		pluginArtifactsFromOrchestrator := cicdRequest.CommonWorkflowRequest.RegistryDestinationImageMap
+		allPluginArtifacts = util.MergeMaps(pluginArtifactsFromFile, pluginArtifactsFromOrchestrator)
+
 	} else {
 
 		// Get devtron-cd yaml
@@ -164,22 +169,10 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 			return err
 		}
 	}
-
-	// for copy container image plugin v1.0.0 plugin artifacts is equal to RegistryDestinationImageMap
-	pluginArtifacts := cicdRequest.CommonWorkflowRequest.RegistryDestinationImageMap
-	if pluginArtifacts == nil {
-		// if nil, check pluginArtifacts v2 may be configured - in that case artifacts are written in file by plugin
-		pluginArtifacts, err = util2.ExtractPluginArtifacts()
-		if err != nil {
-			log.Println("error in extracting plugin artifacts", "err", err)
-			return err
-		}
-	}
-
 	// dry run flag indicates that ci runner image is being run from external helm chart
 	if !cicdRequest.CommonWorkflowRequest.IsDryRun {
 		log.Println(util.DEVTRON, " event")
-		err = helper.SendCDEvent(cicdRequest.CommonWorkflowRequest, pluginArtifacts)
+		err = helper.SendCDEvent(cicdRequest.CommonWorkflowRequest, allPluginArtifacts)
 		if err != nil {
 			log.Println(err)
 			return err

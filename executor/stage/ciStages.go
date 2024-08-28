@@ -329,7 +329,7 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 		util.LogStage("running PRE-CI steps")
 	}
 	// run pre artifact processing
-	preCiStageOutVariable, step, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_PRE, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
+	_, preCiStageOutVariable, step, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_PRE, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
 	preCiDuration := time.Since(start).Seconds()
 	if err != nil {
 		log.Println("error in running pre Ci Steps", "err", err)
@@ -407,21 +407,17 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 	scriptEnvs["DEST"] = dest
 	scriptEnvs["DIGEST"] = digest
 	// run post artifact processing
-	_, step, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PostCiSteps, refStageMap, scriptEnvs, preCiStageOutVariable)
+	pluginArtifactsFromFile, _, step, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PostCiSteps, refStageMap, scriptEnvs, preCiStageOutVariable)
 	if err != nil {
 		log.Println("error in running Post Ci Steps", "err", err)
 		return nil, sendFailureNotification(string(PostCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
 	}
-	// for copy container image plugin v1.0.0 plugin artifacts is equal to RegistryDestinationImageMap
-	pluginArtifacts := ciCdRequest.CommonWorkflowRequest.RegistryDestinationImageMap
-	if pluginArtifacts == nil {
-		// if nil, check pluginArtifacts v2 may be configured - in that case artifacts are written in file by plugin
-		pluginArtifacts, err = util2.ExtractPluginArtifacts()
-		if err != nil {
-			log.Println("error in extracting plugin artifacts", "err", err)
-		}
-	}
-	return pluginArtifacts, nil
+	//sent by orchestrator if copy container image v2 is configured
+	pluginArtifactsFromOrchestrator := ciCdRequest.CommonWorkflowRequest.RegistryDestinationImageMap
+
+	allPluginArtifacts := util.MergeMaps(pluginArtifactsFromFile, pluginArtifactsFromOrchestrator)
+
+	return allPluginArtifacts, nil
 }
 
 func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, artifactUploaded bool) error {
