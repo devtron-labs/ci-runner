@@ -5,9 +5,10 @@ import (
 	"github.com/devtron-labs/ci-runner/util"
 	"io/ioutil"
 	"log"
+	"os"
 )
 
-func ExtractPluginArtifacts() (*PluginArtifacts, error) {
+func ExtractPluginArtifactsAndCleanFile() (*PluginArtifacts, error) {
 	exists, err := util.CheckFileExists(util.PluginArtifactsResults)
 	if err != nil || !exists {
 		log.Println("err", err)
@@ -22,6 +23,11 @@ func ExtractPluginArtifacts() (*PluginArtifacts, error) {
 	err = json.Unmarshal(file, &pluginArtifacts)
 	if err != nil {
 		log.Println("error in unmarshalling imageDetailsFromCr results", "err", err.Error())
+		return nil, err
+	}
+	err = os.Remove(util.PluginArtifactsResults)
+	if err != nil {
+		log.Println("error in removing plugin artifacts file", "err", err)
 		return nil, err
 	}
 	return pluginArtifacts, nil

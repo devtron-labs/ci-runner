@@ -78,7 +78,7 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 		if err != nil {
 			return nil, stageVariable, failedStep, err
 		}
-		pluginArtifacts, err := helper.ExtractPluginArtifacts()
+		pluginArtifacts, err := helper.ExtractPluginArtifactsAndCleanFile()
 		if err != nil {
 			log.Println("error in extracting plugin artifacts from file", "err", err)
 			return nil, nil, nil, err
