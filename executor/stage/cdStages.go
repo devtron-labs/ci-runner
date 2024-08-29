@@ -126,7 +126,7 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 
 	scriptEnvs, err := util2.GetGlobalEnvVariables(cicdRequest)
 
-	var allPluginArtifacts map[string][]string
+	allPluginArtifacts := helper.NewPluginArtifact()
 	if len(cicdRequest.CommonWorkflowRequest.PrePostDeploySteps) > 0 {
 		refStageMap := make(map[int][]*helper.StepObject)
 		for _, ref := range cicdRequest.CommonWorkflowRequest.RefPlugins {
@@ -135,14 +135,11 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		scriptEnvs["DEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
 		scriptEnvs["DIGEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
 		var stage = helper.StepType(cicdRequest.CommonWorkflowRequest.StageType)
-		pluginArtifactsFromFile, _, _, err := impl.stageExecutorManager.RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
+		pluginArtifacts, _, _, err := impl.stageExecutorManager.RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
-		//sent by orchestrator only if copy container image v1 is configured, all images in RegistryDestinationImageMap images are copied by plugin
-		pluginArtifactsFromOrchestrator := cicdRequest.CommonWorkflowRequest.RegistryDestinationImageMap
-		allPluginArtifacts = util.MergeMaps(pluginArtifactsFromFile, pluginArtifactsFromOrchestrator)
-
+		allPluginArtifacts.MergePluginArtifact(pluginArtifacts)
 	} else {
 
 		// Get devtron-cd yaml

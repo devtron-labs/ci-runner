@@ -1,4 +1,4 @@
-package util
+package helper
 
 import (
 	"encoding/json"
@@ -7,18 +7,18 @@ import (
 	"log"
 )
 
-func ExtractPluginArtifacts() (map[string][]string, error) {
-	exists, err := util.CheckFileExists(util.CopyContainerImagePluginResults)
+func ExtractPluginArtifacts() (*PluginArtifacts, error) {
+	exists, err := util.CheckFileExists(util.PluginArtifactsResults)
 	if err != nil || !exists {
 		log.Println("err", err)
 		return nil, err
 	}
-	file, err := ioutil.ReadFile(util.CopyContainerImagePluginResults)
+	file, err := ioutil.ReadFile(util.PluginArtifactsResults)
 	if err != nil {
 		log.Println("error in reading file", "err", err.Error())
 		return nil, err
 	}
-	pluginArtifacts := make(map[string][]string)
+	pluginArtifacts := &PluginArtifacts{}
 	err = json.Unmarshal(file, &pluginArtifacts)
 	if err != nil {
 		log.Println("error in unmarshalling imageDetailsFromCr results", "err", err.Error())

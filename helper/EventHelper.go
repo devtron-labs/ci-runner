@@ -354,6 +354,7 @@ type CiCompleteEvent struct {
 	PluginRegistryArtifactDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
 	PluginArtifactStage           string              `json:"pluginArtifactStage"`
 	IsScanEnabled                 bool                `json:"isScanEnabled"`
+	PluginArtifacts               *PluginArtifacts    `json:"pluginArtifacts"`
 }
 
 type NotifyPipelineType string
@@ -385,6 +386,7 @@ type CdStageCompleteEvent struct {
 	CiArtifactDTO                 CiArtifactDTO       `json:"ciArtifactDTO"`
 	PluginRegistryArtifactDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
 	PluginArtifactStage           string              `json:"pluginArtifactStage"`
+	PluginArtifacts               *PluginArtifacts    `json:"pluginArtifacts"`
 }
 
 type CiProjectDetails struct {
@@ -442,7 +444,7 @@ type CiProjectDetailsMin struct {
 	CommitTime time.Time `json:"commitTime"`
 }
 
-func SendCDEvent(cdRequest *CommonWorkflowRequest, pluginArtifacts map[string][]string) error {
+func SendCDEvent(cdRequest *CommonWorkflowRequest, pluginArtifacts *PluginArtifacts) error {
 
 	event := CdStageCompleteEvent{
 		CiProjectDetails:              cdRequest.CiProjectDetails,
@@ -451,8 +453,9 @@ func SendCDEvent(cdRequest *CommonWorkflowRequest, pluginArtifacts map[string][]
 		WorkflowRunnerId:              cdRequest.WorkflowRunnerId,
 		CiArtifactDTO:                 cdRequest.CiArtifactDTO,
 		TriggeredBy:                   cdRequest.TriggeredBy,
-		PluginRegistryArtifactDetails: pluginArtifacts,
+		PluginRegistryArtifactDetails: cdRequest.RegistryDestinationImageMap,
 		PluginArtifactStage:           cdRequest.PluginArtifactStage,
+		PluginArtifacts:               pluginArtifacts,
 	}
 	err := SendCdCompleteEvent(cdRequest, event)
 	if err != nil {
@@ -462,7 +465,7 @@ func SendCDEvent(cdRequest *CommonWorkflowRequest, pluginArtifacts map[string][]
 	return nil
 }
 
-func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failureReason string, imageDetailsFromCR *ImageDetailsFromCR, pluginArtifacts map[string][]string) error {
+func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failureReason string, imageDetailsFromCR *ImageDetailsFromCR, pluginArtifacts *PluginArtifacts) error {
 	event := CiCompleteEvent{
 		CiProjectDetails:              ciRequest.CiProjectDetails,
 		DockerImage:                   image,
@@ -478,9 +481,10 @@ func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, m
 		IsArtifactUploaded:            artifactUploaded,
 		FailureReason:                 failureReason,
 		ImageDetailsFromCR:            imageDetailsFromCR,
-		PluginRegistryArtifactDetails: pluginArtifacts,
+		PluginRegistryArtifactDetails: ciRequest.RegistryDestinationImageMap,
 		PluginArtifactStage:           ciRequest.PluginArtifactStage,
 		IsScanEnabled:                 ciRequest.ScanEnabled,
+		PluginArtifacts:               pluginArtifacts,
 	}
 
 	err := SendCiCompleteEvent(ciRequest, event)
