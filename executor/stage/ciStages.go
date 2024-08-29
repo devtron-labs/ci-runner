@@ -330,7 +330,7 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 	metrics.PreCiStartTime = start
 	var resultsFromPlugin *helper.ImageDetailsFromCR
 	if !buildSkipEnabled {
-		util.LogStage("running PRE-CI steps")
+		log.Println("running PRE-CI steps")
 	}
 	// run pre artifact processing
 	preCiStageOutVariable, step, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_PRE, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PreCiSteps, refStageMap, scriptEnvs, nil)
@@ -353,7 +353,6 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics,
 	refStageMap map[int][]*helper.StepObject, scriptEnvs map[string]string, artifactUploaded bool,
 	preCiStageOutVariable map[int]map[string]*helper.VariableObject) (string, error) {
-	util.LogStage("Build")
 	// build
 	start := time.Now()
 	metrics.BuildStartTime = start
@@ -364,7 +363,7 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 		// code-block starts : run post-ci which are enabled to run on ci fail
 		postCiStepsToTriggerOnCiFail := getPostCiStepToRunOnCiFail(ciCdRequest.CommonWorkflowRequest.PostCiSteps)
 		if len(postCiStepsToTriggerOnCiFail) > 0 {
-			util.LogStage("Running POST-CI steps which are enabled to RUN even on CI FAIL")
+			log.Println("Running POST-CI steps which are enabled to RUN even on CI FAIL")
 			// build success will always be false
 			scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
 			// run post artifact processing
@@ -388,7 +387,6 @@ func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest st
 		if isBuildX {
 			digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
 		} else {
-			util.LogStage("docker push")
 			// push to dest
 			log.Println(util.DEVTRON, "Docker push Artifact", "dest", dest)
 			err = impl.pushArtifact(ciCdRequest, dest, digest, metrics, artifactUploaded)
@@ -405,7 +403,7 @@ func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest st
 }
 
 func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, metrics *helper.CIMetrics, artifactUploaded bool, dest string, digest string) error {
-	util.LogStage("running POST-CI steps")
+	log.Println("running POST-CI steps")
 	// sending build success as true always as post-ci triggers only if ci gets success
 	scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "true"
 	scriptEnvs["DEST"] = dest
@@ -421,7 +419,6 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 
 func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, artifactUploaded bool) error {
 	imageScanningStage := func() error {
-		util.LogStage("IMAGE SCAN")
 		log.Println("Image Scanning Started for digest", digest)
 		scanEvent := &helper.ScanEvent{
 			Image:               dest,
@@ -560,13 +557,17 @@ func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *
 
 		}
 		if len(ciRequest.ExtraEnvironmentVariables["imageDigest"]) == 0 {
-			//user has not provided imageDigest in that case fetch from docker.
-			imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(image)
-			if err != nil {
-				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
-				return nil, err
+			if ciRequest.ShouldPullDigest {
+
+				log.Println("image scanning plugin configured and digest not provided hence pulling image digest")
+				//user has not provided imageDigest in that case fetch from docker.
+				imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(image)
+				if err != nil {
+					fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
+					return nil, err
+				}
+				ciRequest.ExtraEnvironmentVariables["imageDigest"] = imgDigest
 			}
-			ciRequest.ExtraEnvironmentVariables["imageDigest"] = imgDigest
 		}
 	}
 	return ciRequest.ExtraEnvironmentVariables, nil
