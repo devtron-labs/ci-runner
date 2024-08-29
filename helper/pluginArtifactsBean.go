@@ -25,6 +25,9 @@ func NewPluginArtifact() *PluginArtifacts {
 }
 
 func (p *PluginArtifacts) MergePluginArtifact(pluginArtifact *PluginArtifacts) {
+	if pluginArtifact == nil {
+		return
+	}
 	p.Artifacts = append(p.Artifacts, pluginArtifact.Artifacts...)
 }
 
