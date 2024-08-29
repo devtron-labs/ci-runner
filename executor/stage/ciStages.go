@@ -541,6 +541,10 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 }
 
 func getDockerAuthConfigForPrivateRegistries(ciRequest *helper.CommonWorkflowRequest) *bean.DockerAuthConfig {
+	if ciRequest.CiPipelineType == helper.CI_JOB {
+		// we don't support private images in runtime params as of now
+		return nil
+	}
 	var dockerAuthConfig *bean.DockerAuthConfig
 	switch ciRequest.DockerRegistryType {
 	case helper.REGISTRY_TYPE_GCR:
