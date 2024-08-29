@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func ExtractPluginArtifactsAndCleanFile() (*PluginArtifacts, error) {
+func ExtractPluginArtifactsAndRemoveFile() (*PluginArtifacts, error) {
 	exists, err := util.CheckFileExists(util.PluginArtifactsResults)
 	if err != nil || !exists {
 		log.Println("err", err)
