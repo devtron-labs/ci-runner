@@ -824,12 +824,14 @@ func (impl *DockerHelperImpl) ExtractDigestFromImage(image string, useDockerApiT
 	var digest string
 	var err error
 	if useDockerApiToGetDigest {
+		log.Println("fetching digest from docker api")
 		digest, err = dockerOperations.GetImageDigestByImage(context.Background(), image, dockerAuthConfig)
 		if err != nil {
 			fmt.Println(fmt.Sprintf("get digest via docker api error, error in extracting digest from image %s, err:", image), err)
 			return "", err
 		}
 	} else {
+		log.Println("fetching digest using docker pull command")
 		digest, err = impl.ExtractDigestUsingPull(image)
 		if err != nil {
 			fmt.Println(fmt.Sprintf("docker pull image error, error in extracting digest from image %s, err:", image), err)

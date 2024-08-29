@@ -281,12 +281,10 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 		dest = scriptEnvs["externalCiArtifact"]
 		digest = scriptEnvs["imageDigest"]
 		if len(digest) == 0 {
+			dockerAuthConfig := getDockerAuthConfigForPrivateRegistries(ciCdRequest.CommonWorkflowRequest)
 			startTime := time.Now()
 			//user has not provided imageDigest in that case fetch from docker.
-			imgDigest, err := impl.dockerHelper.ExtractDigestFromImage(dest, ciCdRequest.CommonWorkflowRequest.UseDockerApiToGetDigest, &bean.DockerAuthConfig{
-				Username: ciCdRequest.CommonWorkflowRequest.DockerUsername,
-				Password: ciCdRequest.CommonWorkflowRequest.DockerPassword,
-			})
+			imgDigest, err := impl.dockerHelper.ExtractDigestFromImage(dest, ciCdRequest.CommonWorkflowRequest.UseDockerApiToGetDigest, dockerAuthConfig)
 			if err != nil {
 				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", dest), err)
 			}
@@ -542,18 +540,45 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 	return err
 }
 
+func getDockerAuthConfigForPrivateRegistries(ciRequest *helper.CommonWorkflowRequest) *bean.DockerAuthConfig {
+	var dockerAuthConfig *bean.DockerAuthConfig
+	switch ciRequest.DockerRegistryType {
+	case helper.REGISTRY_TYPE_GCR:
+
+		dockerAuthConfig = &bean.DockerAuthConfig{
+			RegistryType:          bean.RegistryTypeGcr,
+			CredentialFileJsonGcr: ciRequest.DockerPassword,
+			IsRegistryPrivate:     true,
+		}
+	case helper.DOCKER_REGISTRY_TYPE_ECR:
+		dockerAuthConfig = &bean.DockerAuthConfig{
+			RegistryType:       bean.RegistryTypeEcr,
+			AccessKeyEcr:       ciRequest.AccessKey,
+			SecretAccessKeyEcr: ciRequest.SecretKey,
+			EcrRegion:          ciRequest.AwsRegion,
+			IsRegistryPrivate:  true,
+		}
+	default:
+		if len(ciRequest.DockerUsername) > 0 && len(ciRequest.DockerPassword) > 0 {
+			dockerAuthConfig = &bean.DockerAuthConfig{
+				Username:          ciRequest.DockerUsername,
+				Password:          ciRequest.DockerPassword,
+				IsRegistryPrivate: true,
+			}
+		}
+	}
+	return dockerAuthConfig
+}
+
 func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *helper.CommonWorkflowRequest) map[string]string {
 	if len(ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]) > 0 {
 		image := ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]
 		if ciRequest.ShouldPullDigest {
-
+			dockerAuthConfig := getDockerAuthConfigForPrivateRegistries(ciRequest)
 			log.Println("image scanning plugin configured and digest not provided hence pulling image digest")
 			startTime := time.Now()
 			//user has not provided imageDigest in that case fetch from docker.
-			imgDigest, err := impl.dockerHelper.ExtractDigestFromImage(image, ciRequest.UseDockerApiToGetDigest, &bean.DockerAuthConfig{
-				Username: ciRequest.DockerUsername,
-				Password: ciRequest.DockerPassword,
-			})
+			imgDigest, err := impl.dockerHelper.ExtractDigestFromImage(image, ciRequest.UseDockerApiToGetDigest, dockerAuthConfig)
 			if err != nil {
 				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
 			}
