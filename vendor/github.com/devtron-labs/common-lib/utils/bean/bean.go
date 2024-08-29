@@ -23,12 +23,22 @@ import (
 )
 
 const (
-	YamlSeparator string = "---\n"
+	YamlSeparator       string = "---\n"
+	RegistryTypeGcr            = "gcr"
+	RegistryTypeEcr            = "ecr"
+	GcrRegistryUsername        = "oauth2accesstoken"
+	GcrRegistryScope           = "https://www.googleapis.com/auth/cloud-platform"
 )
 
 type DockerAuthConfig struct {
-	Username string
-	Password string
+	RegistryType          string // can be ecr, gcr, docker-hub, harbor etc.
+	Username              string
+	Password              string
+	AccessKeyEcr          string // used for pulling from private ecr registry
+	SecretAccessKeyEcr    string // used for pulling from private ecr registry
+	EcrRegion             string // used for pulling from private ecr registry
+	CredentialFileJsonGcr string // used for pulling from private gcr registry
+	IsRegistryPrivate     bool
 }
 
 func (r *DockerAuthConfig) GetEncodedRegistryAuth() (string, error) {
