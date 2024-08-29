@@ -536,7 +536,9 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *helper.CommonWorkflowRequest) map[string]string {
 	if len(ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]) > 0 {
 		image := ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]
-		if len(ciRequest.ExtraEnvironmentVariables["imageDigest"]) == 0 {
+		if ciRequest.ShouldPullDigest {
+
+			log.Println("image scanning plugin configured and digest not provided hence pulling image digest")
 			//user has not provided imageDigest in that case fetch from docker.
 			imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(image)
 			if err != nil {
