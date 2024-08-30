@@ -193,7 +193,11 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	// Start docker daemon TODO
 	log.Println(util.DEVTRON, " docker-build")
 	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest)
-	ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables = impl.AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciCdRequest.CommonWorkflowRequest)
+	extraEnvVars, err := impl.AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciCdRequest.CommonWorkflowRequest)
+	if err != nil {
+		return artifactUploaded, err
+	}
+	ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables = extraEnvVars
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {
 		return artifactUploaded, err
@@ -300,6 +304,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 			imgDigest, err := impl.dockerHelper.ExtractDigestFromImage(dest, ciCdRequest.CommonWorkflowRequest.UseDockerApiToGetDigest, dockerAuthConfig)
 			if err != nil {
 				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", dest), err)
+				return artifactUploaded, err
 			}
 			log.Println(fmt.Sprintf("time since extract digest from image process:- %s", time.Since(startTime).String()))
 			digest = imgDigest
@@ -553,7 +558,7 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 	return err
 }
 
-func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *helper.CommonWorkflowRequest) map[string]string {
+func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *helper.CommonWorkflowRequest) (map[string]string, error) {
 	if len(ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]) > 0 {
 		image := ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]
 		if ciRequest.ShouldPullDigest {
@@ -564,6 +569,7 @@ func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *
 				useAppDockerConfigForPrivateRegistries, err = strconv.ParseBool(useAppDockerConfig)
 				if err != nil {
 					fmt.Println(fmt.Sprintf("Error in parsing useAppDockerConfig runtime param to bool from string useAppDockerConfigForPrivateRegistries:- %s, err:", useAppDockerConfig), err)
+					return ciRequest.ExtraEnvironmentVariables, err
 				}
 			}
 			var dockerAuthConfig *bean.DockerAuthConfig
@@ -576,11 +582,12 @@ func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *
 			imgDigest, err := impl.dockerHelper.ExtractDigestFromImage(image, ciRequest.UseDockerApiToGetDigest, dockerAuthConfig)
 			if err != nil {
 				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
+				return ciRequest.ExtraEnvironmentVariables, err
 			}
 			log.Println(fmt.Sprintf("time since extract digest from image process:- %s", time.Since(startTime).String()))
 			log.Println(fmt.Sprintf("image:- %s , image digest:- %s", image, imgDigest))
 			ciRequest.ExtraEnvironmentVariables["imageDigest"] = imgDigest
 		}
 	}
-	return ciRequest.ExtraEnvironmentVariables
+	return ciRequest.ExtraEnvironmentVariables, nil
 }
