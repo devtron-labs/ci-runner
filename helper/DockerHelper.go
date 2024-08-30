@@ -61,11 +61,12 @@ type DockerHelper interface {
 	BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error)
 	StopDocker(ciContext cicxt.CiContext) error
 	PushArtifact(ciContext cicxt.CiContext, dest string) error
-	ExtractDigestForBuildx(dest string) (string, error)
+	ExtractDigestForBuildx(dest string, ciRequest *CommonWorkflowRequest) (string, error)
 	CleanBuildxK8sDriver(ciContext cicxt.CiContext, nodes []map[string]string) error
 	GetDestForNatsEvent(commonWorkflowRequest *CommonWorkflowRequest, dest string) (string, error)
 	ExtractDigestUsingPull(dest string) (string, error)
 	ExtractDigestFromImage(image string, useDockerApiToGetDigest bool, dockerAuthConfig *bean.DockerAuthConfig) (string, error)
+	GetDockerAuthConfigForPrivateRegistries(workflowRequest *CommonWorkflowRequest) *bean.DockerAuthConfig
 }
 
 type DockerHelperImpl struct {
@@ -802,7 +803,7 @@ func (impl *DockerHelperImpl) PushArtifact(ciContext cicxt.CiContext, dest strin
 	return nil
 }
 
-func (impl *DockerHelperImpl) ExtractDigestForBuildx(dest string) (string, error) {
+func (impl *DockerHelperImpl) ExtractDigestForBuildx(dest string, ciRequest *CommonWorkflowRequest) (string, error) {
 
 	var digest string
 	var err error
@@ -813,7 +814,12 @@ func (impl *DockerHelperImpl) ExtractDigestForBuildx(dest string) (string, error
 		err = nil // would extract digest using docker pull cmd
 	}
 	if digest == "" {
-		digest, err = impl.ExtractDigestUsingPull(dest)
+		dockerAuthConfig := impl.GetDockerAuthConfigForPrivateRegistries(ciRequest)
+		// if UseDockerApiToGetDigest is true then fetches digest from docker api else uses docker pull command and then parse the result
+		digest, err = impl.ExtractDigestFromImage(dest, ciRequest.UseDockerApiToGetDigest, dockerAuthConfig)
+		if err != nil {
+			fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", dest), err)
+		}
 	}
 	log.Println("Digest -----> ", digest)
 
@@ -1101,4 +1107,38 @@ func ValidBuildxK8sDriverOptions(ciRequest *CommonWorkflowRequest) (bool, []map[
 
 func GetSelfManagedDockerfilePath(checkoutPath string) string {
 	return filepath.Join(util.WORKINGDIR, checkoutPath, "./Dockerfile")
+}
+
+func (impl *DockerHelperImpl) GetDockerAuthConfigForPrivateRegistries(workflowRequest *CommonWorkflowRequest) *bean.DockerAuthConfig {
+	if workflowRequest.CiPipelineType == CI_JOB {
+		// we don't support private images in runtime params as of now
+		return nil
+	}
+	var dockerAuthConfig *bean.DockerAuthConfig
+	switch workflowRequest.DockerRegistryType {
+	case REGISTRY_TYPE_GCR:
+
+		dockerAuthConfig = &bean.DockerAuthConfig{
+			RegistryType:          bean.RegistryTypeGcr,
+			CredentialFileJsonGcr: workflowRequest.DockerPassword,
+			IsRegistryPrivate:     true,
+		}
+	case DOCKER_REGISTRY_TYPE_ECR:
+		dockerAuthConfig = &bean.DockerAuthConfig{
+			RegistryType:       bean.RegistryTypeEcr,
+			AccessKeyEcr:       workflowRequest.AccessKey,
+			SecretAccessKeyEcr: workflowRequest.SecretKey,
+			EcrRegion:          workflowRequest.AwsRegion,
+			IsRegistryPrivate:  true,
+		}
+	default:
+		if len(workflowRequest.DockerUsername) > 0 && len(workflowRequest.DockerPassword) > 0 {
+			dockerAuthConfig = &bean.DockerAuthConfig{
+				Username:          workflowRequest.DockerUsername,
+				Password:          workflowRequest.DockerPassword,
+				IsRegistryPrivate: true,
+			}
+		}
+	}
+	return dockerAuthConfig
 }

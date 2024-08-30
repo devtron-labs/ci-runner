@@ -26,7 +26,6 @@ import (
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
-	"github.com/devtron-labs/common-lib/utils/bean"
 	"io/ioutil"
 	"log"
 	"os"
@@ -281,7 +280,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 		dest = scriptEnvs["externalCiArtifact"]
 		digest = scriptEnvs["imageDigest"]
 		if len(digest) == 0 {
-			dockerAuthConfig := getDockerAuthConfigForPrivateRegistries(ciCdRequest.CommonWorkflowRequest)
+			dockerAuthConfig := impl.dockerHelper.GetDockerAuthConfigForPrivateRegistries(ciCdRequest.CommonWorkflowRequest)
 			startTime := time.Now()
 			//user has not provided imageDigest in that case fetch from docker.
 			imgDigest, err := impl.dockerHelper.ExtractDigestFromImage(dest, ciCdRequest.CommonWorkflowRequest.UseDockerApiToGetDigest, dockerAuthConfig)
@@ -385,7 +384,7 @@ func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest st
 		ciBuildConfi := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
 		isBuildX := ciBuildConfi != nil && ciBuildConfi.DockerBuildConfig != nil && ciBuildConfi.DockerBuildConfig.CheckForBuildX()
 		if isBuildX {
-			digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
+			digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest, ciCdRequest.CommonWorkflowRequest)
 		} else {
 			util.LogStage("docker push")
 			// push to dest
@@ -394,7 +393,7 @@ func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest st
 			if err != nil {
 				return err
 			}
-			digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest)
+			digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest, ciCdRequest.CommonWorkflowRequest)
 		}
 		return err
 	}
@@ -540,45 +539,11 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 	return err
 }
 
-func getDockerAuthConfigForPrivateRegistries(ciRequest *helper.CommonWorkflowRequest) *bean.DockerAuthConfig {
-	if ciRequest.CiPipelineType == helper.CI_JOB {
-		// we don't support private images in runtime params as of now
-		return nil
-	}
-	var dockerAuthConfig *bean.DockerAuthConfig
-	switch ciRequest.DockerRegistryType {
-	case helper.REGISTRY_TYPE_GCR:
-
-		dockerAuthConfig = &bean.DockerAuthConfig{
-			RegistryType:          bean.RegistryTypeGcr,
-			CredentialFileJsonGcr: ciRequest.DockerPassword,
-			IsRegistryPrivate:     true,
-		}
-	case helper.DOCKER_REGISTRY_TYPE_ECR:
-		dockerAuthConfig = &bean.DockerAuthConfig{
-			RegistryType:       bean.RegistryTypeEcr,
-			AccessKeyEcr:       ciRequest.AccessKey,
-			SecretAccessKeyEcr: ciRequest.SecretKey,
-			EcrRegion:          ciRequest.AwsRegion,
-			IsRegistryPrivate:  true,
-		}
-	default:
-		if len(ciRequest.DockerUsername) > 0 && len(ciRequest.DockerPassword) > 0 {
-			dockerAuthConfig = &bean.DockerAuthConfig{
-				Username:          ciRequest.DockerUsername,
-				Password:          ciRequest.DockerPassword,
-				IsRegistryPrivate: true,
-			}
-		}
-	}
-	return dockerAuthConfig
-}
-
 func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *helper.CommonWorkflowRequest) map[string]string {
 	if len(ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]) > 0 {
 		image := ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]
 		if ciRequest.ShouldPullDigest {
-			dockerAuthConfig := getDockerAuthConfigForPrivateRegistries(ciRequest)
+			dockerAuthConfig := impl.dockerHelper.GetDockerAuthConfigForPrivateRegistries(ciRequest)
 			log.Println("image scanning plugin configured and digest not provided hence pulling image digest")
 			startTime := time.Now()
 			//user has not provided imageDigest in that case fetch from docker.
