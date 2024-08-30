@@ -26,9 +26,11 @@ import (
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
+	"github.com/devtron-labs/common-lib/utils/bean"
 	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -280,7 +282,19 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 		dest = scriptEnvs["externalCiArtifact"]
 		digest = scriptEnvs["imageDigest"]
 		if len(digest) == 0 {
-			dockerAuthConfig := impl.dockerHelper.GetDockerAuthConfigForPrivateRegistries(ciCdRequest.CommonWorkflowRequest)
+			var useAppDockerConfigForPrivateRegistries bool
+			var err error
+			useAppDockerConfig, ok := ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables["useAppDockerConfig"]
+			if ok && len(useAppDockerConfig) > 0 {
+				useAppDockerConfigForPrivateRegistries, err = strconv.ParseBool(useAppDockerConfig)
+				if err != nil {
+					fmt.Println(fmt.Sprintf("Error in parsing useAppDockerConfig runtime param to bool from string useAppDockerConfigForPrivateRegistries:- %s, err:", useAppDockerConfig), err)
+				}
+			}
+			var dockerAuthConfig *bean.DockerAuthConfig
+			if useAppDockerConfigForPrivateRegistries {
+				dockerAuthConfig = impl.dockerHelper.GetDockerAuthConfigForPrivateRegistries(ciCdRequest.CommonWorkflowRequest)
+			}
 			startTime := time.Now()
 			//user has not provided imageDigest in that case fetch from docker.
 			imgDigest, err := impl.dockerHelper.ExtractDigestFromImage(dest, ciCdRequest.CommonWorkflowRequest.UseDockerApiToGetDigest, dockerAuthConfig)
@@ -543,7 +557,19 @@ func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *
 	if len(ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]) > 0 {
 		image := ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]
 		if ciRequest.ShouldPullDigest {
-			dockerAuthConfig := impl.dockerHelper.GetDockerAuthConfigForPrivateRegistries(ciRequest)
+			var useAppDockerConfigForPrivateRegistries bool
+			var err error
+			useAppDockerConfig, ok := ciRequest.ExtraEnvironmentVariables["useAppDockerConfig"]
+			if ok && len(useAppDockerConfig) > 0 {
+				useAppDockerConfigForPrivateRegistries, err = strconv.ParseBool(useAppDockerConfig)
+				if err != nil {
+					fmt.Println(fmt.Sprintf("Error in parsing useAppDockerConfig runtime param to bool from string useAppDockerConfigForPrivateRegistries:- %s, err:", useAppDockerConfig), err)
+				}
+			}
+			var dockerAuthConfig *bean.DockerAuthConfig
+			if useAppDockerConfigForPrivateRegistries {
+				dockerAuthConfig = impl.dockerHelper.GetDockerAuthConfigForPrivateRegistries(ciRequest)
+			}
 			log.Println("image scanning plugin configured and digest not provided hence pulling image digest")
 			startTime := time.Now()
 			//user has not provided imageDigest in that case fetch from docker.
@@ -552,7 +578,7 @@ func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *
 				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
 			}
 			log.Println(fmt.Sprintf("time since extract digest from image process:- %s", time.Since(startTime).String()))
-			log.Println(fmt.Sprintf("image digest:- %s", imgDigest))
+			log.Println(fmt.Sprintf("image:- %s , image digest:- %s", image, imgDigest))
 			ciRequest.ExtraEnvironmentVariables["imageDigest"] = imgDigest
 		}
 	}
