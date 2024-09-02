@@ -31,6 +31,8 @@ import (
 	"github.com/caarlos0/env"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	"github.com/devtron-labs/ci-runner/util"
+	"github.com/devtron-labs/common-lib/utils"
+	"github.com/devtron-labs/common-lib/utils/bean"
 	"io"
 	"io/ioutil"
 	"log"
@@ -791,21 +793,14 @@ func (impl *DockerHelperImpl) checkAndCreateDirectory(ciContext cicxt.CiContext,
 }
 
 func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
-	dest := ""
-	if DOCKER_REGISTRY_TYPE_DOCKERHUB == ciRequest.DockerRegistryType {
-		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
-	} else {
-		registryUrl := ciRequest.IntermediateDockerRegistryUrl
-		u, err := util.ParseUrl(registryUrl)
-		if err != nil {
-			log.Println("not a valid docker repository url")
-			return "", err
-		}
-		u.Path = path.Join(u.Path, "/", ciRequest.DockerRepository)
-		dockerRegistryURL := u.Host + u.Path
-		dest = dockerRegistryURL + ":" + ciRequest.DockerImageTag
-	}
-	return dest, nil
+	return utils.BuildDockerImagePath(bean.DockerRegistryInfo{
+		DockerImageTag:     ciRequest.DockerImageTag,
+		DockerRegistryId:   ciRequest.DockerRegistryId,
+		DockerRegistryType: ciRequest.DockerRegistryType,
+		DockerRegistryURL:  ciRequest.IntermediateDockerRegistryUrl,
+		DockerRepository:   ciRequest.DockerRepository,
+	})
+
 }
 
 func (impl *DockerHelperImpl) PushArtifact(ciContext cicxt.CiContext, dest string) error {
