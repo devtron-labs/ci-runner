@@ -26,9 +26,11 @@ import (
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
+	"github.com/devtron-labs/common-lib/utils"
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -191,7 +193,10 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	// Start docker daemon TODO
 	log.Println(util.DEVTRON, " docker-build")
 	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest)
-	ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables = impl.AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciCdRequest.CommonWorkflowRequest)
+	ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables, err = impl.AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciCdRequest.CommonWorkflowRequest)
+	if err != nil {
+		return artifactUploaded, err
+	}
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {
 		return artifactUploaded, err
@@ -533,19 +538,38 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 	return err
 }
 
-func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *helper.CommonWorkflowRequest) map[string]string {
+func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *helper.CommonWorkflowRequest) (map[string]string, error) {
 	if len(ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]) > 0 {
+		var err error
 		image := ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]
-		if ciRequest.ShouldPullDigest {
-
-			log.Println("image scanning plugin configured and digest not provided hence pulling image digest")
-			//user has not provided imageDigest in that case fetch from docker.
-			imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(image)
-			if err != nil {
-				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
+		if !strings.Contains(image, ":") {
+			//check for tag name
+			if utils.IsValidDockerTagName(image) {
+				ciRequest.DockerImageTag = image
+				image, err = helper.BuildDockerImagePath(ciRequest)
+				if err != nil {
+					log.Println("Error in building docker image", "err", err)
+					return nil, err
+				}
+				ciRequest.ExtraEnvironmentVariables["externalCiArtifact"] = image
+			} else {
+				return nil, errors.New("external-ci-artifact image is neither a url nor a tag name")
 			}
-			ciRequest.ExtraEnvironmentVariables["imageDigest"] = imgDigest
+
+		}
+		if len(ciRequest.ExtraEnvironmentVariables["imageDigest"]) == 0 {
+			if ciRequest.ShouldPullDigest {
+
+				log.Println("image scanning plugin configured and digest not provided hence pulling image digest")
+				//user has not provided imageDigest in that case fetch from docker.
+				imgDigest, err := impl.dockerHelper.ExtractDigestUsingPull(image)
+				if err != nil {
+					fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
+					return nil, err
+				}
+				ciRequest.ExtraEnvironmentVariables["imageDigest"] = imgDigest
+			}
 		}
 	}
-	return ciRequest.ExtraEnvironmentVariables
+	return ciRequest.ExtraEnvironmentVariables, nil
 }
