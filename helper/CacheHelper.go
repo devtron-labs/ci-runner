@@ -32,7 +32,9 @@ func GetCache(ciRequest *CommonWorkflowRequest) error {
 	if ciRequest.IgnoreDockerCachePull || ciRequest.CacheInvalidate {
 		if !ciRequest.IsPvcMounted {
 			log.Println("ignoring cache ... ")
+			return nil
 		}
+		log.Println("ignoring cache as cache pull is disabled...")
 		return nil
 	}
 	log.Println("setting build cache ...............")

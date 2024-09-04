@@ -406,7 +406,6 @@ func (impl *StageExecutorImpl) RunCdStageTasks(ciContext cictx.CiContext, tasks 
 		task.RunStatus = true
 		taskMap[task.Name] = task
 		log.Println(util.DEVTRON, "stage", task)
-		util.LogStage(task.Name)
 		err := impl.scriptExecutor.RunScriptsV1(ciContext, util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return err
