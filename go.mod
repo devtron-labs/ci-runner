@@ -8,7 +8,7 @@ require (
 	github.com/Knetic/govaluate v3.0.0+incompatible
 	github.com/aws/aws-sdk-go v1.44.116
 	github.com/caarlos0/env v3.5.0+incompatible
-	github.com/devtron-labs/common-lib v0.16.1-0.20240823093253-28bcf3a4b2d7
+	github.com/devtron-labs/common-lib v0.16.1-0.20240904063411-de9a254aa77a
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/joho/godotenv v1.4.0
 	github.com/otiai10/copy v1.7.0
