@@ -224,7 +224,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	var preCiStageOutVariable map[int]map[string]*helper.VariableObject
 	start = time.Now()
 	metrics.PreCiStartTime = start
-	var resultsFromPlugin *helper.ImageDetailsFromCR
+	var resultsFromPlugin json.RawMessage
 	if len(ciCdRequest.CommonWorkflowRequest.PreCiSteps) > 0 {
 		resultsFromPlugin, preCiStageOutVariable, err = impl.runPreCiSteps(ciCdRequest, metrics, buildSkipEnabled, refStageMap, scriptEnvs, artifactUploaded)
 		if err != nil {
@@ -325,10 +325,9 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 
 func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics,
 	buildSkipEnabled bool, refStageMap map[int][]*helper.StepObject,
-	scriptEnvs map[string]string, artifactUploaded bool) (*helper.ImageDetailsFromCR, map[int]map[string]*helper.VariableObject, error) {
+	scriptEnvs map[string]string, artifactUploaded bool) (json.RawMessage, map[int]map[string]*helper.VariableObject, error) {
 	start := time.Now()
 	metrics.PreCiStartTime = start
-	var resultsFromPlugin *helper.ImageDetailsFromCR
 	if !buildSkipEnabled {
 		log.Println("running PRE-CI steps")
 	}
@@ -342,9 +341,9 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 	}
 	// considering pull images from Container repo Plugin in Pre ci steps only.
 	// making it non-blocking if results are not available (in case of err)
-	resultsFromPlugin, err = extractOutResultsIfExists()
-	if err != nil {
-		log.Println("error in getting results", "err", err.Error())
+	resultsFromPlugin, fileErr := extractOutResultsIfExists()
+	if fileErr != nil {
+		log.Println("error in getting results", "err", fileErr.Error())
 	}
 	metrics.PreCiDuration = preCiDuration
 	return resultsFromPlugin, preCiStageOutVariable, nil
@@ -469,8 +468,9 @@ func getPostCiStepToRunOnCiFail(postCiSteps []*helper.StepObject) []*helper.Step
 	return postCiStepsToTriggerOnCiFail
 }
 
-// extractOutResultsIfExists will unmarshall the results from file(json) (if file exist) into.ImageDetailsFromCR
-func extractOutResultsIfExists() (*helper.ImageDetailsFromCR, error) {
+// extractOutResultsIfExists will return the json.RawMessage results from file
+// if file doesn't exist, returns nil
+func extractOutResultsIfExists() (json.RawMessage, error) {
 	exists, err := util.CheckFileExists(util.ResultsDirInCIRunnerPath)
 	if err != nil || !exists {
 		log.Println("err", err)
@@ -481,14 +481,7 @@ func extractOutResultsIfExists() (*helper.ImageDetailsFromCR, error) {
 		log.Println("error in reading file", "err", err.Error())
 		return nil, err
 	}
-	imageDetailsFromCr := helper.ImageDetailsFromCR{}
-	err = json.Unmarshal(file, &imageDetailsFromCr)
-	if err != nil {
-		log.Println("error in unmarshalling imageDetailsFromCr results", "err", err.Error())
-		return nil, err
-	}
-	return &imageDetailsFromCr, nil
-
+	return file, nil
 }
 
 func makeDockerfile(config *helper.DockerBuildConfig, checkoutPath string) error {
