@@ -122,7 +122,7 @@ github.com/caarlos0/env
 # github.com/cespare/xxhash/v2 v2.3.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/devtron-labs/common-lib v0.16.1-0.20240904133334-7918e7c25b63
+# github.com/devtron-labs/common-lib v0.16.1-0.20240909125937-8f88a0b86754
 ## explicit; go 1.21
 github.com/devtron-labs/common-lib/blob-storage
 github.com/devtron-labs/common-lib/constants
