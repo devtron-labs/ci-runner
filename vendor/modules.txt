@@ -108,7 +108,7 @@ github.com/caarlos0/env
 # github.com/cespare/xxhash/v2 v2.2.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/devtron-labs/common-lib v0.16.1-0.20240904131140-b4128b676f6c
+# github.com/devtron-labs/common-lib v0.16.1-0.20240909135009-9ab705e1a141
 ## explicit; go 1.21
 github.com/devtron-labs/common-lib/blob-storage
 github.com/devtron-labs/common-lib/constants
@@ -120,6 +120,9 @@ github.com/devtron-labs/common-lib/pubsub-lib/model
 github.com/devtron-labs/common-lib/utils
 github.com/devtron-labs/common-lib/utils/bean
 github.com/devtron-labs/common-lib/utils/remoteConnection/bean
+# github.com/docker/cli v24.0.6+incompatible
+## explicit
+github.com/docker/cli/cli/config/types
 # github.com/go-resty/resty/v2 v2.7.0
 ## explicit; go 1.11
 github.com/go-resty/resty/v2
@@ -234,6 +237,9 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
+# github.com/sirupsen/logrus v1.9.3
+## explicit; go 1.13
+github.com/sirupsen/logrus
 # go.opencensus.io v0.24.0
 ## explicit; go 1.13
 go.opencensus.io
