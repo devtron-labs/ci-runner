@@ -31,6 +31,7 @@ import (
 	"github.com/caarlos0/env"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	"github.com/devtron-labs/ci-runner/util"
+	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/common-lib/utils/bean"
 	"github.com/devtron-labs/common-lib/utils/dockerOperations"
 	"io"
@@ -108,24 +109,41 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 		}
 		if connection == util.INSECURE {
 			dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, host, dockerMtuValueFlag)
-			util.LogStage("Insecure Registry")
+			log.Println("Insecure Registry")
 		} else {
 			if connection == util.SECUREWITHCERT {
-				os.MkdirAll(fmt.Sprintf("/etc/docker/certs.d/%s", host), os.ModePerm)
-				f, err := os.Create(fmt.Sprintf("/etc/docker/certs.d/%s/ca.crt", host))
+				log.Println("Secure with Cert")
 
-				if err != nil {
+				// Create /etc/docker/certs.d/<host>/ca.crt with specified content
+				certDir := fmt.Sprintf("%s/%s", CertDir, host)
+				os.MkdirAll(certDir, os.ModePerm)
+				certFilePath := fmt.Sprintf("%s/ca.crt", certDir)
+
+				log.Printf("creating %s", certFilePath)
+
+				if err := util.CreateAndWriteFile(certFilePath, commonWorkflowRequest.DockerCert); err != nil {
 					return err
 				}
 
-				defer f.Close()
-
-				_, err2 := f.WriteString(commonWorkflowRequest.DockerCert)
-
-				if err2 != nil {
+				// Run "update-ca-certificates" to update the system certificates
+				log.Println(UpdateCaCertCommand)
+				cpCmd := exec.Command("cp", certFilePath, CaCertPath)
+				if err := cpCmd.Run(); err != nil {
 					return err
 				}
-				util.LogStage("Secure with Cert")
+
+				updateCmd := exec.Command(UpdateCaCertCommand)
+				if err := updateCmd.Run(); err != nil {
+					return err
+				}
+
+				// Create /etc/buildkitd.toml with specified content
+				log.Printf("creating %s", BuildkitdConfigPath)
+				buildkitdContent := util.GenerateBuildkitdContent(host)
+
+				if err := util.CreateAndWriteFile(BuildkitdConfigPath, buildkitdContent); err != nil {
+					return err
+				}
 			}
 			dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 		}
@@ -149,6 +167,10 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 	return
 }
 
+const CertDir = "/etc/docker/certs.d"
+const UpdateCaCertCommand = "update-ca-certificates"
+const CaCertPath = "/usr/local/share/ca-certificates/"
+const BuildkitdConfigPath = "/etc/buildkitd.toml"
 const DOCKER_REGISTRY_TYPE_ECR = "ecr"
 const DOCKER_REGISTRY_TYPE_DOCKERHUB = "docker-hub"
 const DOCKER_REGISTRY_TYPE_OTHER = "other"
@@ -315,13 +337,13 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 				useBuildxK8sDriver, eligibleK8sDriverNodes = dockerBuildConfig.CheckForBuildXK8sDriver()
 				if useBuildxK8sDriver {
-					err = impl.createBuildxBuilderWithK8sDriver(ciContext, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
+					err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.DockerConnection, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 						return err
 					}
 				} else {
-					err = impl.createBuildxBuilderForMultiArchBuild(ciContext)
+					err = impl.createBuildxBuilderForMultiArchBuild(ciContext, ciRequest.DockerConnection)
 					if err != nil {
 						return err
 					}
@@ -733,8 +755,13 @@ func (impl *DockerHelperImpl) setupCacheForBuildx(ciContext cicxt.CiContext, loc
 	return nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilder(ciContext cicxt.CiContext) error {
-	multiPlatformCmd := "docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure'"
+func (impl *DockerHelperImpl) createBuildxBuilder(ciContext cicxt.CiContext, dockerConnection string) error {
+	buildkitToml := ""
+	if dockerConnection == util.SECUREWITHCERT {
+		buildkitToml = fmt.Sprintf("--config %s", BuildkitdConfigPath)
+	}
+	multiPlatformCmd := fmt.Sprintf("docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' %s", buildkitToml)
+
 	log.Println(" -----> " + multiPlatformCmd)
 	dockerBuildCMD := impl.GetCommandToExecute(multiPlatformCmd)
 	err := impl.cmdExecutor.RunCommand(ciContext, dockerBuildCMD)
@@ -769,21 +796,14 @@ func (impl *DockerHelperImpl) checkAndCreateDirectory(ciContext cicxt.CiContext,
 }
 
 func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
-	dest := ""
-	if DOCKER_REGISTRY_TYPE_DOCKERHUB == ciRequest.DockerRegistryType {
-		dest = ciRequest.DockerRepository + ":" + ciRequest.DockerImageTag
-	} else {
-		registryUrl := ciRequest.IntermediateDockerRegistryUrl
-		u, err := util.ParseUrl(registryUrl)
-		if err != nil {
-			log.Println("not a valid docker repository url")
-			return "", err
-		}
-		u.Path = path.Join(u.Path, "/", ciRequest.DockerRepository)
-		dockerRegistryURL := u.Host + u.Path
-		dest = dockerRegistryURL + ":" + ciRequest.DockerImageTag
-	}
-	return dest, nil
+	return utils.BuildDockerImagePath(bean.DockerRegistryInfo{
+		DockerImageTag:     ciRequest.DockerImageTag,
+		DockerRegistryId:   ciRequest.DockerRegistryId,
+		DockerRegistryType: ciRequest.DockerRegistryType,
+		DockerRegistryURL:  ciRequest.IntermediateDockerRegistryUrl,
+		DockerRepository:   ciRequest.DockerRepository,
+	})
+
 }
 
 func (impl *DockerHelperImpl) PushArtifact(ciContext cicxt.CiContext, dest string) error {
@@ -894,26 +914,25 @@ func readImageDigestFromManifest(manifestFilePath string) (string, error) {
 	return imageDigest.(string), nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cicxt.CiContext) error {
+func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cicxt.CiContext, dockerConnection string) error {
 	err := impl.installAllSupportedPlatforms(ciContext)
 	if err != nil {
 		return err
 	}
-	err = impl.createBuildxBuilder(ciContext)
+	err = impl.createBuildxBuilder(ciContext, dockerConnection)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
-
+func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, dockerConnection string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
 	defaultNodeOpts := builderNodes[0]
 
-	buildxCreate := getBuildxK8sDriverCmd(defaultNodeOpts, ciPipelineId, ciWorkflowId)
+	buildxCreate := getBuildxK8sDriverCmd(dockerConnection, defaultNodeOpts, ciPipelineId, ciWorkflowId)
 	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--use")
 	fmt.Println(util.DEVTRON, " cmd : ", buildxCreate)
 	builderCreateCmd := impl.GetCommandToExecute(buildxCreate)
@@ -926,7 +945,7 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 	// appending other nodes to the builder,except default node ,since we already added it
 	for i := 1; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
-		appendNode := getBuildxK8sDriverCmd(nodeOpts, ciPipelineId, ciWorkflowId)
+		appendNode := getBuildxK8sDriverCmd(dockerConnection, nodeOpts, ciPipelineId, ciWorkflowId)
 		appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
 		fmt.Println(util.DEVTRON, " cmd : ", appendNode)
 		appendNodeCmd := impl.GetCommandToExecute(appendNode)
@@ -989,7 +1008,7 @@ func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	return err, errBuf
 }
 
-func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflowId int) string {
+func getBuildxK8sDriverCmd(dockerConnection string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) string {
 	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
@@ -1005,6 +1024,11 @@ func getBuildxK8sDriverCmd(driverOpts map[string]string, ciPipelineId, ciWorkflo
 		buildxCreate += " '--driver-opt=%s' "
 		buildxCreate = fmt.Sprintf(buildxCreate, driverOpts["driverOptions"])
 	}
+	buildkitToml := ""
+	if dockerConnection == util.SECUREWITHCERT {
+		buildkitToml = fmt.Sprintf("--config %s", BuildkitdConfigPath)
+	}
+	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, buildkitToml)
 	return buildxCreate
 }
 

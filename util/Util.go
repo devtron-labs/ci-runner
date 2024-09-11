@@ -119,14 +119,6 @@ func CleanupAfterFetchingHttpsSubmodules() error {
 	return nil
 }
 
-func LogStage(name string) {
-	//stageTemplate := `
-	//------------------------------------------------------------------------------------------------------------------------
-	//STAGE:  %s
-	//------------------------------------------------------------------------------------------------------------------------`
-	//log.Println(fmt.Sprintf(stageTemplate, name))
-}
-
 var chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
 // Generates random string
@@ -235,4 +227,25 @@ func ExecuteWithStageInfoLog(stageName string, stageExecutor func() error) (err 
 	}()
 
 	return stageExecutor()
+}
+
+func GenerateBuildkitdContent(host string) string {
+	return fmt.Sprintf(`debug = true
+[registry."%s"]
+  ca=["/etc/docker/certs.d/%s/ca.crt"]`, host, host)
+}
+
+func CreateAndWriteFile(filePath string, content string) error {
+	f, err := os.Create(filePath)
+	if err != nil {
+		log.Printf("Error creating file %s: %v", filePath, err)
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(content)
+	if err != nil {
+		log.Printf("Error writing content to file %s: %v", filePath, err)
+	}
+	return err
 }
