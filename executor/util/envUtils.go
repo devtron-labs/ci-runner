@@ -69,7 +69,10 @@ func GetGlobalEnvVariables(cicdRequest *helper.CiCdTriggerEvent) (map[string]str
 		envs["GIT_MATERIAL_REQUEST"] = CiMaterialRequestArr // GIT_MATERIAL_REQUEST will be of form "<repoName>/<checkoutPath>/<BranchName>/<CommitHash>"
 		fmt.Println(envs["GIT_MATERIAL_REQUEST"])
 
-		// adding ACCESS_KEY,SECRET_KEY, AWS_REGION, LAST_FETCHED_TIME for polling-plugin
+		// adding envs for polling-plugin
+		envs["DOCKER_REGISTRY_TYPE"] = cicdRequest.CommonWorkflowRequest.DockerRegistryType
+		envs["DOCKER_USERNAME"] = cicdRequest.CommonWorkflowRequest.DockerUsername
+		envs["DOCKER_PASSWORD"] = cicdRequest.CommonWorkflowRequest.DockerPassword
 		envs["ACCESS_KEY"] = cicdRequest.CommonWorkflowRequest.AccessKey
 		envs["SECRET_KEY"] = cicdRequest.CommonWorkflowRequest.SecretKey
 		envs["AWS_REGION"] = cicdRequest.CommonWorkflowRequest.AwsRegion
