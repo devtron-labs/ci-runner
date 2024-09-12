@@ -249,3 +249,11 @@ func CreateAndWriteFile(filePath string, content string) error {
 	}
 	return err
 }
+
+func GetSelfK8sUID() string {
+	return os.Getenv("DEVTRON_SELF_POD_UID")
+}
+
+func GetSelfK8sPodName() string {
+	return os.Getenv("DEVTRON_SELF_POD_NAME")
+}

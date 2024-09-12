@@ -36,6 +36,10 @@ import (
 	"github.com/devtron-labs/common-lib/utils/dockerOperations"
 	"io"
 	"io/ioutil"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"log"
 	"os"
 	"os/exec"
@@ -59,7 +63,7 @@ const (
 type DockerHelper interface {
 	StartDockerDaemon(commonWorkflowRequest *CommonWorkflowRequest)
 	DockerLogin(ciContext cicxt.CiContext, dockerCredentials *DockerCredentials) error
-	BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error)
+	BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error, func() error)
 	StopDocker(ciContext cicxt.CiContext) error
 	PushArtifact(ciContext cicxt.CiContext, dest string) error
 	ExtractDigestForBuildx(dest string, ciRequest *CommonWorkflowRequest) (string, error)
@@ -268,7 +272,8 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 	return util.ExecuteWithStageInfoLog(util.DOCKER_LOGIN_STAGE, performDockerLogin)
 }
 
-func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
+func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error, func() error) {
+	var cacheExportAndDriverCleanup func() error
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
 	err := impl.DockerLogin(ciContext, &DockerCredentials{
 		DockerUsername:     ciRequest.DockerUsername,
@@ -280,7 +285,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		DockerRegistryType: ciRequest.DockerRegistryType,
 	})
 	if err != nil {
-		return "", err
+		return "", err, cacheExportAndDriverCleanup
 	}
 	envVars := &EnvironmentVariables{}
 	err = env.Parse(envVars)
@@ -297,7 +302,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 
 	dest, err := BuildDockerImagePath(ciRequest)
 	if err != nil {
-		return "", err
+		return "", err, cacheExportAndDriverCleanup
 	}
 	if ciBuildConfig.CiBuildType == SELF_DOCKERFILE_BUILD_TYPE || ciBuildConfig.CiBuildType == MANAGED_DOCKERFILE_BUILD_TYPE {
 		dockerBuild := "docker build "
@@ -352,7 +357,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			}
 
 			if err = util.ExecuteWithStageInfoLog(util.SETUP_BUILDX_BUILDER, setupBuildxBuilder); err != nil {
-				return "", err
+				return "", err, cacheExportAndDriverCleanup
 			}
 
 			cacheEnabled := (ciRequest.IsPvcMounted || ciRequest.BlobStorageConfigured)
@@ -364,7 +369,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				localCachePath = util.LOCAL_BUILDX_CACHE_LOCATION
 				err = impl.setupCacheForBuildx(ciContext, localCachePath, oldCacheBuildxPath)
 				if err != nil {
-					return "", err
+					return "", err, cacheExportAndDriverCleanup
 				}
 				oldCacheBuildxPath = oldCacheBuildxPath + "/cache"
 			}
@@ -397,34 +402,38 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		}
 
 		if err = util.ExecuteWithStageInfoLog(util.DOCKER_BUILD, buildImageStage); err != nil {
-			return "", nil
+			return "", nil, cacheExportAndDriverCleanup
 		}
 
-		if buildxExportCacheFunc != nil {
-			util.ExecuteWithStageInfoLog(util.EXPORT_BUILD_CACHE, buildxExportCacheFunc)
-		}
-
-		if useBuildK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver(); useBuildK8sDriver {
-
-			buildxCleanupSatge := func() error {
-				err = impl.CleanBuildxK8sDriver(ciContext, eligibleK8sDriverNodes)
-				if err != nil {
-					log.Println(util.DEVTRON, " error in cleaning buildx K8s driver ", " err: ", err)
-				}
-				return nil
+		cacheExportAndDriverCleanup := func() error {
+			if buildxExportCacheFunc != nil {
+				util.ExecuteWithStageInfoLog(util.EXPORT_BUILD_CACHE, buildxExportCacheFunc)
 			}
 
-			// do not need to handle the below error
-			util.ExecuteWithStageInfoLog(util.CLEANUP_BUILDX_BUILDER, buildxCleanupSatge)
+			if useBuildK8sDriver, eligibleK8sDriverNodes := dockerBuildConfig.CheckForBuildXK8sDriver(); useBuildK8sDriver {
+
+				buildxCleanupSatge := func() error {
+					err = impl.CleanBuildxK8sDriver(ciContext, eligibleK8sDriverNodes)
+					if err != nil {
+						log.Println(util.DEVTRON, " error in cleaning buildx K8s driver ", " err: ", err)
+					}
+					return nil
+				}
+
+				// do not need to handle the below error
+				util.ExecuteWithStageInfoLog(util.CLEANUP_BUILDX_BUILDER, buildxCleanupSatge)
+			}
+
+			return nil
 		}
 
 		if !useBuildx {
 			err = impl.tagDockerBuild(ciContext, ciRequest.DockerRepository, dest)
 			if err != nil {
-				return "", err
+				return "", err, cacheExportAndDriverCleanup
 			}
 		} else {
-			return dest, nil
+			return dest, nil, cacheExportAndDriverCleanup
 		}
 	} else if ciBuildConfig.CiBuildType == BUILDPACK_BUILD_TYPE {
 
@@ -461,12 +470,12 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		}
 
 		if err = util.ExecuteWithStageInfoLog(util.BUILD_PACK_BUILD, buildPacksImageBuildStage); err != nil {
-			return "", nil
+			return "", nil, cacheExportAndDriverCleanup
 		}
 
 	}
 
-	return dest, nil
+	return dest, nil, cacheExportAndDriverCleanup
 }
 
 func getDockerBuildFlagsMap(dockerBuildConfig *DockerBuildConfig) map[string]string {
@@ -512,121 +521,6 @@ func getDockerfilePath(CiBuildConfig *CiBuildConfigBean, checkoutPath string) st
 		dockerFilePath = CiBuildConfig.DockerBuildConfig.DockerfilePath
 	}
 	return dockerFilePath
-}
-
-// getBuildxExportCacheFunc  will concurrently execute the given export cache commands
-func (impl *DockerHelperImpl) getBuildxExportCacheFunc(ciContext cicxt.CiContext, exportCacheCmds map[string]string) func() error {
-	exportCacheFunc := func() error {
-		// run export cache cmd for buildx
-		if len(exportCacheCmds) > 0 {
-			log.Println("exporting build caches...")
-			wg := sync.WaitGroup{}
-			wg.Add(len(exportCacheCmds))
-			for platform, exportCacheCmd := range exportCacheCmds {
-				go func(platform, exportCacheCmd string) {
-					defer wg.Done()
-					log.Println("exporting build cache, platform : ", platform)
-					log.Println(exportCacheCmd)
-					err := impl.executeCmd(ciContext, exportCacheCmd)
-					if err != nil {
-						log.Println("error in exporting ", "err : ", err)
-						return
-					}
-				}(platform, exportCacheCmd)
-			}
-			wg.Wait()
-		}
-		return nil
-	}
-	return exportCacheFunc
-}
-
-// getExportCacheCmds will return build commands exclusively for exporting cache for all the given target platforms.
-func getExportCacheCmds(targetPlatforms, dockerBuild, localCachePath string, useCacheMin bool) map[string]string {
-
-	cacheMode := CacheModeMax
-	if useCacheMin {
-		cacheMode = CacheModeMin
-	}
-
-	cacheCmd := "%s --platform=%s --cache-to=type=local,dest=%s,mode=" + cacheMode
-	platforms := strings.Split(targetPlatforms, ",")
-
-	exportCacheCmds := make(map[string]string)
-	for _, platform := range platforms {
-		cachePath := strings.Join(strings.Split(platform, "/"), "-")
-		exportCacheCmds[platform] = fmt.Sprintf(cacheCmd, dockerBuild, platform, localCachePath+"/"+cachePath)
-	}
-	return exportCacheCmds
-}
-
-func getSourceCaches(targetPlatforms, oldCachePathLocation string) string {
-	cacheCmd := " --cache-from=type=local,src=%s "
-	platforms := strings.Split(targetPlatforms, ",")
-	allCachePaths := make([]string, 0, len(platforms))
-	for _, platform := range platforms {
-		cachePath := strings.Join(strings.Split(platform, "/"), "-")
-		allCachePaths = append(allCachePaths, fmt.Sprintf(cacheCmd, oldCachePathLocation+"/"+cachePath))
-	}
-	return strings.Join(allCachePaths, " ")
-}
-
-func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
-	dockerBuild = fmt.Sprintf("%s %s -f %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.BuildContext, dockerfilePath)
-	exportCacheCmds := make(map[string]string)
-
-	provenanceFlag := dockerBuildConfig.GetProvenanceFlag()
-	dockerBuild = fmt.Sprintf("%s %s", dockerBuild, provenanceFlag)
-
-	// separate out export cache and source cache cmds here
-	isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
-	if isTargetPlatformSet {
-		if cacheEnabled {
-			exportCacheCmds = getExportCacheCmds(dockerBuildConfig.TargetPlatform, dockerBuild, localCachePath, useCacheMin)
-		}
-
-		dockerBuild = fmt.Sprintf("%s --platform %s", dockerBuild, dockerBuildConfig.TargetPlatform)
-	}
-
-	if cacheEnabled {
-		dockerBuild = fmt.Sprintf("%s %s", dockerBuild, getSourceCaches(dockerBuildConfig.TargetPlatform, oldCacheBuildxPath))
-	}
-
-	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-	dockerBuild = fmt.Sprintf("%s -t %s --push --metadata-file %s", dockerBuild, dest, manifestLocation)
-
-	return dockerBuild, impl.getBuildxExportCacheFunc(ciContext, exportCacheCmds)
-}
-
-func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
-
-	cacheMode := CacheModeMax
-	if useCacheMin {
-		cacheMode = CacheModeMin
-	}
-	dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerfilePath, dest, dockerBuildConfig.BuildContext)
-	if cacheEnabled {
-		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=%s --cache-from=type=local,src=%s", dockerBuild, localCachePath, cacheMode, oldCacheBuildxPath)
-	}
-
-	isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
-	if isTargetPlatformSet {
-		dockerBuild = fmt.Sprintf("%s --platform %s", dockerBuild, dockerBuildConfig.TargetPlatform)
-	}
-
-	provenanceFlag := dockerBuildConfig.GetProvenanceFlag()
-	dockerBuild = fmt.Sprintf("%s %s", dockerBuild, provenanceFlag)
-	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-	dockerBuild = fmt.Sprintf("%s --metadata-file %s", dockerBuild, manifestLocation)
-
-	return dockerBuild, nil
-}
-
-func (impl *DockerHelperImpl) getBuildxBuildCommand(ciContext cicxt.CiContext, exportBuildxCacheAfterBuild bool, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
-	if exportBuildxCacheAfterBuild {
-		return impl.getBuildxBuildCommandV2(ciContext, cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
-	}
-	return impl.getBuildxBuildCommandV1(cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
 }
 
 func (impl *DockerHelperImpl) handleLanguageVersion(ciContext cicxt.CiContext, projectPath string, buildpackConfig *BuildPackConfig) {
@@ -720,63 +614,6 @@ func (impl *DockerHelperImpl) tagDockerBuild(ciContext cicxt.CiContext, dockerRe
 	log.Println(" -----> " + dockerTag)
 	dockerTagCMD := impl.GetCommandToExecute(dockerTag)
 	err := impl.cmdExecutor.RunCommand(ciContext, dockerTagCMD)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
-}
-
-func (impl *DockerHelperImpl) setupCacheForBuildx(ciContext cicxt.CiContext, localCachePath string, oldCacheBuildxPath string) error {
-	err := impl.checkAndCreateDirectory(ciContext, localCachePath)
-	if err != nil {
-		return err
-	}
-	err = impl.checkAndCreateDirectory(ciContext, oldCacheBuildxPath)
-	if err != nil {
-		return err
-	}
-	copyContent := "cp -R " + localCachePath + " " + oldCacheBuildxPath
-	copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
-	err = impl.cmdExecutor.RunCommand(ciContext, copyContentCmd)
-
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	cleanContent := "rm -rf " + localCachePath + "/*"
-	cleanContentCmd := exec.Command("/bin/sh", "-c", cleanContent)
-	err = impl.cmdExecutor.RunCommand(ciContext, cleanContentCmd)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
-}
-
-func (impl *DockerHelperImpl) createBuildxBuilder(ciContext cicxt.CiContext, dockerConnection string) error {
-	buildkitToml := ""
-	if dockerConnection == util.SECUREWITHCERT {
-		buildkitToml = fmt.Sprintf("--config %s", BuildkitdConfigPath)
-	}
-	multiPlatformCmd := fmt.Sprintf("docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' %s", buildkitToml)
-
-	log.Println(" -----> " + multiPlatformCmd)
-	dockerBuildCMD := impl.GetCommandToExecute(multiPlatformCmd)
-	err := impl.cmdExecutor.RunCommand(ciContext, dockerBuildCMD)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
-}
-
-func (impl *DockerHelperImpl) installAllSupportedPlatforms(ciContext cicxt.CiContext) error {
-	multiPlatformCmd := "docker run --privileged --rm quay.io/devtron/binfmt:stable --install all"
-	log.Println(" -----> " + multiPlatformCmd)
-	dockerBuildCMD := impl.GetCommandToExecute(multiPlatformCmd)
-	err := impl.cmdExecutor.RunCommand(ciContext, dockerBuildCMD)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -914,6 +751,190 @@ func readImageDigestFromManifest(manifestFilePath string) (string, error) {
 	return imageDigest.(string), nil
 }
 
+func GetSelfManagedDockerfilePath(checkoutPath string) string {
+	return filepath.Join(util.WORKINGDIR, checkoutPath, "./Dockerfile")
+}
+
+// BUILDX
+// getBuildxExportCacheFunc  will concurrently execute the given export cache commands
+func (impl *DockerHelperImpl) getBuildxExportCacheFunc(ciContext cicxt.CiContext, exportCacheCmds map[string]string) func() error {
+	exportCacheFunc := func() error {
+		// run export cache cmd for buildx
+		if len(exportCacheCmds) > 0 {
+			log.Println("exporting build caches...")
+			wg := sync.WaitGroup{}
+			wg.Add(len(exportCacheCmds))
+			for platform, exportCacheCmd := range exportCacheCmds {
+				go func(platform, exportCacheCmd string) {
+					defer wg.Done()
+					log.Println("exporting build cache, platform : ", platform)
+					log.Println(exportCacheCmd)
+					err := impl.executeCmd(ciContext, exportCacheCmd)
+					if err != nil {
+						log.Println("error in exporting ", "err : ", err)
+						return
+					}
+				}(platform, exportCacheCmd)
+			}
+			wg.Wait()
+		}
+		return nil
+	}
+	return exportCacheFunc
+}
+
+// getExportCacheCmds will return build commands exclusively for exporting cache for all the given target platforms.
+func getExportCacheCmds(targetPlatforms, dockerBuild, localCachePath string, useCacheMin bool) map[string]string {
+
+	cacheMode := CacheModeMax
+	if useCacheMin {
+		cacheMode = CacheModeMin
+	}
+
+	cacheCmd := "%s --platform=%s --cache-to=type=local,dest=%s,mode=" + cacheMode
+	platforms := strings.Split(targetPlatforms, ",")
+
+	exportCacheCmds := make(map[string]string)
+	for _, platform := range platforms {
+		cachePath := strings.Join(strings.Split(platform, "/"), "-")
+		exportCacheCmds[platform] = fmt.Sprintf(cacheCmd, dockerBuild, platform, localCachePath+"/"+cachePath)
+	}
+	return exportCacheCmds
+}
+
+func getSourceCaches(targetPlatforms, oldCachePathLocation string) string {
+	cacheCmd := " --cache-from=type=local,src=%s "
+	platforms := strings.Split(targetPlatforms, ",")
+	allCachePaths := make([]string, 0, len(platforms))
+	for _, platform := range platforms {
+		cachePath := strings.Join(strings.Split(platform, "/"), "-")
+		allCachePaths = append(allCachePaths, fmt.Sprintf(cacheCmd, oldCachePathLocation+"/"+cachePath))
+	}
+	return strings.Join(allCachePaths, " ")
+}
+
+// buildx build command
+func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
+	dockerBuild = fmt.Sprintf("%s %s -f %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.BuildContext, dockerfilePath)
+	exportCacheCmds := make(map[string]string)
+
+	provenanceFlag := dockerBuildConfig.GetProvenanceFlag()
+	dockerBuild = fmt.Sprintf("%s %s", dockerBuild, provenanceFlag)
+
+	// separate out export cache and source cache cmds here
+	isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
+	if isTargetPlatformSet {
+		if cacheEnabled {
+			exportCacheCmds = getExportCacheCmds(dockerBuildConfig.TargetPlatform, dockerBuild, localCachePath, useCacheMin)
+		}
+
+		dockerBuild = fmt.Sprintf("%s --platform %s", dockerBuild, dockerBuildConfig.TargetPlatform)
+	}
+
+	if cacheEnabled {
+		dockerBuild = fmt.Sprintf("%s %s", dockerBuild, getSourceCaches(dockerBuildConfig.TargetPlatform, oldCacheBuildxPath))
+	}
+
+	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
+	dockerBuild = fmt.Sprintf("%s -t %s --push --metadata-file %s", dockerBuild, dest, manifestLocation)
+
+	return dockerBuild, impl.getBuildxExportCacheFunc(ciContext, exportCacheCmds)
+}
+
+// buildx build command
+func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
+
+	cacheMode := CacheModeMax
+	if useCacheMin {
+		cacheMode = CacheModeMin
+	}
+	dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerfilePath, dest, dockerBuildConfig.BuildContext)
+	if cacheEnabled {
+		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=%s --cache-from=type=local,src=%s", dockerBuild, localCachePath, cacheMode, oldCacheBuildxPath)
+	}
+
+	isTargetPlatformSet := dockerBuildConfig.TargetPlatform != ""
+	if isTargetPlatformSet {
+		dockerBuild = fmt.Sprintf("%s --platform %s", dockerBuild, dockerBuildConfig.TargetPlatform)
+	}
+
+	provenanceFlag := dockerBuildConfig.GetProvenanceFlag()
+	dockerBuild = fmt.Sprintf("%s %s", dockerBuild, provenanceFlag)
+	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
+	dockerBuild = fmt.Sprintf("%s --metadata-file %s", dockerBuild, manifestLocation)
+
+	return dockerBuild, nil
+}
+
+// buildx build command
+func (impl *DockerHelperImpl) getBuildxBuildCommand(ciContext cicxt.CiContext, exportBuildxCacheAfterBuild bool, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
+	if exportBuildxCacheAfterBuild {
+		return impl.getBuildxBuildCommandV2(ciContext, cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
+	}
+	return impl.getBuildxBuildCommandV1(cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
+}
+
+// buildx cache
+func (impl *DockerHelperImpl) setupCacheForBuildx(ciContext cicxt.CiContext, localCachePath string, oldCacheBuildxPath string) error {
+	err := impl.checkAndCreateDirectory(ciContext, localCachePath)
+	if err != nil {
+		return err
+	}
+	err = impl.checkAndCreateDirectory(ciContext, oldCacheBuildxPath)
+	if err != nil {
+		return err
+	}
+	copyContent := "cp -R " + localCachePath + " " + oldCacheBuildxPath
+	copyContentCmd := exec.Command("/bin/sh", "-c", copyContent)
+	err = impl.cmdExecutor.RunCommand(ciContext, copyContentCmd)
+
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	cleanContent := "rm -rf " + localCachePath + "/*"
+	cleanContentCmd := exec.Command("/bin/sh", "-c", cleanContent)
+	err = impl.cmdExecutor.RunCommand(ciContext, cleanContentCmd)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+// buildx docker container
+func (impl *DockerHelperImpl) createBuildxBuilder(ciContext cicxt.CiContext, dockerConnection string) error {
+	buildkitToml := ""
+	if dockerConnection == util.SECUREWITHCERT {
+		buildkitToml = fmt.Sprintf("--config %s", BuildkitdConfigPath)
+	}
+	multiPlatformCmd := fmt.Sprintf("docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' %s", buildkitToml)
+
+	log.Println(" -----> " + multiPlatformCmd)
+	dockerBuildCMD := impl.GetCommandToExecute(multiPlatformCmd)
+	err := impl.cmdExecutor.RunCommand(ciContext, dockerBuildCMD)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+// buildx docker container
+func (impl *DockerHelperImpl) installAllSupportedPlatforms(ciContext cicxt.CiContext) error {
+	multiPlatformCmd := "docker run --privileged --rm quay.io/devtron/binfmt:stable --install all"
+	log.Println(" -----> " + multiPlatformCmd)
+	dockerBuildCMD := impl.GetCommandToExecute(multiPlatformCmd)
+	err := impl.cmdExecutor.RunCommand(ciContext, dockerBuildCMD)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+// buildx docker container
 func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cicxt.CiContext, dockerConnection string) error {
 	err := impl.installAllSupportedPlatforms(ciContext)
 	if err != nil {
@@ -930,9 +951,11 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
+	deploymentNames := make([]string, 0)
 	defaultNodeOpts := builderNodes[0]
 
-	buildxCreate := getBuildxK8sDriverCmd(dockerConnection, defaultNodeOpts, ciPipelineId, ciWorkflowId)
+	buildxCreate, deploymentName := getBuildxK8sDriverCmd(dockerConnection, defaultNodeOpts, ciPipelineId, ciWorkflowId)
+	deploymentNames = append(deploymentNames, deploymentName)
 	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--use")
 	fmt.Println(util.DEVTRON, " cmd : ", buildxCreate)
 	builderCreateCmd := impl.GetCommandToExecute(buildxCreate)
@@ -945,7 +968,8 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 	// appending other nodes to the builder,except default node ,since we already added it
 	for i := 1; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
-		appendNode := getBuildxK8sDriverCmd(dockerConnection, nodeOpts, ciPipelineId, ciWorkflowId)
+		appendNode, deploymentName := getBuildxK8sDriverCmd(dockerConnection, nodeOpts, ciPipelineId, ciWorkflowId)
+		deploymentNames = append(deploymentNames, deploymentName)
 		appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
 		fmt.Println(util.DEVTRON, " cmd : ", appendNode)
 		appendNodeCmd := impl.GetCommandToExecute(appendNode)
@@ -956,6 +980,7 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 		}
 	}
 
+	patchK8sDriverNodes(deploymentNames)
 	return nil
 }
 
@@ -998,17 +1023,7 @@ func (impl *DockerHelperImpl) leaveNodesFromBuildxK8sDriver(ciContext cicxt.CiCo
 	return err
 }
 
-// this function is deprecated, use cmdExecutor.RunCommand instead
-func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
-	fmt.Println(util.DEVTRON, " cmd : ", cmd)
-	builderCreateCmd := impl.GetCommandToExecute(cmd)
-	errBuf := &bytes.Buffer{}
-	builderCreateCmd.Stderr = errBuf
-	err := builderCreateCmd.Run()
-	return err, errBuf
-}
-
-func getBuildxK8sDriverCmd(dockerConnection string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) string {
+func getBuildxK8sDriverCmd(dockerConnection string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) (string, string) {
 	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
@@ -1029,7 +1044,7 @@ func getBuildxK8sDriverCmd(dockerConnection string, driverOpts map[string]string
 		buildkitToml = fmt.Sprintf("--config %s", BuildkitdConfigPath)
 	}
 	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, buildkitToml)
-	return buildxCreate
+	return buildxCreate, nodeName
 }
 
 func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
@@ -1129,10 +1144,6 @@ func ValidBuildxK8sDriverOptions(ciRequest *CommonWorkflowRequest) (bool, []map[
 	return false, nil
 }
 
-func GetSelfManagedDockerfilePath(checkoutPath string) string {
-	return filepath.Join(util.WORKINGDIR, checkoutPath, "./Dockerfile")
-}
-
 func (impl *DockerHelperImpl) GetDockerAuthConfigForPrivateRegistries(workflowRequest *CommonWorkflowRequest) *bean.DockerAuthConfig {
 	var dockerAuthConfig *bean.DockerAuthConfig
 	switch workflowRequest.DockerRegistryType {
@@ -1164,4 +1175,75 @@ func (impl *DockerHelperImpl) GetDockerAuthConfigForPrivateRegistries(workflowRe
 		}
 	}
 	return dockerAuthConfig
+}
+
+func patchK8sDriverNodes(deploymentNames []string) {
+	for _, deploymentName := range deploymentNames {
+		if err := jsonPatchOwnerReferenceInDeployment(deploymentName); err != nil {
+			fmt.Println(util.DEVTRON, "failed to patch the buildkit deployment's owner reference, ", " deployment: ", deploymentName, " err: ", err)
+		} else {
+			fmt.Println(util.DEVTRON, "successfully patched the buildkit deployment's owner reference, ", " deployment: ", deploymentName)
+		}
+	}
+}
+
+func jsonPatchOwnerReferenceInDeployment(deploymentName string) error {
+
+	clientSet, err := GetK8sInClusterClientSet()
+	if err != nil {
+		return err
+	}
+
+	ownerRef := v1.OwnerReference{
+		APIVersion: "v1",
+		Kind:       "Pod",
+		Name:       util.GetSelfK8sPodName(),
+		UID:        types.UID(util.GetSelfK8sUID()),
+	}
+
+	patch := []map[string]interface{}{
+		{
+			"op":    "add",
+			"path":  "/metadata/ownerReferences/-",
+			"value": ownerRef,
+		},
+	}
+
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		return err
+	}
+
+	// Apply the patch directly
+	_, err = clientSet.AppsV1().Deployments("devtron-ci").Patch(
+		context.TODO(),
+		deploymentName,
+		types.JSONPatchType,
+		patchBytes,
+		v1.PatchOptions{},
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetK8sInClusterClientSet() (*kubernetes.Clientset, error) {
+	restConfig, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	k8sHttpClient, err := rest.HTTPClientFor(restConfig)
+	if err != nil {
+		fmt.Println("error occurred while overriding k8s client", "reason", err)
+		return nil, err
+	}
+
+	k8sClientSet, err := kubernetes.NewForConfigAndClient(restConfig, k8sHttpClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return k8sClientSet, nil
 }

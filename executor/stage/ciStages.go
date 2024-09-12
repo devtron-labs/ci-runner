@@ -57,6 +57,7 @@ type CiStage struct {
 	gitManager           helper.GitManager
 	dockerHelper         helper.DockerHelper
 	stageExecutorManager executor.StageExecutor
+	postStageHooks       []func() error
 }
 
 func NewCiStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, stageExecutor executor.StageExecutor) *CiStage {
@@ -64,7 +65,13 @@ func NewCiStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, 
 		gitManager:           gitManager,
 		dockerHelper:         dockerHelper,
 		stageExecutorManager: stageExecutor,
+		postStageHooks:       make([]func() error, 0),
 	}
+}
+
+// RegisterPostBuildStageHook registers a function to be called after the runCIStages method is executed
+func (impl *CiStage) RegisterPostBuildStageHook(hook func() error) {
+	impl.postStageHooks = append(impl.postStageHooks, hook)
 }
 
 func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
@@ -335,6 +342,16 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	}
 	log.Println(util.DEVTRON, " /event")
 
+	// run post stage hooks
+	for _, hook := range impl.postStageHooks {
+		if hook != nil {
+			err := hook()
+			if err != nil {
+				log.Println(util.DEVTRON, "error in post stage hook", err)
+			}
+		}
+	}
+
 	err = impl.dockerHelper.StopDocker(ciContext)
 	if err != nil {
 		log.Println("err", err)
@@ -375,8 +392,9 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 	// build
 	start := time.Now()
 	metrics.BuildStartTime = start
-	dest, err := impl.dockerHelper.BuildArtifact(ciCdRequest.CommonWorkflowRequest) // TODO make it skipable
+	dest, err, cacheExportAndDriverCleanup := impl.dockerHelper.BuildArtifact(ciCdRequest.CommonWorkflowRequest) // TODO make it skipable
 	metrics.BuildDuration = time.Since(start).Seconds()
+	impl.RegisterPostBuildStageHook(cacheExportAndDriverCleanup)
 	if err != nil {
 		log.Println("Error in building artifact", "err", err)
 		// code-block starts : run post-ci which are enabled to run on ci fail
