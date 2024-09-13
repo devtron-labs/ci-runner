@@ -55,6 +55,8 @@ const (
 	CLEANUP_BUILDX_BUILDER               = "Cleaning Up Buildx Builder"
 	BUILD_PACK_BUILD                     = "Build Packs Build"
 	EXPORT_BUILD_CACHE                   = "Exporting Build Cache"
+	DEVTRON_SELF_POD_UID                 = "DEVTRON_SELF_POD_UID"
+	DEVTRON_SELF_POD_NAME                = "DEVTRON_SELF_POD_NAME"
 )
 
 func CreateSshPrivateKeyOnDisk(fileId int, sshPrivateKeyContent string) error {
@@ -251,9 +253,9 @@ func CreateAndWriteFile(filePath string, content string) error {
 }
 
 func GetSelfK8sUID() string {
-	return os.Getenv("DEVTRON_SELF_POD_UID")
+	return os.Getenv(DEVTRON_SELF_POD_UID)
 }
 
 func GetSelfK8sPodName() string {
-	return os.Getenv("DEVTRON_SELF_POD_NAME")
+	return os.Getenv(DEVTRON_SELF_POD_NAME)
 }
