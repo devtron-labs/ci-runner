@@ -1191,7 +1191,7 @@ func jsonPatchOwnerReferenceInDeployment(deploymentName string) error {
 		return err
 	}
 
-	patchStr := fmt.Sprintf(`{"metadata":{"ownerReferences":[{"apiVersion":"v1","kind":"Pod","name":"%s","uid":"%s"}]}}`, util.GetSelfK8sPodName(), util.GetSelfK8sUID())
+	patchStr := fmt.Sprintf(`{"metadata":{"ownerReferences":[{"apiVersion":"v1","kind":"Pod","name":"%s","uid":"%s"}]}}`, utils.GetSelfK8sPodName(), utils.GetSelfK8sUID())
 
 	// Apply the patch directly
 	// the namespace is hardcoded to devtron-ci as our k8s driver is only supported for ci's running in devtron-ci namespace.
