@@ -1202,9 +1202,9 @@ func jsonPatchOwnerReferenceInDeployment(deploymentName string) error {
 	_, err = clientSet.AppsV1().Deployments("devtron-ci").Patch(
 		context.TODO(),
 		deploymentName,
-		types.JSONPatchType,
+		types.StrategicMergePatchType,
 		[]byte(patchStr),
-		v1.PatchOptions{},
+		v1.PatchOptions{FieldManager: "patch"},
 	)
 	if err != nil {
 		return err
