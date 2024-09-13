@@ -1191,35 +1191,19 @@ func jsonPatchOwnerReferenceInDeployment(deploymentName string) error {
 
 	clientSet, err := GetK8sInClusterClientSet()
 	if err != nil {
+		fmt.Println(util.DEVTRON, "error in getting k8s clientset", "err", err)
 		return err
 	}
 
-	ownerRef := v1.OwnerReference{
-		APIVersion: "v1",
-		Kind:       "Pod",
-		Name:       util.GetSelfK8sPodName(),
-		UID:        types.UID(util.GetSelfK8sUID()),
-	}
-
-	patch := []map[string]interface{}{
-		{
-			"op":    "add",
-			"path":  "/metadata/ownerReferences/-",
-			"value": ownerRef,
-		},
-	}
-
-	patchBytes, err := json.Marshal(patch)
-	if err != nil {
-		return err
-	}
+	patchStr := fmt.Sprintf(`{metadata:{ownerReferences:[{"apiVersion":"v1","kind":"Pod","name":"%s","uid":"%s"}]}}`, util.GetSelfK8sPodName(), util.GetSelfK8sUID())
 
 	// Apply the patch directly
+	// the namespace is hardcoded to devtron-ci as our k8s driver is only supported for ci's running in devtron-ci namespace.
 	_, err = clientSet.AppsV1().Deployments("devtron-ci").Patch(
 		context.TODO(),
 		deploymentName,
 		types.JSONPatchType,
-		patchBytes,
+		[]byte(patchStr),
 		v1.PatchOptions{},
 	)
 	if err != nil {
