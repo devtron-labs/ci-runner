@@ -1,8 +1,8 @@
 module github.com/devtron-labs/ci-runner
 
-go 1.22.0
+go 1.21
 
-toolchain go1.22.4
+toolchain go1.21.8
 
 require (
 	github.com/Knetic/govaluate v3.0.0+incompatible
