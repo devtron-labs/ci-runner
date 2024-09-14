@@ -126,6 +126,7 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 
 	scriptEnvs, err := util2.GetGlobalEnvVariables(cicdRequest)
 
+	allPluginArtifacts := helper.NewPluginArtifact()
 	if len(cicdRequest.CommonWorkflowRequest.PrePostDeploySteps) > 0 {
 		refStageMap := make(map[int][]*helper.StepObject)
 		for _, ref := range cicdRequest.CommonWorkflowRequest.RefPlugins {
@@ -134,10 +135,11 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 		scriptEnvs["DEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
 		scriptEnvs["DIGEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
 		var stage = helper.StepType(cicdRequest.CommonWorkflowRequest.StageType)
-		_, _, err = impl.stageExecutorManager.RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
+		pluginArtifacts, _, _, err := impl.stageExecutorManager.RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {
 			return err
 		}
+		allPluginArtifacts.MergePluginArtifact(pluginArtifacts)
 	} else {
 
 		// Get devtron-cd yaml
@@ -164,11 +166,10 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 			return err
 		}
 	}
-
 	// dry run flag indicates that ci runner image is being run from external helm chart
 	if !cicdRequest.CommonWorkflowRequest.IsDryRun {
 		log.Println(util.DEVTRON, " event")
-		err = helper.SendCDEvent(cicdRequest.CommonWorkflowRequest)
+		err = helper.SendCDEvent(cicdRequest.CommonWorkflowRequest, allPluginArtifacts)
 		if err != nil {
 			log.Println(err)
 			return err

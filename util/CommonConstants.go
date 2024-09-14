@@ -48,7 +48,7 @@ const (
 
 const (
 	ResultsDirInCIRunnerPath = "/polling-plugin/results.json"
-	PathInPollingPlugin      = "/tmp/results.json"
+	PluginArtifactsResults   = "/tmp/pluginArtifacts/results.json"
 )
 
 var (
