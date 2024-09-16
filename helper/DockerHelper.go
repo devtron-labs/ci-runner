@@ -934,30 +934,24 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
-	defaultNodeOpts := builderNodes[0]
 	deploymentNames := make([]string, 0)
-	buildxCreate, deploymentName := getBuildxK8sDriverCmd(dockerConnection, defaultNodeOpts, ciPipelineId, ciWorkflowId)
-	deploymentNames = append(deploymentNames, deploymentName)
-	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--use")
-	fmt.Println(util.DEVTRON, " cmd : ", buildxCreate)
-	builderCreateCmd := impl.GetCommandToExecute(buildxCreate)
-	err := impl.cmdExecutor.RunCommand(ciContext, builderCreateCmd)
-	if err != nil {
-		fmt.Println(util.DEVTRON, "buildxCreate : ", buildxCreate, " err : ", err, " error : ")
-		return err
-	}
-
-	// appending other nodes to the builder,except default node ,since we already added it
-	for i := 1; i < len(builderNodes); i++ {
+	for i := 0; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
-		appendNode, deploymentName := getBuildxK8sDriverCmd(dockerConnection, nodeOpts, ciPipelineId, ciWorkflowId)
+		builderCmd, deploymentName := getBuildxK8sDriverCmd(dockerConnection, nodeOpts, ciPipelineId, ciWorkflowId)
 		deploymentNames = append(deploymentNames, deploymentName)
-		appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
-		fmt.Println(util.DEVTRON, " cmd : ", appendNode)
-		appendNodeCmd := impl.GetCommandToExecute(appendNode)
-		err = impl.cmdExecutor.RunCommand(ciContext, appendNodeCmd)
+		// first node is used as default node, we create builder with --use flag, then we append other nodes
+		if i == 0 {
+			builderCmd = fmt.Sprintf("%s %s", builderCmd, "--use")
+		} else {
+			// appending other nodes to the builder,except default node ,since we already added it
+			builderCmd = fmt.Sprintf("%s %s", builderCmd, "--append")
+		}
+
+		fmt.Println(util.DEVTRON, " cmd : ", builderCmd)
+		builderExecCmd := impl.GetCommandToExecute(builderCmd)
+		err := impl.cmdExecutor.RunCommand(ciContext, builderExecCmd)
 		if err != nil {
-			fmt.Println(util.DEVTRON, " appendNode : ", appendNode, " err : ", err, " error : ")
+			fmt.Println(util.DEVTRON, " builderCmd : ", builderCmd, " err : ", err, " error : ")
 			return err
 		}
 	}
