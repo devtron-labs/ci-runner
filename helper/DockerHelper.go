@@ -36,6 +36,10 @@ import (
 	"github.com/devtron-labs/common-lib/utils/dockerOperations"
 	"io"
 	"io/ioutil"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	appsV1 "k8s.io/client-go/kubernetes/typed/apps/v1"
+	"k8s.io/client-go/rest"
 	"log"
 	"os"
 	"os/exec"
@@ -930,32 +934,29 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
-	defaultNodeOpts := builderNodes[0]
-
-	buildxCreate := getBuildxK8sDriverCmd(dockerConnection, defaultNodeOpts, ciPipelineId, ciWorkflowId)
-	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, "--use")
-	fmt.Println(util.DEVTRON, " cmd : ", buildxCreate)
-	builderCreateCmd := impl.GetCommandToExecute(buildxCreate)
-	err := impl.cmdExecutor.RunCommand(ciContext, builderCreateCmd)
-	if err != nil {
-		fmt.Println(util.DEVTRON, "buildxCreate : ", buildxCreate, " err : ", err, " error : ")
-		return err
-	}
-
-	// appending other nodes to the builder,except default node ,since we already added it
-	for i := 1; i < len(builderNodes); i++ {
+	deploymentNames := make([]string, 0)
+	for i := 0; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
-		appendNode := getBuildxK8sDriverCmd(dockerConnection, nodeOpts, ciPipelineId, ciWorkflowId)
-		appendNode = fmt.Sprintf("%s %s", appendNode, "--append")
-		fmt.Println(util.DEVTRON, " cmd : ", appendNode)
-		appendNodeCmd := impl.GetCommandToExecute(appendNode)
-		err = impl.cmdExecutor.RunCommand(ciContext, appendNodeCmd)
+		builderCmd, deploymentName := getBuildxK8sDriverCmd(dockerConnection, nodeOpts, ciPipelineId, ciWorkflowId)
+		deploymentNames = append(deploymentNames, deploymentName)
+		// first node is used as default node, we create builder with --use flag, then we append other nodes
+		if i == 0 {
+			builderCmd = fmt.Sprintf("%s %s", builderCmd, "--use")
+		} else {
+			// appending other nodes to the builder,except default node ,since we already added it
+			builderCmd = fmt.Sprintf("%s %s", builderCmd, "--append")
+		}
+
+		fmt.Println(util.DEVTRON, " cmd : ", builderCmd)
+		builderExecCmd := impl.GetCommandToExecute(builderCmd)
+		err := impl.cmdExecutor.RunCommand(ciContext, builderExecCmd)
 		if err != nil {
-			fmt.Println(util.DEVTRON, " appendNode : ", appendNode, " err : ", err, " error : ")
+			fmt.Println(util.DEVTRON, " builderCmd : ", builderCmd, " err : ", err, " error : ")
 			return err
 		}
 	}
 
+	patchK8sDriverNodes(deploymentNames)
 	return nil
 }
 
@@ -1008,7 +1009,7 @@ func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	return err, errBuf
 }
 
-func getBuildxK8sDriverCmd(dockerConnection string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) string {
+func getBuildxK8sDriverCmd(dockerConnection string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) (string, string) {
 	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
@@ -1029,7 +1030,7 @@ func getBuildxK8sDriverCmd(dockerConnection string, driverOpts map[string]string
 		buildkitToml = fmt.Sprintf("--config %s", BuildkitdConfigPath)
 	}
 	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, buildkitToml)
-	return buildxCreate
+	return buildxCreate, nodeName
 }
 
 func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
@@ -1164,4 +1165,59 @@ func (impl *DockerHelperImpl) GetDockerAuthConfigForPrivateRegistries(workflowRe
 		}
 	}
 	return dockerAuthConfig
+}
+
+func patchK8sDriverNodes(deploymentNames []string) {
+	for _, deploymentName := range deploymentNames {
+		if err := jsonPatchOwnerReferenceInDeployment(deploymentName); err != nil {
+			fmt.Println(util.DEVTRON, "failed to patch the buildkit deployment's owner reference, ", " deployment: ", deploymentName, " err: ", err)
+		} else {
+			fmt.Println(util.DEVTRON, "successfully patched the buildkit deployment's owner reference, ", " deployment: ", deploymentName)
+		}
+	}
+}
+
+func jsonPatchOwnerReferenceInDeployment(deploymentName string) error {
+
+	clientSet, err := GetK8sInClusterClientSet()
+	if err != nil {
+		fmt.Println(util.DEVTRON, "error in getting k8s clientset", "err", err)
+		return err
+	}
+
+	patchStr := fmt.Sprintf(`{"metadata":{"ownerReferences":[{"apiVersion":"v1","kind":"Pod","name":"%s","uid":"%s"}]}}`, utils.GetSelfK8sPodName(), utils.GetSelfK8sUID())
+
+	// Apply the patch directly
+	// the namespace is hardcoded to devtron-ci as our k8s driver is only supported for ci's running in devtron-ci namespace.
+	_, err = clientSet.Deployments("devtron-ci").Patch(
+		context.TODO(),
+		deploymentName,
+		types.StrategicMergePatchType,
+		[]byte(patchStr),
+		v1.PatchOptions{FieldManager: "patch"},
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetK8sInClusterClientSet() (*appsV1.AppsV1Client, error) {
+	restConfig, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	k8sHttpClient, err := rest.HTTPClientFor(restConfig)
+	if err != nil {
+		fmt.Println("error occurred while overriding k8s client", "reason", err)
+		return nil, err
+	}
+
+	k8sClientSet, err := appsV1.NewForConfigAndClient(restConfig, k8sHttpClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return k8sClientSet, nil
 }
