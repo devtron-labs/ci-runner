@@ -184,6 +184,7 @@ type CommonWorkflowRequest struct {
 	BuildxCacheModeMin            bool                           `json:"buildxCacheModeMin"`
 	AsyncBuildxCacheExport        bool                           `json:"asyncBuildxCacheExport"`
 	UseDockerApiToGetDigest       bool                           `json:"useDockerApiToGetDigest"`
+	BaseUrl                       string                         `json:"baseUrl"`
 }
 
 func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {
