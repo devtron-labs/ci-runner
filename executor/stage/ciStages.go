@@ -327,10 +327,6 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].CommitTime = detail.CommitTime
 		}
 	}
-	log.Println("------------------image and image hash before sending ci complete event--------------------------")
-	log.Println(fmt.Sprintf("dest: %s, digest: %s", dest, digest))
-	log.Println("------------------CI_CD_EVENT before sending ci complete event--------------------------")
-	log.Println(ciCdRequest.CommonWorkflowRequest)
 
 	err = helper.SendEvents(ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, "", resultsFromPlugin, pluginArtifacts)
 	if err != nil {
