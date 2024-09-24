@@ -184,6 +184,7 @@ type CommonWorkflowRequest struct {
 	BuildxCacheModeMin            bool                           `json:"buildxCacheModeMin"`
 	AsyncBuildxCacheExport        bool                           `json:"asyncBuildxCacheExport"`
 	UseDockerApiToGetDigest       bool                           `json:"useDockerApiToGetDigest"`
+	HostUrl                       string                         `json:"hostUrl"`
 }
 
 func (c *CommonWorkflowRequest) IsPreCdStage() bool {
