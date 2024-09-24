@@ -275,7 +275,7 @@ func (impl *GitCliManagerImpl) GitCheckout(gitContext GitContext, checkoutPath s
 
 func ToReadableError(errMsg string, cmdErr error) error {
 	if cmdErr != nil {
-		return fmt.Errorf("errorMsg: %s, cmdError: %s", errMsg, cmdErr.Error())
+		return fmt.Errorf("cmdError: %s, errorMsg: %s", cmdErr.Error(), errMsg)
 	}
 	return fmt.Errorf("error: %s", errMsg)
 }
