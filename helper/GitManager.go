@@ -183,7 +183,6 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 				// merge source if action type is merged
 				if webhookData.EventActionType == WEBHOOK_EVENT_MERGED_ACTION_TYPE {
 					sourceCheckout := webhookDataData[WEBHOOK_SELECTOR_SOURCE_CHECKOUT_NAME]
-
 					// throw error if source checkout is empty
 					if len(sourceCheckout) == 0 {
 						log.Println("sourceCheckout is empty")
