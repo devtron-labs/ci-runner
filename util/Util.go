@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/devtron-labs/common-lib/git-manager/util"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -248,4 +249,17 @@ func CreateAndWriteFile(filePath string, content string) error {
 		log.Printf("Error writing content to file %s: %v", filePath, err)
 	}
 	return err
+}
+
+func PopulateStageError(err error) {
+	if err == nil {
+		return
+	}
+	if _, fileErr := os.Stat(TerminalLogDir); os.IsNotExist(fileErr) {
+		_ = os.Mkdir(TerminalLogDir, os.ModeDir)
+	}
+	writeErr := os.WriteFile(path.Join(TerminalLogDir, TerminalLogFile), []byte(err.Error()), os.ModePerm)
+	if writeErr != nil {
+		log.Println(util.DEVTRON, writeErr)
+	}
 }
