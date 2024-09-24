@@ -26,6 +26,8 @@ const (
 	DOCKER_PS_START_WAIT_SECONDS = 150
 	HOMEDIR                      = "/"
 	WORKINGDIR                   = "/devtroncd"
+	TerminalLogDir               = "/dev"
+	TerminalLogFile              = "/termination-log"
 	LOCAL_BUILDX_LOCATION        = "/var/lib/devtron/buildx"
 	LOCAL_BUILDX_CACHE_LOCATION  = LOCAL_BUILDX_LOCATION + "/cache"
 	CIEVENT                      = "CI"
@@ -46,6 +48,7 @@ const (
 	NewLineChar                  = "\n"
 	ArtifactSourceType           = "CI-RUNNER"
 	ArtifactMaterialType         = "git"
+	TerminationLogDir            = "/dev/termination-log"
 )
 
 const (

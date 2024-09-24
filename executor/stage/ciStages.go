@@ -32,6 +32,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -68,28 +69,42 @@ func NewCiStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, 
 	}
 }
 
+// TODO Asutosh: here wip
+func propagateError(err error) {
+	if err == nil {
+		return
+	}
+	if _, fileErr := os.Stat(util.TerminalLogDir); os.IsNotExist(fileErr) {
+		_ = os.Mkdir(util.TerminalLogDir, os.ModeDir)
+	}
+	_ = os.WriteFile(path.Join(util.TerminalLogDir, util.TerminalLogFile), []byte(err.Error()), os.ModePerm)
+}
+
 func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	var artifactUploaded bool
 	var err error
 	ciRequest := ciCdRequest.CommonWorkflowRequest
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
 	defer func(ciRequest *helper.CommonWorkflowRequest) {
-		var stageError *helper.CiStageError
-		if errors.As(err, &stageError) {
-			*exitCode = util.CiStageFailErrorCode
-			// update artifact uploaded status
-			if !stageError.IsArtifactUploaded() {
-				stageError = stageError.WithArtifactUploaded(artifactUploaded)
+		if err != nil {
+			var stageError *helper.CiStageError
+			if errors.As(err, &stageError) {
+				*exitCode = util.CiStageFailErrorCode
+				// update artifact uploaded status
+				if !stageError.IsArtifactUploaded() {
+					stageError = stageError.WithArtifactUploaded(artifactUploaded)
+				}
+				// send ci failure event, for ci failure notification
+				sendCIFailureEvent(ciRequest, stageError)
+				err = stageError
+			} else {
+				*exitCode = util.DefaultErrorCode
+				stageError = helper.NewCiStageError(err).
+					WithArtifactUploaded(artifactUploaded).
+					WithFailureMessage(util.CiFailed.String())
+				sendCIFailureEvent(ciRequest, stageError)
 			}
-			// send ci failure event, for ci failure notification
-			sendCIFailureEvent(ciRequest, stageError)
-			err = stageError
-		} else if err != nil {
-			*exitCode = util.DefaultErrorCode
-			stageError = helper.NewCiStageError(err).
-				WithArtifactUploaded(artifactUploaded).
-				WithFailureMessage(util.CiFailed.String())
-			sendCIFailureEvent(ciRequest, stageError)
+
 		}
 	}(ciRequest)
 	artifactUploaded, err = impl.runCIStages(ciContext, ciCdRequest)
