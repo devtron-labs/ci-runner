@@ -54,13 +54,13 @@ func deferCDEvent(cdRequest *helper.CommonWorkflowRequest, artifactUploaded bool
 			if !stageError.IsArtifactUploaded() {
 				stageError = stageError.WithArtifactUploaded(artifactUploaded)
 			}
-			// send ci failure event, for ci failure notification
-			sendCDFailureEvent(cdRequest, stageError)
 		} else {
-			sendCDFailureEvent(cdRequest, helper.NewCdStageError(err).
+			stageError = helper.NewCdStageError(err).
 				WithArtifactUploaded(artifactUploaded).
-				WithFailureMessage(fmt.Sprintf(util.CdStageFailed.String(), cdRequest.GetCdStageType())))
+				WithFailureMessage(fmt.Sprintf(util.CdStageFailed.String(), cdRequest.GetCdStageType()))
 		}
+		// send ci failure event, for ci failure notification
+		sendCDFailureEvent(cdRequest, stageError)
 		util.PopulateStageError(err)
 	}
 }
