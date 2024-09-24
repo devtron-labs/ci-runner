@@ -66,7 +66,7 @@ func (impl *GitCliManagerImpl) Fetch(gitContext GitContext, rootDir string) (res
 
 	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.Auth.Username, gitContext.Auth.Password, tlsPathInfo)
 	log.Println(util.DEVTRON, "fetch output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
-	return output, "", nil
+	return output, errMsg, err
 }
 
 func (impl *GitCliManagerImpl) Checkout(gitContext GitContext, rootDir string, checkout string) (response, errMsg string, err error) {
@@ -82,7 +82,7 @@ func (impl *GitCliManagerImpl) Checkout(gitContext GitContext, rootDir string, c
 
 	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.Auth.Username, gitContext.Auth.Password, tlsPathInfo)
 	log.Println(util.DEVTRON, "checkout output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
-	return output, "", nil
+	return output, errMsg, err
 }
 
 func (impl *GitCliManagerImpl) RunCommandWithCred(cmd *exec.Cmd, userName, password string, tlsPathInfo *git_manager.TlsPathInfo) (response, errMsg string, err error) {
@@ -271,4 +271,11 @@ func (impl *GitCliManagerImpl) GitCheckout(gitContext GitContext, checkoutPath s
 
 	return "", nil
 
+}
+
+func ToReadableError(errMsg string, cmdErr error) error {
+	if cmdErr != nil {
+		return fmt.Errorf("cmdError: %s, errorMsg: %s", cmdErr.Error(), errMsg)
+	}
+	return fmt.Errorf("error: %s", errMsg)
 }

@@ -111,6 +111,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 				}
 			}
 			var cErr error
+			var errMsg string
 			var auth *BasicAuth
 			authMode := prj.GitOptions.AuthMode
 			switch authMode {
@@ -135,10 +136,10 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 				}
 			}
 
-			_, msgMsg, cErr := impl.gitCliManager.Clone(gitContext, prj)
-			if cErr != nil {
-				log.Fatal("could not clone repo ", " err ", cErr, "msgMsg", msgMsg)
-				return cErr
+			_, errMsg, cErr = impl.gitCliManager.Clone(gitContext, prj)
+			if cErr != nil || errMsg != "" {
+				log.Println("could not clone repo ", " err ", cErr, "errMsg", errMsg)
+				return ToReadableError(errMsg, cErr)
 			}
 
 			// checkout code
@@ -154,10 +155,10 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 					checkoutSource = prj.SourceValue
 				}
 				log.Println("checkout commit in branch fix : ", checkoutSource)
-				msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository, prj)
-				if cErr != nil {
-					log.Println("could not checkout hash ", " err ", cErr, "msgMsg", msgMsg)
-					return cErr
+				errMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, checkoutSource, authMode, prj.FetchSubmodules, prj.GitRepository, prj)
+				if cErr != nil || errMsg != "" {
+					log.Println("could not checkout hash ", " err ", cErr, "errMsg", errMsg)
+					return ToReadableError(errMsg, cErr)
 				}
 
 			} else if prj.SourceType == SOURCE_TYPE_WEBHOOK {
@@ -174,10 +175,10 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 				log.Println("checkout commit in webhook : ", targetCheckout)
 
 				// checkout target hash
-				msgMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository, prj)
-				if cErr != nil {
-					log.Println("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " msgMsg", msgMsg)
-					return cErr
+				errMsg, cErr = impl.gitCliManager.GitCheckout(gitContext, prj.CheckoutPath, targetCheckout, authMode, prj.FetchSubmodules, prj.GitRepository, prj)
+				if cErr != nil || errMsg != "" {
+					log.Println("could not checkout  ", "targetCheckout ", targetCheckout, " err ", cErr, " errMsg", errMsg)
+					return ToReadableError(errMsg, cErr)
 				}
 
 				// merge source if action type is merged
@@ -192,10 +193,10 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 					log.Println("merge commit in webhook : ", sourceCheckout)
 
 					// merge source
-					_, msgMsg, cErr = impl.gitCliManager.Merge(filepath.Join(util.WORKINGDIR, prj.CheckoutPath), sourceCheckout)
-					if cErr != nil {
-						log.Println("could not merge ", "sourceCheckout ", sourceCheckout, " err ", cErr, " msgMsg", msgMsg)
-						return cErr
+					_, errMsg, cErr = impl.gitCliManager.Merge(filepath.Join(util.WORKINGDIR, prj.CheckoutPath), sourceCheckout)
+					if cErr != nil || errMsg != "" {
+						log.Println("could not merge ", "sourceCheckout ", sourceCheckout, " err ", cErr, " errMsg", errMsg)
+						return ToReadableError(errMsg, cErr)
 					}
 
 				}
@@ -208,7 +209,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 
 	err := util.ExecuteWithStageInfoLog(util.GIT_CLONE_CHECKOUT, cloneAndCheckoutGitMaterials)
 	if err != nil {
-		log.Fatal("error in cloning and checking out the git materials ", "err : ", err)
+		log.Println(util.DEVTRON, "error in cloning and checking out the git materials ", "err : ", err)
 	}
 	return err
 }
