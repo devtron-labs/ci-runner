@@ -362,7 +362,6 @@ type CiCompleteEvent struct {
 	AppName                       string              `json:"appName"`
 	IsArtifactUploaded            bool                `json:"isArtifactUploaded"`
 	FailureReason                 string              `json:"failureReason"` // FailureReason is used for notifying the failure reason to the user. Should be short and user-friendly
-	InternalError                 string              `json:"internalError"` // InternalError is used as workflow failure message. Should be more detailed and technical
 	ImageDetailsFromCR            json.RawMessage     `json:"imageDetailsFromCR"`
 	PluginRegistryArtifactDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
 	PluginArtifactStage           string              `json:"pluginArtifactStage"`
@@ -377,11 +376,6 @@ func (event *CiCompleteEvent) WithMetrics(metrics CIMetrics) *CiCompleteEvent {
 
 func (event *CiCompleteEvent) WithFailureReason(failureReason string) *CiCompleteEvent {
 	event.FailureReason = failureReason
-	return event
-}
-
-func (event *CiCompleteEvent) WithInternalError(internalError string) *CiCompleteEvent {
-	event.InternalError = internalError
 	return event
 }
 
@@ -450,16 +444,10 @@ type CdStageCompleteEvent struct {
 	PluginArtifacts               *PluginArtifacts    `json:"pluginArtifacts"`
 	IsArtifactUploaded            bool                `json:"isArtifactUploaded"`
 	FailureReason                 string              `json:"failureReason"` // FailureReason is used for notifying the failure reason to the user. Should be short and user-friendly
-	InternalError                 string              `json:"internalError"` // InternalError is used as workflow failure message. Should be more detailed and technical
 }
 
 func (event *CdStageCompleteEvent) WithFailureReason(failureReason string) *CdStageCompleteEvent {
 	event.FailureReason = failureReason
-	return event
-}
-
-func (event *CdStageCompleteEvent) WithInternalError(internalError string) *CdStageCompleteEvent {
-	event.InternalError = internalError
 	return event
 }
 
