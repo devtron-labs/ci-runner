@@ -210,7 +210,7 @@ func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) er
 
 	err := util.ExecuteWithStageInfoLog(util.GIT_CLONE_CHECKOUT, cloneAndCheckoutGitMaterials)
 	if err != nil {
-		log.Fatal("error in cloning and checking out the git materials ", "err : ", err)
+		log.Println(util.DEVTRON, "error in cloning and checking out the git materials ", "err : ", err)
 	}
 	return err
 }
