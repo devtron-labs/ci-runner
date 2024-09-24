@@ -36,7 +36,7 @@ type StageExecutorImpl struct {
 
 type StageExecutor interface {
 	RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (pluginArtifacts *helper.PluginArtifacts, outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error)
-	RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvs map[string]string) error
+	RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvs map[string]string, stageType helper.PipelineType) error
 }
 
 func NewStageExecutorImpl(cmdExecutor helper.CommandExecutor, scriptExecutor ScriptExecutor) *StageExecutorImpl {
@@ -384,7 +384,7 @@ func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string
 
 }
 
-func (impl *StageExecutorImpl) RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvs map[string]string) error {
+func (impl *StageExecutorImpl) RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvs map[string]string, stageType helper.PipelineType) error {
 	log.Println(util.DEVTRON, " cd-stage-processing")
 	//cleaning the directory
 	err := os.RemoveAll(util.Output_path)
@@ -408,7 +408,9 @@ func (impl *StageExecutorImpl) RunCdStageTasks(ciContext cictx.CiContext, tasks 
 		log.Println(util.DEVTRON, "stage", task)
 		err := impl.scriptExecutor.RunScriptsV1(ciContext, util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
 		if err != nil {
-			return err
+			return helper.NewCdStageError(err).
+				WithFailureMessage(fmt.Sprintf(util.CdStageTaskFailed.String(), stageType, task.Name)).
+				WithArtifactUploaded(false)
 		}
 	}
 	return nil

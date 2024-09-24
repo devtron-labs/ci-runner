@@ -18,6 +18,9 @@ package stage
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"github.com/devtron-labs/ci-runner/helper/adaptor"
 	"log"
 	"os"
 
@@ -43,20 +46,47 @@ func NewCdStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, 
 }
 
 func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
-	err := impl.runCDStages(ciCdRequest)
-	artifactUploadErr := collectAndUploadCDArtifacts(ciCdRequest.CommonWorkflowRequest)
-	if err != nil || artifactUploadErr != nil {
+	var artifactUploaded bool
+	var err error
+	defer func(cdRequest *helper.CommonWorkflowRequest) {
+		if err != nil {
+			*exitCode = util.DefaultErrorCode
+			var stageError *helper.CdStageError
+			if errors.As(err, &stageError) {
+				// update artifact uploaded status
+				if !stageError.IsArtifactUploaded() {
+					stageError = stageError.WithArtifactUploaded(artifactUploaded)
+				}
+				// send ci failure event, for ci failure notification
+				sendCDFailureEvent(cdRequest, stageError)
+			} else {
+				sendCDFailureEvent(cdRequest, helper.NewCdStageError(err).
+					WithArtifactUploaded(artifactUploaded).
+					WithFailureMessage(fmt.Sprintf(util.CdStageFailed.String(), cdRequest.GetCdStageType())))
+			}
+		}
+	}(ciCdRequest.CommonWorkflowRequest)
+	err = impl.runCDStages(ciCdRequest)
+	if err != nil {
 		log.Println(err)
-		*exitCode = util.DefaultErrorCode
+		// not returning error as we want to upload artifacts
 	}
-
+	var artifactUploadErr error
+	artifactUploaded, artifactUploadErr = collectAndUploadCDArtifacts(ciCdRequest.CommonWorkflowRequest)
+	if artifactUploadErr != nil {
+		log.Println(artifactUploadErr)
+		// if artifact upload fails, treat it as exit status code 1 and set err to artifact upload error
+		if err == nil {
+			err = artifactUploadErr
+		}
+	}
+	return
 }
 
-func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) error {
+func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) (artifactUploaded bool, err error) {
 	cloudHelperBaseConfig := cdRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
 	if cdRequest.PrePostDeploySteps != nil && len(cdRequest.PrePostDeploySteps) > 0 {
-		err := helper.ZipAndUpload(cloudHelperBaseConfig, cdRequest.CiArtifactFileName)
-		return err
+		return helper.ZipAndUpload(cloudHelperBaseConfig, cdRequest.CiArtifactFileName)
 	}
 
 	// to support stage YAML outputs
@@ -82,7 +112,7 @@ func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) error 
 	return helper.UploadArtifact(cloudHelperBaseConfig, artifactFiles, cdRequest.CiArtifactFileName)
 }
 
-func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
+func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) error {
 	err := os.Chdir("/")
 	if err != nil {
 		return err
@@ -97,10 +127,10 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	}
 	// git handling
 	// we are skipping clone and checkout in case of ci job type poll cr images plugin does not require it.(ci-job)
-	skipCheckout := cicdRequest.CommonWorkflowRequest.CiPipelineType == helper.CI_JOB
+	skipCheckout := ciCdRequest.CommonWorkflowRequest.CiPipelineType == helper.CI_JOB
 	if !skipCheckout {
 		log.Println(util.DEVTRON, " git")
-		err = impl.gitManager.CloneAndCheckout(cicdRequest.CommonWorkflowRequest.CiProjectDetails)
+		err = impl.gitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
 		if err != nil {
 			log.Println(util.DEVTRON, "clone err: ", err)
 			return err
@@ -109,46 +139,48 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 	log.Println(util.DEVTRON, " /git")
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
-	impl.dockerHelper.StartDockerDaemon(cicdRequest.CommonWorkflowRequest)
-	ciContext := cictx.BuildCiContext(context.Background(), cicdRequest.CommonWorkflowRequest.EnableSecretMasking)
+	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest)
+	ciContext := cictx.BuildCiContext(context.Background(), ciCdRequest.CommonWorkflowRequest.EnableSecretMasking)
 	err = impl.dockerHelper.DockerLogin(ciContext, &helper.DockerCredentials{
-		DockerUsername:     cicdRequest.CommonWorkflowRequest.DockerUsername,
-		DockerPassword:     cicdRequest.CommonWorkflowRequest.DockerPassword,
-		AwsRegion:          cicdRequest.CommonWorkflowRequest.AwsRegion,
-		AccessKey:          cicdRequest.CommonWorkflowRequest.AccessKey,
-		SecretKey:          cicdRequest.CommonWorkflowRequest.SecretKey,
-		DockerRegistryURL:  cicdRequest.CommonWorkflowRequest.IntermediateDockerRegistryUrl,
-		DockerRegistryType: cicdRequest.CommonWorkflowRequest.DockerRegistryType,
+		DockerUsername:     ciCdRequest.CommonWorkflowRequest.DockerUsername,
+		DockerPassword:     ciCdRequest.CommonWorkflowRequest.DockerPassword,
+		AwsRegion:          ciCdRequest.CommonWorkflowRequest.AwsRegion,
+		AccessKey:          ciCdRequest.CommonWorkflowRequest.AccessKey,
+		SecretKey:          ciCdRequest.CommonWorkflowRequest.SecretKey,
+		DockerRegistryURL:  ciCdRequest.CommonWorkflowRequest.IntermediateDockerRegistryUrl,
+		DockerRegistryType: ciCdRequest.CommonWorkflowRequest.DockerRegistryType,
 	})
 	if err != nil {
 		return err
 	}
 
-	scriptEnvs, err := util2.GetGlobalEnvVariables(cicdRequest)
+	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 
 	allPluginArtifacts := helper.NewPluginArtifact()
-	if len(cicdRequest.CommonWorkflowRequest.PrePostDeploySteps) > 0 {
+	if len(ciCdRequest.CommonWorkflowRequest.PrePostDeploySteps) > 0 {
 		refStageMap := make(map[int][]*helper.StepObject)
-		for _, ref := range cicdRequest.CommonWorkflowRequest.RefPlugins {
+		for _, ref := range ciCdRequest.CommonWorkflowRequest.RefPlugins {
 			refStageMap[ref.Id] = ref.Steps
 		}
-		scriptEnvs["DEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
-		scriptEnvs["DIGEST"] = cicdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
-		var stage = helper.StepType(cicdRequest.CommonWorkflowRequest.StageType)
-		pluginArtifacts, _, _, err := impl.stageExecutorManager.RunCiCdSteps(stage, cicdRequest.CommonWorkflowRequest, cicdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
+		scriptEnvs["DEST"] = ciCdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
+		scriptEnvs["DIGEST"] = ciCdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
+		var stage = helper.StepType(ciCdRequest.CommonWorkflowRequest.StageType)
+		pluginArtifacts, _, step, err := impl.stageExecutorManager.RunCiCdSteps(stage, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {
-			return err
+			return helper.NewCdStageError(err).
+				WithFailureMessage(fmt.Sprintf(util.CdStageTaskFailed.String(), ciCdRequest.CommonWorkflowRequest.GetCdStageType(), step.Name)).
+				WithArtifactUploaded(false)
 		}
 		allPluginArtifacts.MergePluginArtifact(pluginArtifacts)
 	} else {
 
 		// Get devtron-cd yaml
-		taskYaml, err := helper.ToTaskYaml([]byte(cicdRequest.CommonWorkflowRequest.StageYaml))
+		taskYaml, err := helper.ToTaskYaml([]byte(ciCdRequest.CommonWorkflowRequest.StageYaml))
 		if err != nil {
 			log.Println(err)
 			return err
 		}
-		cicdRequest.CommonWorkflowRequest.TaskYaml = taskYaml
+		ciCdRequest.CommonWorkflowRequest.TaskYaml = taskYaml
 
 		// run post artifact processing
 		log.Println(util.DEVTRON, " stage yaml", taskYaml)
@@ -158,18 +190,19 @@ func (impl *CdStage) runCDStages(cicdRequest *helper.CiCdTriggerEvent) error {
 			tasks = append(tasks, t.AfterTasks...)
 		}
 
-		if err != nil {
-			return err
-		}
-		err = impl.stageExecutorManager.RunCdStageTasks(ciContext, tasks, scriptEnvs)
+		err = impl.stageExecutorManager.RunCdStageTasks(ciContext, tasks, scriptEnvs, ciCdRequest.CommonWorkflowRequest.GetCdStageType())
 		if err != nil {
 			return err
 		}
 	}
-	// dry run flag indicates that ci runner image is being run from external helm chart
-	if !cicdRequest.CommonWorkflowRequest.IsDryRun {
+	// dry run flag indicates that cd stage is running in dry run mode.
+	// specifically for isolated environment type, for dry-run we don't send success event.
+	// but failure event is sent in case of error.
+	if !ciCdRequest.CommonWorkflowRequest.IsDryRun {
 		log.Println(util.DEVTRON, " event")
-		err = helper.SendCDEvent(cicdRequest.CommonWorkflowRequest, allPluginArtifacts)
+		event := adaptor.NewCdCompleteEvent(ciCdRequest.CommonWorkflowRequest).
+			WithPluginArtifacts(allPluginArtifacts)
+		err = helper.SendCDEvent(ciCdRequest.CommonWorkflowRequest, event)
 		if err != nil {
 			log.Println(err)
 			return err

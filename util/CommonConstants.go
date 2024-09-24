@@ -44,6 +44,8 @@ const (
 	TeeCommand                   = "tee"
 	LogFileName                  = "main.log"
 	NewLineChar                  = "\n"
+	ArtifactSourceType           = "CI-RUNNER"
+	ArtifactMaterialType         = "git"
 )
 
 const (
@@ -57,4 +59,28 @@ var (
 	Output_path         = filepath.Join(WORKINGDIR, "./process")
 
 	Bash_script = filepath.Join("_script.sh")
+)
+
+type CiFailReason string
+
+type CdFailReason string
+
+func (r CiFailReason) String() string {
+	return string(r)
+}
+
+func (r CdFailReason) String() string {
+	return string(r)
+}
+
+const (
+	PreCiFailed  CiFailReason = "Pre-CI task failed: %s"
+	PostCiFailed CiFailReason = "Post-CI task failed: %s"
+	BuildFailed  CiFailReason = "Docker build failed"
+	PushFailed   CiFailReason = "Docker push failed"
+	ScanFailed   CiFailReason = "Image scan failed"
+	CiFailed     CiFailReason = "CI failed"
+
+	CdStageTaskFailed CdFailReason = "%s task failed: %s"
+	CdStageFailed     CdFailReason = "%s failed"
 )
