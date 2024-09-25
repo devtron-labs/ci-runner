@@ -443,12 +443,6 @@ type CdStageCompleteEvent struct {
 	PluginArtifactStage           string              `json:"pluginArtifactStage"`
 	PluginArtifacts               *PluginArtifacts    `json:"pluginArtifacts"`
 	IsArtifactUploaded            bool                `json:"isArtifactUploaded"`
-	FailureReason                 string              `json:"failureReason"` // FailureReason is used for notifying the failure reason to the user. Should be short and user-friendly
-}
-
-func (event *CdStageCompleteEvent) WithFailureReason(failureReason string) *CdStageCompleteEvent {
-	event.FailureReason = failureReason
-	return event
 }
 
 func (event *CdStageCompleteEvent) WithPluginArtifacts(pluginArtifacts *PluginArtifacts) *CdStageCompleteEvent {

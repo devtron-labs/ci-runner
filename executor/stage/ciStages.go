@@ -545,8 +545,7 @@ func sendCIFailureEvent(ciRequest *helper.CommonWorkflowRequest, err *helper.CiS
 
 func sendCDFailureEvent(ciRequest *helper.CommonWorkflowRequest, err *helper.CdStageError) {
 	event := adaptor.NewCdCompleteEvent(ciRequest).
-		WithIsArtifactUploaded(err.IsArtifactUploaded()).
-		WithFailureReason(err.GetFailureMessage())
+		WithIsArtifactUploaded(err.IsArtifactUploaded())
 	e := helper.SendCDEvent(ciRequest, event)
 	if e != nil {
 		log.Println(e)
