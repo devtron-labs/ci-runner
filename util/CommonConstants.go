@@ -82,7 +82,7 @@ const (
 	BuildFailed  CiFailReason = "Docker build failed"
 	PushFailed   CiFailReason = "Docker push failed"
 	ScanFailed   CiFailReason = "Image scan failed"
-	CiFailed     CiFailReason = "CI failed"
+	CiFailed     CiFailReason = "CI Failed: exit code 1"
 
 	CdStageTaskFailed CdFailReason = "%s task failed: %s"
 	CdStageFailed     CdFailReason = "%s failed"
