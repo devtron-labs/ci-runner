@@ -68,7 +68,9 @@ func deferCDEvent(cdRequest *helper.CommonWorkflowRequest, artifactUploaded bool
 func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	var artifactUploaded bool
 	var err error
-	defer deferCDEvent(ciCdRequest.CommonWorkflowRequest, artifactUploaded, exitCode, err)
+	defer func() {
+		deferCDEvent(ciCdRequest.CommonWorkflowRequest, artifactUploaded, exitCode, err)
+	}()
 	err = impl.runCDStages(ciCdRequest)
 	if err != nil {
 		log.Println(err)

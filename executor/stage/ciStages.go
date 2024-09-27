@@ -94,7 +94,9 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	var err error
 	ciRequest := ciCdRequest.CommonWorkflowRequest
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
-	defer deferCIEvent(ciRequest, artifactUploaded, exitCode, err)
+	defer func() {
+		deferCIEvent(ciRequest, artifactUploaded, exitCode, err)
+	}()
 	artifactUploaded, err = impl.runCIStages(ciContext, ciCdRequest)
 	log.Println(util.DEVTRON, artifactUploaded, err)
 	var artifactUploadErr error
