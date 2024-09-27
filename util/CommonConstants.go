@@ -25,7 +25,7 @@ const (
 	SECUREWITHCERT               = "secure-with-cert"
 	DOCKER_PS_START_WAIT_SECONDS = 150
 	HOMEDIR                      = "/"
-	WORKINGDIR                   = "/tmp/devtroncd"
+	WORKINGDIR                   = "/devtroncd"
 	TerminalLogDir               = "/dev"
 	TerminalLogFile              = "/termination-log"
 	LOCAL_BUILDX_LOCATION        = "/var/lib/devtron/buildx"
