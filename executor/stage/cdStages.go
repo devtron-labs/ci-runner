@@ -45,9 +45,9 @@ func NewCdStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, 
 	}
 }
 
-func deferCDEvent(cdRequest *helper.CommonWorkflowRequest, artifactUploaded bool, exitCode *int, err error) {
+func deferCDEvent(cdRequest *helper.CommonWorkflowRequest, artifactUploaded bool, err error) (exitCode int) {
 	if err != nil {
-		*exitCode = util.DefaultErrorCode
+		exitCode = util.DefaultErrorCode
 		var stageError *helper.CdStageError
 		if errors.As(err, &stageError) {
 			// update artifact uploaded status
@@ -63,13 +63,14 @@ func deferCDEvent(cdRequest *helper.CommonWorkflowRequest, artifactUploaded bool
 		sendCDFailureEvent(cdRequest, stageError)
 		util.PopulateStageError(err)
 	}
+	return exitCode
 }
 
 func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	var artifactUploaded bool
 	var err error
 	defer func() {
-		deferCDEvent(ciCdRequest.CommonWorkflowRequest, artifactUploaded, exitCode, err)
+		*exitCode = deferCDEvent(ciCdRequest.CommonWorkflowRequest, artifactUploaded, err)
 	}()
 	err = impl.runCDStages(ciCdRequest)
 	if err != nil {

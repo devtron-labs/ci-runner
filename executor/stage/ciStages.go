@@ -68,17 +68,17 @@ func NewCiStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, 
 	}
 }
 
-func deferCIEvent(ciRequest *helper.CommonWorkflowRequest, artifactUploaded bool, exitCode *int, err error) {
+func deferCIEvent(ciRequest *helper.CommonWorkflowRequest, artifactUploaded bool, err error) (exitCode int) {
 	if err != nil {
 		var stageError *helper.CiStageError
 		if errors.As(err, &stageError) {
-			*exitCode = util.CiStageFailErrorCode
+			exitCode = util.CiStageFailErrorCode
 			// update artifact uploaded status
 			if !stageError.IsArtifactUploaded() {
 				stageError = stageError.WithArtifactUploaded(artifactUploaded)
 			}
 		} else {
-			*exitCode = util.DefaultErrorCode
+			exitCode = util.DefaultErrorCode
 			stageError = helper.NewCiStageError(err).
 				WithArtifactUploaded(artifactUploaded).
 				WithFailureMessage(util.CiFailed.String())
@@ -87,6 +87,7 @@ func deferCIEvent(ciRequest *helper.CommonWorkflowRequest, artifactUploaded bool
 		sendCIFailureEvent(ciRequest, stageError)
 		util.PopulateStageError(err)
 	}
+	return exitCode
 }
 
 func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
@@ -95,7 +96,7 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	ciRequest := ciCdRequest.CommonWorkflowRequest
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
 	defer func() {
-		deferCIEvent(ciRequest, artifactUploaded, exitCode, err)
+		*exitCode = deferCIEvent(ciRequest, artifactUploaded, err)
 	}()
 	artifactUploaded, err = impl.runCIStages(ciContext, ciCdRequest)
 	log.Println(util.DEVTRON, artifactUploaded, err)
