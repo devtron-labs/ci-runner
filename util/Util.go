@@ -262,4 +262,10 @@ func PopulateStageError(err error) {
 	if writeErr != nil {
 		log.Println(util.DEVTRON, writeErr)
 	}
+	// TODO Asutosh: Debugging removeeeeeeee......
+	data, fileErr := os.ReadFile(path.Join(TerminalLogDir, TerminalLogFile))
+	if fileErr != nil {
+		log.Println(util.DEVTRON, "failed to read testdata: ", fileErr)
+	}
+	log.Println(util.DEVTRON, "termination log data: ", string(data))
 }
