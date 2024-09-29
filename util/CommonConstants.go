@@ -48,7 +48,6 @@ const (
 	NewLineChar                  = "\n"
 	ArtifactSourceType           = "CI-RUNNER"
 	ArtifactMaterialType         = "git"
-	TerminationLogDir            = "/dev/termination-log"
 )
 
 const (

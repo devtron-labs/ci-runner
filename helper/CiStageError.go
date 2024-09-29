@@ -16,6 +16,8 @@
 
 package helper
 
+import "fmt"
+
 type CiStageError struct {
 	stageErr         error
 	metrics          *CIMetrics
@@ -61,6 +63,11 @@ func (err *CiStageError) Error() string {
 	return err.stageErr.Error()
 }
 
+// ErrorMessage returns the error message with the failure message
+func (err *CiStageError) ErrorMessage() string {
+	return fmt.Sprintf("%s. Error: %s", err.failureMessage, err.stageErr.Error())
+}
+
 func (err *CiStageError) Unwrap() error {
 	return err.stageErr
 }
@@ -95,6 +102,11 @@ func (err *CdStageError) IsArtifactUploaded() bool {
 
 func (err *CdStageError) Error() string {
 	return err.stageErr.Error()
+}
+
+// ErrorMessage returns the error message with the failure message
+func (err *CdStageError) ErrorMessage() string {
+	return fmt.Sprintf("%s. Error: %s", err.failureMessage, err.stageErr.Error())
 }
 
 func (err *CdStageError) Unwrap() error {

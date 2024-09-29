@@ -251,16 +251,16 @@ func CreateAndWriteFile(filePath string, content string) error {
 	return err
 }
 
-func PopulateStageError(err error) {
-	if err == nil {
+func PopulateStageError(errorMessage string) {
+	if len(errorMessage) == 0 {
 		return
 	}
 	if _, fileErr := os.Stat(TerminalLogDir); os.IsNotExist(fileErr) {
 		_ = os.Mkdir(TerminalLogDir, os.ModeDir)
 	}
-	writeErr := os.WriteFile(path.Join(TerminalLogDir, TerminalLogFile), []byte(err.Error()), os.ModePerm)
+	writeErr := os.WriteFile(path.Join(TerminalLogDir, TerminalLogFile), []byte(errorMessage), os.ModePerm)
 	if writeErr != nil {
-		log.Println(util.DEVTRON, writeErr)
+		log.Println(util.DEVTRON, "failed to write error message: ", writeErr)
 	}
 	// TODO Asutosh: Debugging removeeeeeeee......
 	data, fileErr := os.ReadFile(path.Join(TerminalLogDir, TerminalLogFile))
