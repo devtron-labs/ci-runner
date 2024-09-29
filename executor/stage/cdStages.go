@@ -61,7 +61,7 @@ func deferCDEvent(cdRequest *helper.CommonWorkflowRequest, artifactUploaded bool
 		}
 		// send ci failure event, for ci failure notification
 		sendCDFailureEvent(cdRequest, stageError)
-		util.PopulateStageError(err)
+		util.PopulateStageError(stageError)
 	}
 	return exitCode
 }

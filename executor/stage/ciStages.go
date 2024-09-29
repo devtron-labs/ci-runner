@@ -86,7 +86,7 @@ func deferCIEvent(ciRequest *helper.CommonWorkflowRequest, artifactUploaded bool
 		}
 		// send ci failure event, for ci failure notification
 		sendCIFailureEvent(ciRequest, stageError)
-		util.PopulateStageError(err)
+		util.PopulateStageError(stageError)
 	}
 	return exitCode
 }
