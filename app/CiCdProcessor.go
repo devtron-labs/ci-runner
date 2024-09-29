@@ -25,6 +25,7 @@ import (
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
 	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
+	"github.com/devtron-labs/common-lib/utils/workFlow"
 	"log"
 	"os"
 	"os/signal"
@@ -80,7 +81,7 @@ func (impl *CiCdProcessor) ProcessCiCdEvent(ciCdRequest *helper.CiCdTriggerEvent
 	exitCode := 0
 	if ciCdRequestErr != nil {
 		log.Println(ciCdRequestErr)
-		exitCode = util.DefaultErrorCode
+		exitCode = workFlow.DefaultErrorCode
 		return
 	}
 	// Create a channel to receive the SIGTERM signal
@@ -88,7 +89,7 @@ func (impl *CiCdProcessor) ProcessCiCdEvent(ciCdRequest *helper.CiCdTriggerEvent
 	signal.Notify(sigTerm, syscall.SIGTERM)
 
 	go func() {
-		var abortErrorCode = util.AbortErrorCode
+		var abortErrorCode = workFlow.AbortErrorCode
 		log.Println(util.DEVTRON, "SIGTERM listener started!")
 		receivedSignal := <-sigTerm
 		log.Println(util.DEVTRON, "signal received: ", receivedSignal)

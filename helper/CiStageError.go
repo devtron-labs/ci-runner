@@ -16,7 +16,10 @@
 
 package helper
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/devtron-labs/common-lib/utils/workFlow"
+)
 
 type CiStageError struct {
 	stageErr         error
@@ -65,7 +68,13 @@ func (err *CiStageError) Error() string {
 
 // ErrorMessage returns the error message with the failure message
 func (err *CiStageError) ErrorMessage() string {
-	return fmt.Sprintf("%s. Error: %s", err.failureMessage, err.stageErr.Error())
+	if len(err.failureMessage) != 0 && err.failureMessage != workFlow.CiFailed.String() {
+		return err.failureMessage
+	} else if err.failureMessage == workFlow.CiFailed.String() {
+		return fmt.Sprintf("%s. Reason: %s", err.failureMessage, err.stageErr.Error())
+	} else {
+		return err.stageErr.Error()
+	}
 }
 
 func (err *CiStageError) Unwrap() error {
@@ -106,7 +115,11 @@ func (err *CdStageError) Error() string {
 
 // ErrorMessage returns the error message with the failure message
 func (err *CdStageError) ErrorMessage() string {
-	return fmt.Sprintf("%s. Error: %s", err.failureMessage, err.stageErr.Error())
+	if len(err.failureMessage) != 0 {
+		return err.failureMessage
+	} else {
+		return err.stageErr.Error()
+	}
 }
 
 func (err *CdStageError) Unwrap() error {

@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/devtron-labs/ci-runner/helper/adaptor"
+	"github.com/devtron-labs/common-lib/utils/workFlow"
 	"log"
 	"os"
 
@@ -47,7 +48,7 @@ func NewCdStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, 
 
 func deferCDEvent(cdRequest *helper.CommonWorkflowRequest, artifactUploaded bool, err error) (exitCode int) {
 	if err != nil {
-		exitCode = util.DefaultErrorCode
+		exitCode = workFlow.DefaultErrorCode
 		var stageError *helper.CdStageError
 		if errors.As(err, &stageError) {
 			// update artifact uploaded status
@@ -55,9 +56,8 @@ func deferCDEvent(cdRequest *helper.CommonWorkflowRequest, artifactUploaded bool
 				stageError = stageError.WithArtifactUploaded(artifactUploaded)
 			}
 		} else {
-			stageError = helper.NewCdStageError(err).
-				WithArtifactUploaded(artifactUploaded).
-				WithFailureMessage(fmt.Sprintf(util.CdStageFailed.String(), cdRequest.GetCdStageType()))
+			stageError = helper.NewCdStageError(fmt.Errorf(workFlow.CdStageFailed.String(), cdRequest.GetCdStageType(), err)).
+				WithArtifactUploaded(artifactUploaded)
 		}
 		// send ci failure event, for ci failure notification
 		sendCDFailureEvent(cdRequest, stageError)
@@ -175,7 +175,7 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) error {
 		pluginArtifacts, _, step, err := impl.stageExecutorManager.RunCiCdSteps(stage, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {
 			return helper.NewCdStageError(err).
-				WithFailureMessage(fmt.Sprintf(util.CdStageTaskFailed.String(), ciCdRequest.CommonWorkflowRequest.GetCdStageType(), step.Name)).
+				WithFailureMessage(fmt.Sprintf(workFlow.CdStageTaskFailed.String(), ciCdRequest.CommonWorkflowRequest.GetCdStageType(), step.Name)).
 				WithArtifactUploaded(false)
 		}
 		allPluginArtifacts.MergePluginArtifact(pluginArtifacts)

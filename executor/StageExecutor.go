@@ -23,6 +23,7 @@ import (
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
+	"github.com/devtron-labs/common-lib/utils/workFlow"
 	copylib "github.com/otiai10/copy"
 	"log"
 	"os"
@@ -409,7 +410,7 @@ func (impl *StageExecutorImpl) RunCdStageTasks(ciContext cictx.CiContext, tasks 
 		err := impl.scriptExecutor.RunScriptsV1(ciContext, util.Output_path, fmt.Sprintf("stage-%d", i), task.Script, scriptEnvs)
 		if err != nil {
 			return helper.NewCdStageError(err).
-				WithFailureMessage(fmt.Sprintf(util.CdStageTaskFailed.String(), stageType, task.Name)).
+				WithFailureMessage(fmt.Sprintf(workFlow.CdStageTaskFailed.String(), stageType, task.Name)).
 				WithArtifactUploaded(false)
 		}
 	}

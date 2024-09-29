@@ -26,8 +26,6 @@ const (
 	DOCKER_PS_START_WAIT_SECONDS = 150
 	HOMEDIR                      = "/"
 	WORKINGDIR                   = "/devtroncd"
-	TerminalLogDir               = "/dev"
-	TerminalLogFile              = "/termination-log"
 	LOCAL_BUILDX_LOCATION        = "/var/lib/devtron/buildx"
 	LOCAL_BUILDX_CACHE_LOCATION  = LOCAL_BUILDX_LOCATION + "/cache"
 	CIEVENT                      = "CI"
@@ -38,9 +36,6 @@ const (
 	CiCdEventEnvKey              = "CI_CD_EVENT"
 	Source_Signal                = "Source_Signal"
 	Source_Defer                 = "Source_Defer"
-	DefaultErrorCode             = 1
-	AbortErrorCode               = 143
-	CiStageFailErrorCode         = 2
 	InAppLogging                 = "IN_APP_LOGGING"
 	CiRunnerCommand              = "./cirunner"
 	TeeCommand                   = "tee"
@@ -61,28 +56,4 @@ var (
 	Output_path         = filepath.Join(WORKINGDIR, "./process")
 
 	Bash_script = filepath.Join("_script.sh")
-)
-
-type CiFailReason string
-
-type CdFailReason string
-
-func (r CiFailReason) String() string {
-	return string(r)
-}
-
-func (r CdFailReason) String() string {
-	return string(r)
-}
-
-const (
-	PreCiFailed  CiFailReason = "Pre-CI task failed: %s"
-	PostCiFailed CiFailReason = "Post-CI task failed: %s"
-	BuildFailed  CiFailReason = "Docker build failed"
-	PushFailed   CiFailReason = "Docker push failed"
-	ScanFailed   CiFailReason = "Image scan failed"
-	CiFailed     CiFailReason = "CI Failed: exit code 1"
-
-	CdStageTaskFailed CdFailReason = "%s task failed: %s"
-	CdStageFailed     CdFailReason = "%s failed"
 )

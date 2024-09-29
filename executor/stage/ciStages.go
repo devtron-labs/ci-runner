@@ -29,6 +29,7 @@ import (
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/common-lib/utils/bean"
+	"github.com/devtron-labs/common-lib/utils/workFlow"
 	"io/ioutil"
 	"log"
 	"os"
@@ -73,16 +74,16 @@ func deferCIEvent(ciRequest *helper.CommonWorkflowRequest, artifactUploaded bool
 	if err != nil {
 		var stageError *helper.CiStageError
 		if errors.As(err, &stageError) {
-			exitCode = util.CiStageFailErrorCode
+			exitCode = workFlow.CiStageFailErrorCode
 			// update artifact uploaded status
 			if !stageError.IsArtifactUploaded() {
 				stageError = stageError.WithArtifactUploaded(artifactUploaded)
 			}
 		} else {
-			exitCode = util.DefaultErrorCode
+			exitCode = workFlow.DefaultErrorCode
 			stageError = helper.NewCiStageError(err).
 				WithArtifactUploaded(artifactUploaded).
-				WithFailureMessage(util.CiFailed.String())
+				WithFailureMessage(workFlow.CiFailed.String())
 		}
 		// send ci failure event, for ci failure notification
 		sendCIFailureEvent(ciRequest, stageError)
@@ -368,7 +369,7 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 		log.Println("error in running pre Ci Steps", "err", err)
 		return nil, nil, helper.NewCiStageError(err).
 			WithMetrics(metrics).
-			WithFailureMessage(fmt.Sprintf(util.PreCiFailed.String(), step.Name)).
+			WithFailureMessage(fmt.Sprintf(workFlow.PreCiFailed.String(), step.Name)).
 			WithArtifactUploaded(artifactUploaded)
 	}
 	// considering pull images from Container repo Plugin in Pre ci steps only.
@@ -403,7 +404,7 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 		// code-block ends
 		err = helper.NewCiStageError(err).
 			WithMetrics(metrics).
-			WithFailureMessage(util.BuildFailed.String()).
+			WithFailureMessage(workFlow.BuildFailed.String()).
 			WithArtifactUploaded(artifactUploaded)
 	}
 	log.Println(util.DEVTRON, " Build artifact completed", "dest", dest, "err", err)
@@ -448,7 +449,7 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 		log.Println("error in running Post Ci Steps", "err", err)
 		return nil, helper.NewCiStageError(err).
 			WithMetrics(metrics).
-			WithFailureMessage(fmt.Sprintf(util.PostCiFailed.String(), step.Name)).
+			WithFailureMessage(fmt.Sprintf(workFlow.PostCiFailed.String(), step.Name)).
 			WithArtifactUploaded(artifactUploaded)
 	}
 	//sent by orchestrator if copy container image v2 is configured
@@ -474,7 +475,7 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 			log.Println("error in running Image Scan", "err", err)
 			return helper.NewCiStageError(err).
 				WithMetrics(metrics).
-				WithFailureMessage(util.ScanFailed.String()).
+				WithFailureMessage(workFlow.ScanFailed.String()).
 				WithArtifactUploaded(artifactUploaded)
 		}
 		log.Println("Image scanning completed with scanEvent", scanEvent)
@@ -575,7 +576,7 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 	if err != nil {
 		return helper.NewCiStageError(err).
 			WithMetrics(metrics).
-			WithFailureMessage(util.PushFailed.String()).
+			WithFailureMessage(workFlow.PushFailed.String()).
 			WithArtifactUploaded(artifactUploaded)
 	}
 	return err

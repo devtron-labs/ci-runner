@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/devtron-labs/common-lib/git-manager/util"
+	"github.com/devtron-labs/common-lib/utils/workFlow"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -255,17 +256,11 @@ func PopulateStageError(errorMessage string) {
 	if len(errorMessage) == 0 {
 		return
 	}
-	if _, fileErr := os.Stat(TerminalLogDir); os.IsNotExist(fileErr) {
-		_ = os.Mkdir(TerminalLogDir, os.ModeDir)
+	if _, fileErr := os.Stat(workFlow.TerminalLogDir); os.IsNotExist(fileErr) {
+		_ = os.Mkdir(workFlow.TerminalLogDir, os.ModeDir)
 	}
-	writeErr := os.WriteFile(path.Join(TerminalLogDir, TerminalLogFile), []byte(errorMessage), os.ModePerm)
+	writeErr := os.WriteFile(workFlow.GetTerminalLogFilePath(), []byte(errorMessage), os.ModePerm)
 	if writeErr != nil {
 		log.Println(util.DEVTRON, "failed to write error message: ", writeErr)
 	}
-	// TODO Asutosh: Debugging removeeeeeeee......
-	data, fileErr := os.ReadFile(path.Join(TerminalLogDir, TerminalLogFile))
-	if fileErr != nil {
-		log.Println(util.DEVTRON, "failed to read testdata: ", fileErr)
-	}
-	log.Println(util.DEVTRON, "termination log data: ", string(data))
 }
