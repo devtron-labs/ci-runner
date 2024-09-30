@@ -173,7 +173,7 @@ type CommonWorkflowRequest struct {
 	DeploymentReleaseCounter      int                            `json:"deploymentReleaseCounter,omitempty"`
 	PrePostDeploySteps            []*StepObject                  `json:"prePostDeploySteps"`
 	TaskYaml                      *TaskYaml                      `json:"-"`
-	IsDryRun                      bool                           `json:"isDryRun"`
+	IsVirtualExecution            bool                           `json:"isVirtualExecution"`
 	CiArtifactLastFetch           time.Time                      `json:"ciArtifactLastFetch"`
 	CiPipelineType                string                         `json:"CiPipelineType"`
 	RegistryDestinationImageMap   map[string][]string            `json:"registryDestinationImageMap"`

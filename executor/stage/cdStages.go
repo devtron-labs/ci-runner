@@ -205,7 +205,7 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) error {
 	// dry run flag indicates that cd stage is running in dry run mode.
 	// specifically for isolated environment type, for dry-run we don't send success event.
 	// but failure event is sent in case of error.
-	if !ciCdRequest.CommonWorkflowRequest.IsDryRun {
+	if !ciCdRequest.CommonWorkflowRequest.IsVirtualExecution {
 		log.Println(util.DEVTRON, " event")
 		event := adaptor.NewCdCompleteEvent(ciCdRequest.CommonWorkflowRequest).
 			WithPluginArtifacts(allPluginArtifacts)
