@@ -71,10 +71,11 @@ func deferCDEvent(cdRequest *helper.CommonWorkflowRequest, artifactUploaded bool
 func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	var artifactUploaded bool
 	var err error
+	var allPluginArtifacts *helper.PluginArtifacts
 	defer func() {
 		*exitCode = deferCDEvent(ciCdRequest.CommonWorkflowRequest, artifactUploaded, err)
 	}()
-	err = impl.runCDStages(ciCdRequest)
+	allPluginArtifacts, err = impl.runCDStages(ciCdRequest)
 	if err != nil {
 		log.Println("cd stage error: ", err)
 		// not returning error as we want to upload artifacts
@@ -87,6 +88,20 @@ func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 		if err == nil {
 			err = artifactUploadErr
 		}
+	}
+	// IsVirtualExecution run flag indicates that cd stage is running in virtual mode.
+	// specifically for isolated environment type, for IsVirtualExecution we don't send success event.
+	// but failure event is sent in case of error.
+	if err == nil && !ciCdRequest.CommonWorkflowRequest.IsVirtualExecution {
+		log.Println(util.DEVTRON, " event")
+		event := adaptor.NewCdCompleteEvent(ciCdRequest.CommonWorkflowRequest).
+			WithPluginArtifacts(allPluginArtifacts).
+			WithIsArtifactUploaded(artifactUploaded)
+		err = helper.SendCDEvent(ciCdRequest.CommonWorkflowRequest, event)
+		if err != nil {
+			log.Println(err)
+		}
+		log.Println(util.DEVTRON, " /event")
 	}
 	return
 }
@@ -120,10 +135,10 @@ func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) (artif
 	return helper.UploadArtifact(cloudHelperBaseConfig, artifactFiles, cdRequest.CiArtifactFileName)
 }
 
-func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) error {
+func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.PluginArtifacts, error) {
 	err := os.Chdir("/")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if _, err := os.Stat(util.WORKINGDIR); os.IsNotExist(err) {
@@ -131,7 +146,7 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) error {
 	}
 	err = os.Chdir(util.WORKINGDIR)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// git handling
 	// we are skipping clone and checkout in case of ci job type poll cr images plugin does not require it.(ci-job)
@@ -141,7 +156,7 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) error {
 		err = impl.gitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
 		if err != nil {
 			log.Println(util.DEVTRON, "clone err: ", err)
-			return err
+			return nil, err
 		}
 	}
 	log.Println(util.DEVTRON, " /git")
@@ -159,7 +174,7 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) error {
 		DockerRegistryType: ciCdRequest.CommonWorkflowRequest.DockerRegistryType,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
@@ -175,7 +190,7 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) error {
 		var stage = helper.StepType(ciCdRequest.CommonWorkflowRequest.StageType)
 		pluginArtifacts, _, step, err := impl.stageExecutorManager.RunCiCdSteps(stage, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {
-			return helper.NewCdStageError(err).
+			return allPluginArtifacts, helper.NewCdStageError(err).
 				WithFailureMessage(fmt.Sprintf(workFlow.CdStageTaskFailed.String(), ciCdRequest.CommonWorkflowRequest.GetCdStageType(), step.Name)).
 				WithArtifactUploaded(false)
 		}
@@ -186,7 +201,7 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) error {
 		taskYaml, err := helper.ToTaskYaml([]byte(ciCdRequest.CommonWorkflowRequest.StageYaml))
 		if err != nil {
 			log.Println(err)
-			return err
+			return allPluginArtifacts, err
 		}
 		ciCdRequest.CommonWorkflowRequest.TaskYaml = taskYaml
 
@@ -200,27 +215,14 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) error {
 
 		err = impl.stageExecutorManager.RunCdStageTasks(ciContext, tasks, scriptEnvs, ciCdRequest.CommonWorkflowRequest.GetCdStageType())
 		if err != nil {
-			return err
+			return allPluginArtifacts, err
 		}
 	}
-	// dry run flag indicates that cd stage is running in dry run mode.
-	// specifically for isolated environment type, for dry-run we don't send success event.
-	// but failure event is sent in case of error.
-	if !ciCdRequest.CommonWorkflowRequest.IsVirtualExecution {
-		log.Println(util.DEVTRON, " event")
-		event := adaptor.NewCdCompleteEvent(ciCdRequest.CommonWorkflowRequest).
-			WithPluginArtifacts(allPluginArtifacts)
-		err = helper.SendCDEvent(ciCdRequest.CommonWorkflowRequest, event)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		log.Println(util.DEVTRON, " /event")
-	}
+
 	err = impl.dockerHelper.StopDocker(ciContext)
 	if err != nil {
 		log.Println("error while stopping docker", err)
-		return err
+		return allPluginArtifacts, err
 	}
-	return nil
+	return allPluginArtifacts, nil
 }
