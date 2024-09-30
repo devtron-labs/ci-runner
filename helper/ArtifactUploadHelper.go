@@ -80,13 +80,14 @@ func ZipAndUpload(cloudHelperBaseConfig *util.CloudHelperBaseConfig, artifactFil
 		}
 		log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactFileName)
 		err = UploadFileToCloud(cloudHelperBaseConfig, zipFile, artifactFileName)
-		return err
+		if err != nil {
+			return err
+		}
+		artifactUploaded = true
+		return nil
 	}
 	artifactUploadErr = util.ExecuteWithStageInfoLog(util.UPLOAD_ARTIFACT, uploadArtifact)
-	if artifactUploadErr != nil {
-		return artifactUploaded, artifactUploadErr
-	}
-	return true, nil
+	return artifactUploaded, artifactUploadErr
 }
 
 func IsDirEmpty(name string) (bool, error) {
