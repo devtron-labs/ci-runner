@@ -70,7 +70,7 @@ func NewCiStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, 
 }
 
 func deferCIEvent(ciRequest *helper.CommonWorkflowRequest, artifactUploaded bool, err error) (exitCode int) {
-	log.Println(util.DEVTRON, "termination log data: ", err, artifactUploaded)
+	log.Println(util.DEVTRON, "defer CI stage data.", "err: ", err, "artifactUploaded: ", artifactUploaded)
 	if err != nil {
 		var stageError *helper.CiStageError
 		if errors.As(err, &stageError) {

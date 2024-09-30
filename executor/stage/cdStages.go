@@ -47,6 +47,7 @@ func NewCdStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, 
 }
 
 func deferCDEvent(cdRequest *helper.CommonWorkflowRequest, artifactUploaded bool, err error) (exitCode int) {
+	log.Println(util.DEVTRON, "defer CD stage data.", "err: ", err, "artifactUploaded: ", artifactUploaded)
 	if err != nil {
 		exitCode = workFlow.DefaultErrorCode
 		var stageError *helper.CdStageError
@@ -75,13 +76,13 @@ func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	}()
 	err = impl.runCDStages(ciCdRequest)
 	if err != nil {
-		log.Println(err)
+		log.Println("cd stage error: ", err)
 		// not returning error as we want to upload artifacts
 	}
 	var artifactUploadErr error
 	artifactUploaded, artifactUploadErr = collectAndUploadCDArtifacts(ciCdRequest.CommonWorkflowRequest)
 	if artifactUploadErr != nil {
-		log.Println(artifactUploadErr)
+		log.Println("cd stage artifact upload error: ", artifactUploadErr)
 		// if artifact upload fails, treat it as exit status code 1 and set err to artifact upload error
 		if err == nil {
 			err = artifactUploadErr
