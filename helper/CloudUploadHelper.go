@@ -28,7 +28,7 @@ func UploadFileToCloud(cloudHelperBaseConfig *util.CloudHelperBaseConfig, source
 
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
 	request := createBlobStorageRequest(cloudHelperBaseConfig, sourceFilePath, destinationKey)
-
+	log.Println(util.DEVTRON, "uploading artifact file to cloud, request: ", request)
 	return blobStorageService.PutWithCommand(request)
 }
 
