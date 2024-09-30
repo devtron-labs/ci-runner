@@ -115,7 +115,7 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	}
 
 	if artifactUploadErr != nil {
-		log.Println(util.DEVTRON, artifactUploadErr)
+		log.Println(util.DEVTRON, "error in artifact upload: ", artifactUploadErr)
 		if ciCdRequest.CommonWorkflowRequest.IsExtRun {
 			log.Println(util.DEVTRON, "Ignoring artifactUploadErr")
 			return

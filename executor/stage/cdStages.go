@@ -82,7 +82,7 @@ func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	var artifactUploadErr error
 	artifactUploaded, artifactUploadErr = collectAndUploadCDArtifacts(ciCdRequest.CommonWorkflowRequest)
 	if artifactUploadErr != nil {
-		log.Println("cd stage artifact upload error: ", artifactUploadErr)
+		log.Println("error in artifact upload: ", artifactUploadErr)
 		// if artifact upload fails, treat it as exit status code 1 and set err to artifact upload error
 		if err == nil {
 			err = artifactUploadErr
