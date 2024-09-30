@@ -149,7 +149,7 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 					return err
 				}
 			}
-			dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
+			dockerdstart = fmt.Sprintf("dockerd --iptables=false %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
 		}
 		cmd := impl.GetCommandToExecute(dockerdstart)
 		out, err := cmd.CombinedOutput()
