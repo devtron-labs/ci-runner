@@ -173,7 +173,7 @@ type CommonWorkflowRequest struct {
 	DeploymentReleaseCounter      int                            `json:"deploymentReleaseCounter,omitempty"`
 	PrePostDeploySteps            []*StepObject                  `json:"prePostDeploySteps"`
 	TaskYaml                      *TaskYaml                      `json:"-"`
-	IsDryRun                      bool                           `json:"isDryRun"`
+	IsVirtualExecution            bool                           `json:"isVirtualExecution"`
 	CiArtifactLastFetch           time.Time                      `json:"ciArtifactLastFetch"`
 	CiPipelineType                string                         `json:"CiPipelineType"`
 	RegistryDestinationImageMap   map[string][]string            `json:"registryDestinationImageMap"`
@@ -185,6 +185,23 @@ type CommonWorkflowRequest struct {
 	AsyncBuildxCacheExport        bool                           `json:"asyncBuildxCacheExport"`
 	UseDockerApiToGetDigest       bool                           `json:"useDockerApiToGetDigest"`
 	HostUrl                       string                         `json:"hostUrl"`
+}
+
+func (c *CommonWorkflowRequest) IsPreCdStage() bool {
+	return c.StageType == string(STEP_TYPE_PRE)
+}
+
+func (c *CommonWorkflowRequest) IsPostCdStage() bool {
+	return c.StageType == string(STEP_TYPE_POST)
+}
+
+func (c *CommonWorkflowRequest) GetCdStageType() PipelineType {
+	if c.StageType == string(STEP_TYPE_PRE) {
+		return PRE_CD
+	} else if c.StageType == string(STEP_TYPE_POST) {
+		return POST_CD
+	}
+	return ""
 }
 
 func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {
@@ -344,7 +361,7 @@ type CiCompleteEvent struct {
 	Metrics                       CIMetrics           `json:"metrics"`
 	AppName                       string              `json:"appName"`
 	IsArtifactUploaded            bool                `json:"isArtifactUploaded"`
-	FailureReason                 string              `json:"failureReason"`
+	FailureReason                 string              `json:"failureReason"` // FailureReason is used for notifying the failure reason to the user. Should be short and user-friendly
 	ImageDetailsFromCR            json.RawMessage     `json:"imageDetailsFromCR"`
 	PluginRegistryArtifactDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
 	PluginArtifactStage           string              `json:"pluginArtifactStage"`
@@ -352,20 +369,63 @@ type CiCompleteEvent struct {
 	PluginArtifacts               *PluginArtifacts    `json:"pluginArtifacts"`
 }
 
-type NotifyPipelineType string
+func (event *CiCompleteEvent) WithMetrics(metrics CIMetrics) *CiCompleteEvent {
+	event.Metrics = metrics
+	return event
+}
+
+func (event *CiCompleteEvent) WithFailureReason(failureReason string) *CiCompleteEvent {
+	event.FailureReason = failureReason
+	return event
+}
+
+func (event *CiCompleteEvent) WithImageDetailsFromCR(imageDetailsFromCR json.RawMessage) *CiCompleteEvent {
+	event.ImageDetailsFromCR = imageDetailsFromCR
+	return event
+}
+
+func (event *CiCompleteEvent) WithPluginArtifacts(pluginArtifacts *PluginArtifacts) *CiCompleteEvent {
+	event.PluginArtifacts = pluginArtifacts
+	return event
+}
+
+func (event *CiCompleteEvent) WithDockerImage(dockerImage string) *CiCompleteEvent {
+	event.DockerImage = dockerImage
+	return event
+}
+
+func (event *CiCompleteEvent) WithDigest(digest string) *CiCompleteEvent {
+	event.Digest = digest
+	return event
+}
+
+func (event *CiCompleteEvent) WithIsArtifactUploaded(artifactUploaded bool) *CiCompleteEvent {
+	event.IsArtifactUploaded = artifactUploaded
+	return event
+}
+
+type StageFailureEvent struct {
+	WorkflowId         int          `json:"workflowId"`
+	WorkflowType       PipelineType `json:"workflowType"`
+	IsArtifactUploaded bool         `json:"isArtifactUploaded"`
+	FailureReason      error        `json:"failureReason"`
+}
+
+type PipelineType string
 
 const (
-	PRE_CD  NotifyPipelineType = "PRE-CD"
-	POST_CD NotifyPipelineType = "POST-CD"
+	CI      PipelineType = "CI"
+	PRE_CD  PipelineType = "PRE-CD"
+	POST_CD PipelineType = "POST-CD"
 )
 
 type ImageScanningEvent struct {
-	CiPipelineId int                `json:"ciPipelineId"`
-	CdPipelineId int                `json:"cdPipelineId"`
-	TriggerBy    int                `json:"triggeredBy"`
-	Image        string             `json:"image"`
-	Digest       string             `json:"digest"`
-	PipelineType NotifyPipelineType `json:"PipelineType"`
+	CiPipelineId int          `json:"ciPipelineId"`
+	CdPipelineId int          `json:"cdPipelineId"`
+	TriggerBy    int          `json:"triggeredBy"`
+	Image        string       `json:"image"`
+	Digest       string       `json:"digest"`
+	PipelineType PipelineType `json:"PipelineType"`
 }
 
 type CdStageCompleteEvent struct {
@@ -382,6 +442,17 @@ type CdStageCompleteEvent struct {
 	PluginRegistryArtifactDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
 	PluginArtifactStage           string              `json:"pluginArtifactStage"`
 	PluginArtifacts               *PluginArtifacts    `json:"pluginArtifacts"`
+	IsArtifactUploaded            bool                `json:"isArtifactUploaded"`
+}
+
+func (event *CdStageCompleteEvent) WithPluginArtifacts(pluginArtifacts *PluginArtifacts) *CdStageCompleteEvent {
+	event.PluginArtifacts = pluginArtifacts
+	return event
+}
+
+func (event *CdStageCompleteEvent) WithIsArtifactUploaded(artifactUploaded bool) *CdStageCompleteEvent {
+	event.IsArtifactUploaded = artifactUploaded
+	return event
 }
 
 type CiProjectDetails struct {
@@ -439,20 +510,8 @@ type CiProjectDetailsMin struct {
 	CommitTime time.Time `json:"commitTime"`
 }
 
-func SendCDEvent(cdRequest *CommonWorkflowRequest, pluginArtifacts *PluginArtifacts) error {
-
-	event := CdStageCompleteEvent{
-		CiProjectDetails:              cdRequest.CiProjectDetails,
-		CdPipelineId:                  cdRequest.CdPipelineId,
-		WorkflowId:                    cdRequest.WorkflowId,
-		WorkflowRunnerId:              cdRequest.WorkflowRunnerId,
-		CiArtifactDTO:                 cdRequest.CiArtifactDTO,
-		TriggeredBy:                   cdRequest.TriggeredBy,
-		PluginRegistryArtifactDetails: cdRequest.RegistryDestinationImageMap,
-		PluginArtifactStage:           cdRequest.PluginArtifactStage,
-		PluginArtifacts:               pluginArtifacts,
-	}
-	err := SendCdCompleteEvent(cdRequest, event)
+func SendCDEvent(cdRequest *CommonWorkflowRequest, event *CdStageCompleteEvent) error {
+	err := sendCdCompleteEvent(cdRequest, event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
 		return err
@@ -460,29 +519,12 @@ func SendCDEvent(cdRequest *CommonWorkflowRequest, pluginArtifacts *PluginArtifa
 	return nil
 }
 
-func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, metrics CIMetrics, artifactUploaded bool, failureReason string, imageDetailsFromCR json.RawMessage, pluginArtifacts *PluginArtifacts) error {
-	event := CiCompleteEvent{
-		CiProjectDetails:              ciRequest.CiProjectDetails,
-		DockerImage:                   image,
-		Digest:                        digest,
-		PipelineId:                    ciRequest.PipelineId,
-		PipelineName:                  ciRequest.PipelineName,
-		DataSource:                    "CI-RUNNER",
-		WorkflowId:                    ciRequest.WorkflowId,
-		TriggeredBy:                   ciRequest.TriggeredBy,
-		MaterialType:                  "git",
-		Metrics:                       metrics,
-		AppName:                       ciRequest.AppName,
-		IsArtifactUploaded:            artifactUploaded,
-		FailureReason:                 failureReason,
-		ImageDetailsFromCR:            imageDetailsFromCR,
-		PluginRegistryArtifactDetails: ciRequest.RegistryDestinationImageMap,
-		PluginArtifactStage:           ciRequest.PluginArtifactStage,
-		IsScanEnabled:                 ciRequest.ScanEnabled,
-		PluginArtifacts:               pluginArtifacts,
+func SendCiCompleteEvent(ciRequest *CommonWorkflowRequest, event *CiCompleteEvent) error {
+	if event == nil {
+		log.Println(util.DEVTRON, "err", "empty event received")
+		return nil
 	}
-
-	err := SendCiCompleteEvent(ciRequest, event)
+	err := sendCiCompleteEvent(ciRequest, event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
 		return err
@@ -491,7 +533,7 @@ func SendEvents(ciRequest *CommonWorkflowRequest, digest string, image string, m
 	return nil
 }
 
-func SendCiCompleteEvent(ciRequest *CommonWorkflowRequest, event CiCompleteEvent) error {
+func sendCiCompleteEvent(ciRequest *CommonWorkflowRequest, event *CiCompleteEvent) error {
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
@@ -503,7 +545,7 @@ func SendCiCompleteEvent(ciRequest *CommonWorkflowRequest, event CiCompleteEvent
 	return err
 }
 
-func SendCdCompleteEvent(cdRequest *CommonWorkflowRequest, event CdStageCompleteEvent) error {
+func sendCdCompleteEvent(cdRequest *CommonWorkflowRequest, event *CdStageCompleteEvent) error {
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
@@ -720,7 +762,7 @@ func GetImageScanningEvent(ciCdRequest CommonWorkflowRequest) ImageScanningEvent
 		Image:        ciCdRequest.CiArtifactDTO.Image,
 		Digest:       ciCdRequest.CiArtifactDTO.ImageDigest,
 	}
-	var stage NotifyPipelineType
+	var stage PipelineType
 	if ciCdRequest.StageType == string(STEP_TYPE_PRE) {
 		stage = PRE_CD
 	} else if ciCdRequest.StageType == string(STEP_TYPE_POST) {

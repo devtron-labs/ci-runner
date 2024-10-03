@@ -25,9 +25,11 @@ import (
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
+	"github.com/devtron-labs/ci-runner/helper/adaptor"
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/common-lib/utils/bean"
+	"github.com/devtron-labs/common-lib/utils/workFlow"
 	"io/ioutil"
 	"log"
 	"os"
@@ -67,36 +69,57 @@ func NewCiStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, 
 	}
 }
 
+func deferCIEvent(ciRequest *helper.CommonWorkflowRequest, artifactUploaded bool, err error) (exitCode int) {
+	log.Println(util.DEVTRON, "defer CI stage data.", "err: ", err, "artifactUploaded: ", artifactUploaded)
+	if err != nil {
+		var stageError *helper.CiStageError
+		if errors.As(err, &stageError) {
+			exitCode = workFlow.CiStageFailErrorCode
+			// update artifact uploaded status
+			if !stageError.IsArtifactUploaded() {
+				stageError = stageError.WithArtifactUploaded(artifactUploaded)
+			}
+		} else {
+			exitCode = workFlow.DefaultErrorCode
+			stageError = helper.NewCiStageError(err).
+				WithArtifactUploaded(artifactUploaded).
+				WithFailureMessage(workFlow.CiFailed.String())
+		}
+		// send ci failure event, for ci failure notification
+		sendCIFailureEvent(ciRequest, stageError)
+		// populate stage error
+		util.PopulateStageError(stageError.ErrorMessage())
+	}
+	return exitCode
+}
+
 func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
+	var artifactUploaded bool
+	var err error
 	ciRequest := ciCdRequest.CommonWorkflowRequest
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
-	artifactUploaded, err := impl.runCIStages(ciContext, ciCdRequest)
+	defer func() {
+		*exitCode = deferCIEvent(ciRequest, artifactUploaded, err)
+	}()
+	artifactUploaded, err = impl.runCIStages(ciContext, ciCdRequest)
 	log.Println(util.DEVTRON, artifactUploaded, err)
 	var artifactUploadErr error
 	if !artifactUploaded {
 		cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
-		artifactUploadErr = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
-		artifactUploaded = artifactUploadErr == nil
+		artifactUploaded, artifactUploadErr = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
 	}
 
 	if err != nil {
-		var stageError *helper.CiStageError
 		log.Println(util.DEVTRON, err)
-		if errors.As(err, &stageError) {
-			*exitCode = util.CiStageFailErrorCode
-			return
-		}
-		*exitCode = util.DefaultErrorCode
 		return
 	}
 
 	if artifactUploadErr != nil {
-		log.Println(util.DEVTRON, artifactUploadErr)
+		log.Println(util.DEVTRON, "error in artifact upload: ", artifactUploadErr)
 		if ciCdRequest.CommonWorkflowRequest.IsExtRun {
 			log.Println(util.DEVTRON, "Ignoring artifactUploadErr")
 			return
 		}
-		*exitCode = util.DefaultErrorCode
 		return
 	}
 
@@ -111,27 +134,14 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 				// not returning error as we are ignoring the cache upload, todo: re confirm this
 				return nil
 			}
-			*exitCode = util.DefaultErrorCode
 			return err
 		}
 		log.Println(util.DEVTRON, " /cache-push")
 		return nil
 	}
-
-	// not returning error by choice, do not want to report this error to caller
-	// cache push can fail and we don't want to break the flow
-	util.ExecuteWithStageInfoLog(util.PUSH_CACHE, uploadCache)
+	err = util.ExecuteWithStageInfoLog(util.PUSH_CACHE, uploadCache)
+	return
 }
-
-type CiFailReason string
-
-const (
-	PreCi  CiFailReason = "Pre-CI task failed: "
-	PostCi CiFailReason = "Post-CI task failed: "
-	Build  CiFailReason = "Docker build failed"
-	Push   CiFailReason = "Docker push failed"
-	Scan   CiFailReason = "Image scan failed"
-)
 
 func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
 
@@ -258,11 +268,10 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 
 	log.Println(util.DEVTRON, " artifact-upload")
 	cloudHelperBaseConfig := ciCdRequest.CommonWorkflowRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
-	err = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
-	if err != nil {
+	var artifactUploadErr error
+	artifactUploaded, artifactUploadErr = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
+	if artifactUploadErr != nil {
 		return artifactUploaded, nil
-	} else {
-		artifactUploaded = true
 	}
 	log.Println(util.DEVTRON, " /artifact-upload")
 
@@ -327,8 +336,10 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].CommitTime = detail.CommitTime
 		}
 	}
-
-	err = helper.SendEvents(ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, "", resultsFromPlugin, pluginArtifacts)
+	event := adaptor.NewCiCompleteEvent(ciCdRequest.CommonWorkflowRequest).WithMetrics(*metrics).
+		WithDockerImage(dest).WithDigest(digest).WithIsArtifactUploaded(artifactUploaded).
+		WithImageDetailsFromCR(resultsFromPlugin).WithPluginArtifacts(pluginArtifacts)
+	err = helper.SendCiCompleteEvent(ciCdRequest.CommonWorkflowRequest, event)
 	if err != nil {
 		log.Println(err)
 		return artifactUploaded, err
@@ -356,8 +367,10 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 	preCiDuration := time.Since(start).Seconds()
 	if err != nil {
 		log.Println("error in running pre Ci Steps", "err", err)
-		err = sendFailureNotification(string(PreCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
-		return nil, nil, err
+		return nil, nil, helper.NewCiStageError(err).
+			WithMetrics(metrics).
+			WithFailureMessage(fmt.Sprintf(workFlow.PreCiFailed.String(), step.Name)).
+			WithArtifactUploaded(artifactUploaded)
 	}
 	// considering pull images from Container repo Plugin in Pre ci steps only.
 	// making it non-blocking if results are not available (in case of err)
@@ -389,7 +402,10 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 			impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preCiStageOutVariable)
 		}
 		// code-block ends
-		err = sendFailureNotification(string(Build), ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
+		err = helper.NewCiStageError(err).
+			WithMetrics(metrics).
+			WithFailureMessage(workFlow.BuildFailed.String()).
+			WithArtifactUploaded(artifactUploaded)
 	}
 	log.Println(util.DEVTRON, " Build artifact completed", "dest", dest, "err", err)
 	return dest, err
@@ -431,7 +447,10 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 	pluginArtifactsFromFile, _, step, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PostCiSteps, refStageMap, scriptEnvs, preCiStageOutVariable)
 	if err != nil {
 		log.Println("error in running Post Ci Steps", "err", err)
-		return nil, sendFailureNotification(string(PostCi)+step.Name, ciCdRequest.CommonWorkflowRequest, "", "", *metrics, artifactUploaded, err)
+		return nil, helper.NewCiStageError(err).
+			WithMetrics(metrics).
+			WithFailureMessage(fmt.Sprintf(workFlow.PostCiFailed.String(), step.Name)).
+			WithArtifactUploaded(artifactUploaded)
 	}
 	//sent by orchestrator if copy container image v2 is configured
 	return pluginArtifactsFromFile, nil
@@ -454,8 +473,10 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 		err := helper.SendEventToClairUtility(scanEvent)
 		if err != nil {
 			log.Println("error in running Image Scan", "err", err)
-			err = sendFailureNotification(string(Scan), ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, err)
-			return err
+			return helper.NewCiStageError(err).
+				WithMetrics(metrics).
+				WithFailureMessage(workFlow.ScanFailed.String()).
+				WithArtifactUploaded(artifactUploaded)
 		}
 		log.Println("Image scanning completed with scanEvent", scanEvent)
 		return nil
@@ -517,15 +538,24 @@ func makeDockerfile(config *helper.DockerBuildConfig, checkoutPath string) error
 	return err
 }
 
-func sendFailureNotification(failureMessage string, ciRequest *helper.CommonWorkflowRequest,
-	digest string, image string, ciMetrics helper.CIMetrics,
-	artifactUploaded bool, err error) error {
-	e := helper.SendEvents(ciRequest, digest, image, ciMetrics, artifactUploaded, failureMessage, nil, nil)
+func sendCIFailureEvent(ciRequest *helper.CommonWorkflowRequest, err *helper.CiStageError) {
+	event := adaptor.NewCiCompleteEvent(ciRequest).
+		WithMetrics(err.GetMetrics()).
+		WithIsArtifactUploaded(err.IsArtifactUploaded()).
+		WithFailureReason(err.GetFailureMessage())
+	e := helper.SendCiCompleteEvent(ciRequest, event)
 	if e != nil {
 		log.Println(e)
-		return e
 	}
-	return &helper.CiStageError{Err: err}
+}
+
+func sendCDFailureEvent(ciRequest *helper.CommonWorkflowRequest, err *helper.CdStageError) {
+	event := adaptor.NewCdCompleteEvent(ciRequest).
+		WithIsArtifactUploaded(err.IsArtifactUploaded())
+	e := helper.SendCDEvent(ciRequest, event)
+	if e != nil {
+		log.Println(e)
+	}
 }
 
 func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest string, digest string, metrics *helper.CIMetrics, artifactUploaded bool) error {
@@ -541,13 +571,13 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 		if err == nil {
 			break
 		}
-		if err != nil {
-			log.Println("Error in pushing artifact", "err", err)
-		}
+		log.Println("Error in pushing artifact", "err", err)
 	}
 	if err != nil {
-		err = sendFailureNotification(string(Push), ciCdRequest.CommonWorkflowRequest, digest, dest, *metrics, artifactUploaded, err)
-		return err
+		return helper.NewCiStageError(err).
+			WithMetrics(metrics).
+			WithFailureMessage(workFlow.PushFailed.String()).
+			WithArtifactUploaded(artifactUploaded)
 	}
 	return err
 }

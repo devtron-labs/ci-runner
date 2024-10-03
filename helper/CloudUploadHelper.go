@@ -28,7 +28,6 @@ func UploadFileToCloud(cloudHelperBaseConfig *util.CloudHelperBaseConfig, source
 
 	blobStorageService := blob_storage.NewBlobStorageServiceImpl(nil)
 	request := createBlobStorageRequest(cloudHelperBaseConfig, sourceFilePath, destinationKey)
-
 	return blobStorageService.PutWithCommand(request)
 }
 

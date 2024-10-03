@@ -36,14 +36,13 @@ const (
 	CiCdEventEnvKey              = "CI_CD_EVENT"
 	Source_Signal                = "Source_Signal"
 	Source_Defer                 = "Source_Defer"
-	DefaultErrorCode             = 1
-	AbortErrorCode               = 143
-	CiStageFailErrorCode         = 2
 	InAppLogging                 = "IN_APP_LOGGING"
 	CiRunnerCommand              = "./cirunner"
 	TeeCommand                   = "tee"
 	LogFileName                  = "main.log"
 	NewLineChar                  = "\n"
+	ArtifactSourceType           = "CI-RUNNER"
+	ArtifactMaterialType         = "git"
 )
 
 const (

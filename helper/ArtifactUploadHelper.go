@@ -31,33 +31,32 @@ import (
 //const BLOB_STORAGE_S3 = "S3"
 //const BLOB_STORAGE_GCP = "GCP"
 
-func UploadArtifact(cloudHelperBaseConfig *util.CloudHelperBaseConfig, artifactFiles map[string]string, artifactFileLocation string) error {
+func UploadArtifact(cloudHelperBaseConfig *util.CloudHelperBaseConfig, artifactFiles map[string]string, artifactFileLocation string) (artifactUploaded bool, err error) {
 	if len(artifactFiles) == 0 {
 		log.Println(util.DEVTRON, "no artifact to upload")
-		return nil
+		return artifactUploaded, nil
 	}
-	//collect in a dir
+	// collect in a dir
 	log.Println(util.DEVTRON, "artifact upload ", artifactFiles, artifactFileLocation)
-	err := os.Mkdir(util.TmpArtifactLocation, os.ModePerm)
+	err = os.Mkdir(util.TmpArtifactLocation, os.ModePerm)
 	if err != nil {
-		return err
+		return artifactUploaded, err
 	}
 	for key, val := range artifactFiles {
 		loc := filepath.Join(util.TmpArtifactLocation, key)
-		err := os.Mkdir(loc, os.ModePerm)
+		err = os.Mkdir(loc, os.ModePerm)
 		if err != nil {
-			return err
+			return artifactUploaded, err
 		}
 		err = copy.Copy(val, filepath.Join(loc, val))
 		if err != nil {
-			return err
+			return artifactUploaded, err
 		}
 	}
-	err = ZipAndUpload(cloudHelperBaseConfig, artifactFileLocation)
-	return err
+	return ZipAndUpload(cloudHelperBaseConfig, artifactFileLocation)
 }
 
-func ZipAndUpload(cloudHelperBaseConfig *util.CloudHelperBaseConfig, artifactFileName string) error {
+func ZipAndUpload(cloudHelperBaseConfig *util.CloudHelperBaseConfig, artifactFileName string) (artifactUploaded bool, artifactUploadErr error) {
 	uploadArtifact := func() error {
 		if !cloudHelperBaseConfig.StorageModuleConfigured {
 			log.Println(util.DEVTRON, "not going to upload artifact as storage module not configured...")
@@ -81,9 +80,14 @@ func ZipAndUpload(cloudHelperBaseConfig *util.CloudHelperBaseConfig, artifactFil
 		}
 		log.Println(util.DEVTRON, " artifact upload to ", zipFile, artifactFileName)
 		err = UploadFileToCloud(cloudHelperBaseConfig, zipFile, artifactFileName)
-		return err
+		if err != nil {
+			return err
+		}
+		artifactUploaded = true
+		return nil
 	}
-	return util.ExecuteWithStageInfoLog(util.UPLOAD_ARTIFACT, uploadArtifact)
+	artifactUploadErr = util.ExecuteWithStageInfoLog(util.UPLOAD_ARTIFACT, uploadArtifact)
+	return artifactUploaded, artifactUploadErr
 }
 
 func IsDirEmpty(name string) (bool, error) {

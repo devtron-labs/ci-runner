@@ -20,6 +20,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/devtron-labs/common-lib/git-manager/util"
+	"github.com/devtron-labs/common-lib/utils/workFlow"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -248,4 +250,17 @@ func CreateAndWriteFile(filePath string, content string) error {
 		log.Printf("Error writing content to file %s: %v", filePath, err)
 	}
 	return err
+}
+
+func PopulateStageError(errorMessage string) {
+	if len(errorMessage) == 0 {
+		return
+	}
+	if _, fileErr := os.Stat(workFlow.TerminalLogDir); os.IsNotExist(fileErr) {
+		_ = os.Mkdir(workFlow.TerminalLogDir, os.ModeDir)
+	}
+	writeErr := os.WriteFile(workFlow.GetTerminalLogFilePath(), []byte(errorMessage), os.ModePerm)
+	if writeErr != nil {
+		log.Println(util.DEVTRON, "failed to write error message: ", writeErr)
+	}
 }
