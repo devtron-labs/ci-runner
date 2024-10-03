@@ -118,7 +118,7 @@ github.com/cespare/xxhash/v2
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.18.1-0.20240929204207-9278f7840690
+# github.com/devtron-labs/common-lib v0.18.1-0.20241003071930-acfb6a1b1e7f
 ## explicit; go 1.21
 github.com/devtron-labs/common-lib/blob-storage
 github.com/devtron-labs/common-lib/constants
