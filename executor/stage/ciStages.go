@@ -281,10 +281,9 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 
 	log.Println(util.DEVTRON, " event")
 	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
-
 	// When externalCiArtifact is provided (run time Env at time of build) then this image will be used further in the pipeline
 	// imageDigest and ciProjectDetails are optional fields
-	if scriptEnvs["externalCiArtifact"] != "" && ciCdRequest.CommonWorkflowRequest.CiPipelineType == helper.CI_JOB {
+	if scriptEnvs["externalCiArtifact"] != "" {
 		log.Println(util.DEVTRON, "external ci artifact found! exiting now with success event")
 		dest = scriptEnvs["externalCiArtifact"]
 		digest = scriptEnvs["imageDigest"]
